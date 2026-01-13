@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 )
 
@@ -14,25 +13,6 @@ type cmd struct {
 	arg       string
 	descShort string
 	run       func()
-}
-
-type tSession struct {
-	Order   int16     `json:"order"`
-	Name    string    `json:"name"`
-	Windows []tWindow `json:"windows"`
-}
-
-type tWindow struct {
-	Order  int16   `json:"order"`
-	Name   string  `json:"name"`
-	Layout string  `json:"layout"`
-	Panes  []tPane `json:"panes"`
-}
-
-type tPane struct {
-	Order int16  `json:"order"`
-	Name  string `json:"name"`
-	Path  string `json:"path"`
 }
 
 func (c cmd) helpShort() {
@@ -45,19 +25,15 @@ var listCmd = cmd{
 	alias:     "ls",
 	descShort: "List all active sessions in tmux",
 	run: func() {
-		cmd, err := exec.Command("tmux", "ls").Output()
-
+		ls, err := ListSessions()
 		if err != nil {
-			fmt.Println("unable to list tmux session")
-			os.Exit(1)
+			LogError("Unable to list all tmux sessions")
 		}
 
-		sessions := strings.Split(strings.TrimSpace(string(cmd)), "\n")
-
-		fmt.Printf("Available sessions: \n")
-		for _, session := range sessions {
-			parts := strings.Split(session, " ")
-			fmt.Printf(" %15s %s windows \n", parts[0], parts[1])
+		fmt.Println("Available sessions")
+		for _, s := range ls {
+			parts := strings.Split(s, " ")
+			fmt.Printf("%4s %15s \n", parts[0], parts[1])
 		}
 	},
 }
@@ -68,15 +44,12 @@ var attachCmd = cmd{
 	arg:       "[NAME]",
 	run: func() {
 		if len(os.Args) < 3 {
-			fmt.Println("provide tmux session name you want attach to")
-			os.Exit(1)
+			LogError("No session name provided. Provide tmux session name you want attach to")
 		}
 
-		name := os.Args[2]
-		err := exec.Command("tmux", "attach", "-t", name).Run()
+		err := AttachToSession(os.Args[2])
 		if err != nil {
-			fmt.Printf("unable to attach to tmux session: %s \n", name)
-			os.Exit(1)
+			LogError("Unable to attach to tmux session: %s", os.Args[2])
 		}
 	},
 }
@@ -97,90 +70,54 @@ var saveCmd = cmd{
 	command:   "save",
 	descShort: "Save tmux sessions",
 	run: func() {
-		sessionsCmd, err := exec.Command("tmux", "list-sessions", "-F", "#{session_id} #{session_name}").Output()
-
-		if err != nil {
-			fmt.Println("unable to list active tmux sessions")
-			os.Exit(1)
-		}
-
 		var tSessions []tSession
 
-		// list all sessions
-		sessions := strings.SplitSeq(strings.TrimSpace(string(sessionsCmd)), "\n")
-		for session := range sessions {
-			parts := strings.Split(session, " ")
-			order, err := strconv.Atoi(strings.TrimPrefix(parts[0], "$"))
+		ls, err := ListSessions()
+		if err != nil {
+			LogError("Unable to list all tmux sessions")
+		}
+
+		for _, s := range ls {
+			ts, err := newTSession(s)
 			if err != nil {
-				fmt.Printf("unable to parse order for session: %s", parts[1])
-				os.Exit(1)
+				LogError("Unable to create tSession: %s", ts.Name)
 			}
 
-			sessionName := parts[1]
-			s := tSession{
-				Order: int16(order),
-				Name:  sessionName,
-			}
-
-			windowsCmd, err := exec.Command("tmux", "list-windows", "-t", sessionName, "-F", "#{window_index} #{window_name} #{window_layout}").Output()
+			lw, err := ListWindows(ts.Name)
 			if err != nil {
-				fmt.Printf("unable to list session windows: %s \n", sessionName)
-				os.Exit(1)
+				LogError("Unable to list windows for session: %s", ts.Name)
 			}
 
-			// list all windows for session
-			windows := strings.SplitSeq(strings.TrimSpace(string(windowsCmd)), "\n")
-			for window := range windows {
-				parts := strings.Split(window, " ")
-				order, err := strconv.Atoi(parts[0])
+			for _, w := range lw {
+				tw, err := newTWindow(w, ts.Name)
 				if err != nil {
-					fmt.Printf("unable to parse order for window: %s", parts[1])
-					os.Exit(1)
+					LogError("Unable to create tWindow: %s", tw.Name)
 				}
 
-				w := tWindow{
-					Order:  int16(order),
-					Name:   parts[1],
-					Layout: parts[2],
-				}
-
-				sessionWindow := fmt.Sprintf("%s:%s", sessionName, parts[0])
-				panesCmd, err := exec.Command("tmux", "list-panes", "-t", sessionWindow, "-F", "#{pane_index} #{pane_title} #{pane_current_path}").Output()
+				lp, err := ListPanes(tw.SessionWindow)
 				if err != nil {
-					fmt.Printf("unable to list panes for window: %s \n", sessionWindow)
-					os.Exit(1)
+					LogError("Unable to list panes for window: %s \n", tw.SessionWindow)
 				}
 
-				// list all panes for window in session
-				panes := strings.SplitSeq(strings.TrimSpace(string(panesCmd)), "\n")
-				for pane := range panes {
-					parts := strings.Split(pane, " ")
-					order, err := strconv.Atoi(parts[0])
+				for _, p := range lp {
+					tp, err := newTPane(p)
 					if err != nil {
-						fmt.Printf("unable to parse order for pane: %s", parts[1])
-						os.Exit(1)
+						LogError("Unable to create tPane: %s", tp.Name)
 					}
 
-					p := tPane{
-						Order: int16(order),
-						Name:  parts[1],
-						Path:  parts[2],
-					}
-
-					w.Panes = append(w.Panes, p)
+					tw.Panes = append(tw.Panes, tp)
 				}
-				s.Windows = append(s.Windows, w)
+				ts.Windows = append(ts.Windows, tw)
 			}
-			tSessions = append(tSessions, s)
+			tSessions = append(tSessions, ts)
 		}
 
 		err = saveFile(tSessions)
 		if err != nil {
-			fmt.Println("unable to save sessions")
-			os.Exit(1)
+			LogError("Unable to save tmux sessions to file in ~/.config/tmux")
 		}
 
-		fmt.Println("Tmux sessions saved at ~/.config/tmux")
+		LogInfo("Tmux sessions saved at ~/.config/tmux")
 	},
 }
 
@@ -190,26 +127,27 @@ var restoreCmd = cmd{
 	run: func() {
 		sessions, err := loadFile()
 		if err != nil {
-			fmt.Println("unable to load sessions from file")
-			os.Exit(1)
+			LogError("Unable to load sessionf from session file")
 		}
 
 		for _, session := range sessions {
-			hasSessionCmd, err := exec.Command("tmux", "has-session", "-t", session.Name).Output()
+			hs, err := HasSession(session.Name)
 			if err != nil {
-				fmt.Printf("unable to validate session: %s \n", session.Name)
-				os.Exit(1)
+				LogError("Unable to create session: %s", session.Name)
 			}
 
-			if strings.TrimSpace(string(hasSessionCmd)) == "" {
+			if hs {
 				continue
 			}
 
-			err = exec.Command("tmux", "new-session", "-d -s", session.Name).Run()
-			if err != nil {
-				fmt.Printf("unable to create session: %s", session.Name)
-				os.Exit(1)
-			}
+			// for _, window := range session.Windows {
+			//
+			// 	// rename first window
+			// 	// tmux rename-window -t worklog:1 editor
+			//
+			// 	// create new window
+			// 	// tmux new-window -t session_name:window_index -n window_name
+			// }
 		}
 
 		fmt.Printf("[%v]\n", sessions)

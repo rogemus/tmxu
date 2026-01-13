@@ -29,16 +29,18 @@ func saveFile(data []tSession) error {
 }
 
 func loadFile() ([]tSession, error) {
+	var data []tSession
+
 	path, err := getSessionFilePath()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get file path")
 	}
-	var data []tSession
 
 	out, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read tmux session file at path: %s", path)
 	}
+
 	err = json.Unmarshal(out, &data)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal sassion data")
@@ -53,6 +55,5 @@ func getSessionFilePath() (string, error) {
 		return "", fmt.Errorf("unable to get home dir")
 	}
 
-	path := filepath.Join(homeDir, sessionFile)
-	return path, nil
+	return filepath.Join(homeDir, sessionFile), nil
 }
