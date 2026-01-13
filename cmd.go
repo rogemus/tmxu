@@ -88,6 +88,7 @@ var helpCmd = cmd{
 		attachCmd.helpShort()
 		listCmd.helpShort()
 		saveCmd.helpShort()
+		restoreCmd.helpShort()
 		fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
 	},
 }
@@ -173,6 +174,44 @@ var saveCmd = cmd{
 			tSessions = append(tSessions, s)
 		}
 
-		saveFile(tSessions)
+		err = saveFile(tSessions)
+		if err != nil {
+			fmt.Println("unable to save sessions")
+			os.Exit(1)
+		}
+
+		fmt.Println("Tmux sessions saved at ~/.config/tmux")
+	},
+}
+
+var restoreCmd = cmd{
+	command:   "restore",
+	descShort: "Restore tmux sessions",
+	run: func() {
+		sessions, err := loadFile()
+		if err != nil {
+			fmt.Println("unable to load sessions from file")
+			os.Exit(1)
+		}
+
+		for _, session := range sessions {
+			hasSessionCmd, err := exec.Command("tmux", "has-session", "-t", session.Name).Output()
+			if err != nil {
+				fmt.Printf("unable to validate session: %s \n", session.Name)
+				os.Exit(1)
+			}
+
+			if strings.TrimSpace(string(hasSessionCmd)) == "" {
+				continue
+			}
+
+			err = exec.Command("tmux", "new-session", "-d -s", session.Name).Run()
+			if err != nil {
+				fmt.Printf("unable to create session: %s", session.Name)
+				os.Exit(1)
+			}
+		}
+
+		fmt.Printf("[%v]\n", sessions)
 	},
 }

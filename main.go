@@ -49,6 +49,7 @@ func main() {
 	app.newCmd(attachCmd)
 	app.newCmd(listCmd)
 	app.newCmd(saveCmd)
+	app.newCmd(restoreCmd)
 	app.newCmd(helpCmd)
 
 	app.run()
