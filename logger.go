@@ -11,8 +11,6 @@ func LogInfo(msg string, args ...any) {
 	} else {
 		fmt.Printf("%s \n", msg)
 	}
-
-	os.Exit(0)
 }
 
 func LogError(msg string, args ...any) {

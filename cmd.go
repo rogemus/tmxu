@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -12,7 +12,7 @@ type cmd struct {
 	alias     string
 	arg       string
 	descShort string
-	run       func()
+	run       func() error
 }
 
 func (c cmd) helpShort() {
@@ -24,10 +24,10 @@ var listCmd = cmd{
 	// TODO: suppoer alias
 	alias:     "ls",
 	descShort: "List all active sessions in tmux",
-	run: func() {
+	run: func() error {
 		ls, err := ListSessions()
 		if err != nil {
-			LogError("Unable to list all tmux sessions")
+			return fmt.Errorf("Unable to list all tmux sessions")
 		}
 
 		fmt.Println("Available sessions")
@@ -35,6 +35,8 @@ var listCmd = cmd{
 			parts := strings.Split(s, " ")
 			fmt.Printf("%4s %15s \n", parts[0], parts[1])
 		}
+
+		return nil
 	},
 }
 
@@ -42,67 +44,70 @@ var attachCmd = cmd{
 	command:   "attach",
 	descShort: "Attach to running tmux session",
 	arg:       "[NAME]",
-	run: func() {
+	run: func() error {
 		if len(os.Args) < 3 {
-			LogError("No session name provided. Provide tmux session name you want attach to")
+			return fmt.Errorf("No session name provided. Provide tmux session name you want attach to")
 		}
 
 		err := AttachToSession(os.Args[2])
 		if err != nil {
-			LogError("Unable to attach to tmux session: %s", os.Args[2])
+			return fmt.Errorf("Unable to attach to tmux session: %s \n", os.Args[2])
 		}
+
+		return nil
 	},
 }
 
 var helpCmd = cmd{
 	command:   "help",
 	descShort: "Display help information",
-	run: func() {
+	run: func() error {
 		attachCmd.helpShort()
 		listCmd.helpShort()
 		saveCmd.helpShort()
 		restoreCmd.helpShort()
 		fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
+		return nil
 	},
 }
 
 var saveCmd = cmd{
 	command:   "save",
 	descShort: "Save tmux sessions",
-	run: func() {
+	run: func() error {
 		var tSessions []tSession
 
 		ls, err := ListSessions()
 		if err != nil {
-			LogError("Unable to list all tmux sessions")
+			return fmt.Errorf("Unable to list all tmux sessions")
 		}
 
 		for _, s := range ls {
 			ts, err := newTSession(s)
 			if err != nil {
-				LogError("Unable to create tSession: %s", ts.Name)
+				return fmt.Errorf("Unable to create tSession: %s \n", ts.Name)
 			}
 
 			lw, err := ListWindows(ts.Name)
 			if err != nil {
-				LogError("Unable to list windows for session: %s", ts.Name)
+				return fmt.Errorf("Unable to list windows for session: %s \n", ts.Name)
 			}
 
 			for _, w := range lw {
 				tw, err := newTWindow(w, ts.Name)
 				if err != nil {
-					LogError("Unable to create tWindow: %s", tw.Name)
+					return fmt.Errorf("Unable to create tWindow: %s \n", tw.Name)
 				}
 
 				lp, err := ListPanes(tw.SessionWindow)
 				if err != nil {
-					LogError("Unable to list panes for window: %s \n", tw.SessionWindow)
+					return fmt.Errorf("Unable to list panes for window: %s \n", tw.SessionWindow)
 				}
 
 				for _, p := range lp {
-					tp, err := newTPane(p)
+					tp, err := newTPane(p, tw.SessionName, tw.SessionWindow)
 					if err != nil {
-						LogError("Unable to create tPane: %s", tp.Name)
+						return fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
 					}
 
 					tw.Panes = append(tw.Panes, tp)
@@ -114,42 +119,45 @@ var saveCmd = cmd{
 
 		err = saveFile(tSessions)
 		if err != nil {
-			LogError("Unable to save tmux sessions to file in ~/.config/tmux")
+			return fmt.Errorf("unable to save tmux sessions to file in ~/.config/tmux \n")
 		}
 
-		LogInfo("Tmux sessions saved at ~/.config/tmux")
+		fmt.Println("Tmux sessions saved at ~/.config/tmux")
+		return nil
 	},
 }
 
 var restoreCmd = cmd{
 	command:   "restore",
 	descShort: "Restore tmux sessions",
-	run: func() {
+	run: func() error {
 		sessions, err := loadFile()
 		if err != nil {
-			LogError("Unable to load sessionf from session file")
+			return fmt.Errorf("unable to load session from session file \n")
 		}
 
-		for _, session := range sessions {
-			hs, err := HasSession(session.Name)
-			if err != nil {
-				LogError("Unable to create session: %s", session.Name)
-			}
-
-			if hs {
+		for _, s := range sessions {
+			err := NewSession(s)
+			if errors.Is(err, errorSessionExists) {
+				fmt.Printf("Session already exist: %s \n", s.Name)
 				continue
+			} else if err != nil {
+				return fmt.Errorf("unable to create session: %s \n", s.Name)
 			}
 
-			// for _, window := range session.Windows {
-			//
-			// 	// rename first window
-			// 	// tmux rename-window -t worklog:1 editor
-			//
-			// 	// create new window
-			// 	// tmux new-window -t session_name:window_index -n window_name
-			// }
+			for _, window := range s.Windows {
+				if err := NewWindow(window); err != nil {
+					return fmt.Errorf("unable to create window: %s \n", window.SessionWindow)
+				}
+
+				for _, pane := range window.Panes {
+					if err := NewPane(pane); err != nil {
+						return fmt.Errorf("unable to create pane: %s \n", pane.Name)
+					}
+				}
+			}
 		}
 
-		fmt.Printf("[%v]\n", sessions)
+		return nil
 	},
 }

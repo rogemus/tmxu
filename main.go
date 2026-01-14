@@ -33,7 +33,9 @@ func (a *app) run() {
 
 	c, ok := a.cmds[os.Args[1]]
 	if ok {
-		c.run()
+		if err := c.run(); err != nil {
+			fmt.Printf("%s", err.Error())
+		}
 	} else {
 		fmt.Println("invalid command ")
 		helpCmd := a.cmds["help"]
