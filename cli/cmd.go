@@ -9,7 +9,6 @@ import (
 
 type cmd struct {
 	command   string
-	alias     string
 	arg       string
 	descShort string
 	run       func() error
@@ -20,9 +19,7 @@ func (c cmd) helpShort() {
 }
 
 var listCmd = cmd{
-	command: "list",
-	// TODO: suppoer alias
-	alias:     "ls",
+	command:   "list",
 	descShort: "List all active sessions in tmux",
 	run: func() error {
 		ls, err := ListSessions()

@@ -27,20 +27,19 @@ func (a *app) run() {
 	if len(os.Args) < 2 {
 		helpCmd := a.cmds["help"]
 		helpCmd.run()
-
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	c, ok := a.cmds[os.Args[1]]
 	if ok {
 		if err := c.run(); err != nil {
 			fmt.Printf("%s", err.Error())
+			os.Exit(1)
 		}
 	} else {
-		fmt.Println("invalid command ")
+		fmt.Println("Invalid command ")
 		helpCmd := a.cmds["help"]
 		helpCmd.run()
-
 		os.Exit(1)
 	}
 }
