@@ -4,7 +4,7 @@ _default:
 # Run app
 [group: 'cli']
 run CMD:
-  go run ./cli CMD
+  go run ./ CMD
 
 # Run all tests
 [group: 'tests']
