@@ -18,7 +18,7 @@ Make sure your `$GOPATH/bin` is in your `PATH` to run the installed binary.
 
 ## Available Commands
 
-```bash
+```
 attach [NAME]    Attach to running tmux session
 list             List all active sessions in tmux
 save             Save tmux sessions
