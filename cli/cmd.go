@@ -76,7 +76,22 @@ var versionCmd = Cmd{
 	Command:   "version",
 	DescShort: "Display app version information",
 	Run: func() error {
-		fmt.Printf("tmxu version %s", version)
+		ghVersion, err := getNewestVersion()
+		if err != nil {
+			fmt.Printf("tmxu version %s", version)
+			return fmt.Errorf("unable to check for the newes version on Github \n")
+		}
+
+		sv := newSemVer(version)
+		if sv.original == ghVersion.original {
+			fmt.Printf("tmxu version %s", version)
+			return nil
+		}
+
+		fmt.Println("A new version of the tmxu is available!")
+		fmt.Println("Please run the following command to update:")
+		fmt.Printf("  go install github.com/rogemus/tmxu@%s\n\n", ghVersion.original)
+		fmt.Printf("Current tmxu version %s", version)
 		return nil
 	},
 }
