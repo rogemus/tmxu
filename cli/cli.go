@@ -37,7 +37,6 @@ func (c *cli) Run() {
 
 	if len(os.Args) < 2 {
 		helpCmd.Run()
-		return
 		os.Exit(0)
 	}
 
