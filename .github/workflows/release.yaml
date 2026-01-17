@@ -1,0 +1,26 @@
+name: Tag Releases
+
+on:
+  push:
+    branches:
+      - "main"
+      - "master"
+    paths:
+      - "version.txt"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          VERSION="$(cat version.txt)"
+          git tag "$VERSION"
+          git push origin tag "$VERSION"
