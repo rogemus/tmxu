@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"errors"
@@ -7,21 +7,21 @@ import (
 	"strings"
 )
 
-type cmd struct {
-	command   string
-	arg       string
-	descShort string
-	run       func() error
+type Cmd struct {
+	Command   string
+	Arg       string
+	DescShort string
+	Run       func() error
 }
 
-func (c cmd) helpShort() {
-	fmt.Printf(" %10s %8s    %s \n", c.command, c.arg, c.descShort)
+func (c Cmd) helpShort() {
+	fmt.Printf(" %10s %8s    %s \n", c.Command, c.Arg, c.DescShort)
 }
 
-var listCmd = cmd{
-	command:   "list",
-	descShort: "List all active sessions in tmux",
-	run: func() error {
+var listCmd = Cmd{
+	Command:   "list",
+	DescShort: "List all active sessions in tmux",
+	Run: func() error {
 		ls, err := ListSessions()
 		if err != nil {
 			return fmt.Errorf("Unable to list all tmux sessions")
@@ -37,11 +37,11 @@ var listCmd = cmd{
 	},
 }
 
-var attachCmd = cmd{
-	command:   "attach",
-	descShort: "Attach to running tmux session",
-	arg:       "[NAME]",
-	run: func() error {
+var attachCmd = Cmd{
+	Command:   "attach",
+	DescShort: "Attach to running tmux session",
+	Arg:       "[NAME]",
+	Run: func() error {
 		if len(os.Args) < 3 {
 			return fmt.Errorf("No session name provided. Provide tmux session name you want attach to")
 		}
@@ -55,23 +55,33 @@ var attachCmd = cmd{
 	},
 }
 
-var helpCmd = cmd{
-	command:   "help",
-	descShort: "Display help information",
-	run: func() error {
+var helpCmd = Cmd{
+	Command:   "help",
+	DescShort: "Display help information",
+	Run: func() error {
 		attachCmd.helpShort()
 		listCmd.helpShort()
 		saveCmd.helpShort()
 		restoreCmd.helpShort()
+		versionCmd.helpShort()
 		fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
 		return nil
 	},
 }
 
-var saveCmd = cmd{
-	command:   "save",
-	descShort: "Save tmux sessions",
-	run: func() error {
+var versionCmd = Cmd{
+	Command:   "version",
+	DescShort: "Display app version information",
+	Run: func() error {
+		fmt.Printf("tmxu version %s", version)
+		return nil
+	},
+}
+
+var saveCmd = Cmd{
+	Command:   "save",
+	DescShort: "Save tmux sessions",
+	Run: func() error {
 		var tSessions []tSession
 
 		ls, err := ListSessions()
@@ -124,10 +134,10 @@ var saveCmd = cmd{
 	},
 }
 
-var restoreCmd = cmd{
-	command:   "restore",
-	descShort: "Restore tmux sessions",
-	run: func() error {
+var restoreCmd = Cmd{
+	Command:   "restore",
+	DescShort: "Restore tmux sessions",
+	Run: func() error {
 		sessions, err := loadFile()
 		if err != nil {
 			return fmt.Errorf("unable to load session from session file \n")
