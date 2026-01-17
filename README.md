@@ -4,7 +4,9 @@ Personal Tmux utilities for managing Tmux sessions with ease.
 
 ## About
 
-tmxu is a lightweight command-line tool written in Go that simplifies tmux session management. It provides convenient commands for attaching to sessions, saving your current workspace configuration, and restoring sessions later.
+`tmxu` is a lightweight command-line tool written in Go that simplifies tmux session management. It provides convenient commands for attaching to sessions, saving your current workspace configuration, and restoring sessions later.
+
+Saved sessions are stored in `~/.config/tmxu/tmux-sessions.json`, making it easy to backup and restore your tmux workspace across different machines or after system restarts.
 
 ## Installation
 

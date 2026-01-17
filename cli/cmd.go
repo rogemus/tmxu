@@ -129,7 +129,7 @@ var saveCmd = Cmd{
 			return fmt.Errorf("unable to save tmux sessions to file in ~/.config/tmux \n")
 		}
 
-		fmt.Println("Tmux sessions saved at ~/.config/tmux")
+		fmt.Printf("Tmux sessions saved at ~%s%s \n", configDir, sessionFile)
 		return nil
 	},
 }
