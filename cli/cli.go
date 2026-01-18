@@ -28,26 +28,35 @@ func NewCli(v string) *cli {
 	return &c
 }
 
+func (c *cli) help() {
+	fmt.Println("Tmux utilities for managing sessions with save/restore capabilities")
+	fmt.Println("")
+
+	for _, cmd := range c.cmds {
+		cmd.helpShort()
+	}
+
+	fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
+}
+
 func (c *cli) newCmd(cmd Cmd) {
 	c.cmds[cmd.Command] = cmd
 }
 
 func (c *cli) Run() {
-	helpCmd := c.cmds["help"]
-
 	if len(os.Args) < 2 {
-		helpCmd.Run()
+		c.help()
 		os.Exit(0)
 	}
 
-	if c, ok := c.cmds[os.Args[1]]; ok {
-		if err := c.Run(); err != nil {
+	if cmd, ok := c.cmds[os.Args[1]]; ok {
+		if err := cmd.Run(); err != nil {
 			fmt.Printf("%s", err.Error())
 			os.Exit(1)
 		}
 	} else {
 		fmt.Println("Invalid command ")
-		helpCmd.Run()
+		c.help()
 		os.Exit(1)
 	}
 }
