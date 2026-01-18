@@ -55,23 +55,6 @@ var attachCmd = Cmd{
 	},
 }
 
-var helpCmd = Cmd{
-	Command:   "help",
-	DescShort: "Display help information",
-	Run: func() error {
-		fmt.Println("Tmux utilities for managing sessions with save/restore capabilities")
-		fmt.Println("")
-
-		attachCmd.helpShort()
-		listCmd.helpShort()
-		saveCmd.helpShort()
-		restoreCmd.helpShort()
-		versionCmd.helpShort()
-		fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
-		return nil
-	},
-}
-
 var versionCmd = Cmd{
 	Command:   "version",
 	DescShort: "Display app version information",

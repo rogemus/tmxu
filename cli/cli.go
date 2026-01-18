@@ -8,14 +8,16 @@ import (
 var version string
 
 type cli struct {
-	cmds map[string]Cmd
+	cmds      map[string]Cmd
+	cmdsOrder []string
 }
 
 func NewCli(v string) *cli {
 	version = v
 
 	c := cli{
-		cmds: make(map[string]Cmd),
+		cmds:      make(map[string]Cmd),
+		cmdsOrder: make([]string, 0),
 	}
 
 	c.newCmd(attachCmd)
@@ -23,7 +25,6 @@ func NewCli(v string) *cli {
 	c.newCmd(saveCmd)
 	c.newCmd(restoreCmd)
 	c.newCmd(versionCmd)
-	c.newCmd(helpCmd)
 
 	return &c
 }
@@ -32,8 +33,8 @@ func (c *cli) help() {
 	fmt.Println("Tmux utilities for managing sessions with save/restore capabilities")
 	fmt.Println("")
 
-	for _, cmd := range c.cmds {
-		cmd.helpShort()
+	for _, key := range c.cmdsOrder {
+		c.cmds[key].helpShort()
 	}
 
 	fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
@@ -41,6 +42,7 @@ func (c *cli) help() {
 
 func (c *cli) newCmd(cmd Cmd) {
 	c.cmds[cmd.Command] = cmd
+	c.cmdsOrder = append(c.cmdsOrder, cmd.Command)
 }
 
 func (c *cli) Run() {
