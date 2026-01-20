@@ -29,6 +29,7 @@ func NewCli(v string) *cli {
 	c.newCmd(saveTemplateCmd)
 	c.newCmd(deleteTemplateCmd)
 	c.newCmd(versionCmd)
+
 	return &c
 }
 

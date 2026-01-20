@@ -29,6 +29,10 @@ func (c Cmd) helpShort() {
 func (c Cmd) helpLong() {
 	fmt.Printf("%s - %s\n\n", c.Command, c.DescShort)
 
+	if c.DescLong != "" {
+		fmt.Printf("DESCRIPTION:\n  %s\n\n", c.DescLong)
+	}
+
 	usage := fmt.Sprintf("  tmxu %s", c.Command)
 	if c.Arg != "" {
 		usage += " " + c.Arg
@@ -49,6 +53,7 @@ func (c Cmd) helpLong() {
 var listCmd = Cmd{
 	Command:   "list",
 	DescShort: "List all active sessions in tmux",
+	DescLong:  "Displays all currently running tmux sessions with their IDs and names.",
 	Examples: []string{
 		"tmxu list",
 	},
@@ -71,6 +76,7 @@ var listCmd = Cmd{
 var attachCmd = Cmd{
 	Command:   "attach",
 	DescShort: "Attach to running tmux session",
+	DescLong:  "Connects to an existing tmux session by name. The session must already be running.",
 	Arg:       "[name]",
 	Examples: []string{
 		"tmxu attach mysession",
@@ -92,6 +98,7 @@ var attachCmd = Cmd{
 var versionCmd = Cmd{
 	Command:   "version",
 	DescShort: "Display app version information",
+	DescLong:  "Shows the current tmxu version and checks GitHub for newer releases.",
 	Examples: []string{
 		"tmxu version",
 	},
@@ -119,6 +126,7 @@ var versionCmd = Cmd{
 var saveCmd = Cmd{
 	Command:   "save",
 	DescShort: "Save tmux sessions",
+	DescLong:  "Captures all running tmux sessions including windows, panes, and layouts. Saves to ~/.config/tmxu/tmux-sessions.json.",
 	Examples: []string{
 		"tmxu save",
 	},
@@ -178,6 +186,7 @@ var saveCmd = Cmd{
 var restoreCmd = Cmd{
 	Command:   "restore",
 	DescShort: "Restore tmux sessions",
+	DescLong:  "Recreates tmux sessions from ~/.config/tmxu/tmux-sessions.json. Skips sessions that already exist.",
 	Examples: []string{
 		"tmxu restore",
 	},
@@ -215,7 +224,8 @@ var restoreCmd = Cmd{
 
 var listTemplatesCmd = Cmd{
 	Command:   "list-templates",
-	DescShort: "List all saved templates. Templates are stored in `~/.config/tmxu/templates` \n",
+	DescShort: "List all saved templates",
+	DescLong:  "Displays all saved templates with their windows and panes. Templates are stored in ~/.config/tmxu/templates/.",
 	Examples: []string{
 		"tmxu list-templates",
 	},
@@ -241,10 +251,11 @@ var listTemplatesCmd = Cmd{
 
 var saveTemplateCmd = Cmd{
 	Command:   "save-template",
-	DescShort: "Save session as template. Templates are stored in `~/.config/tmxu/templates`",
+	DescShort: "Save session as template",
+	DescLong:  "Saves a running tmux session as a reusable template. Templates are stored in ~/.config/tmxu/templates/.",
 	Arg:       "[sessionName]",
 	Flags: [][]string{
-		{"path", "initail path for all panes"},
+		{"path", "initial path for all panes"},
 	},
 	Examples: []string{
 		"tmxu save-template sessionName",
@@ -253,7 +264,7 @@ var saveTemplateCmd = Cmd{
 	Run: func() error {
 		var path string
 		fs := flag.NewFlagSet("save-template", flag.ContinueOnError)
-		fs.StringVar(&path, "path", ".", "initail path for all panes")
+		fs.StringVar(&path, "path", ".", "initial path for all panes")
 
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			return fmt.Errorf("Unable to read cmd options \n")
@@ -276,10 +287,11 @@ var saveTemplateCmd = Cmd{
 
 var deleteTemplateCmd = Cmd{
 	Command:   "delete-template",
-	DescShort: "Delete saved template. Templates are stored in `~/.config/tmxu/templates`",
-	Arg:       "[sessionName]",
+	DescShort: "Delete saved template",
+	DescLong:  "Removes a template file from ~/.config/tmxu/templates/.",
+	Arg:       "[templateName]",
 	Examples: []string{
-		"tmxu delete-template sessionName",
+		"tmxu delete-template templateName",
 	},
 	Run: func() error {
 		fmt.Println("Delete templates")
