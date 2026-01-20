@@ -123,6 +123,11 @@ var saveCmd = Cmd{
 		"tmxu save",
 	},
 	Run: func() error {
+		if !confirm("Save all tmux sessions?") {
+			fmt.Println("Aborted.")
+			return nil
+		}
+
 		var tSessions []tSession
 
 		ls, err := ListSessions()
@@ -191,13 +196,18 @@ var restoreCmd = Cmd{
 		fs := flag.NewFlagSet("restore", flag.ContinueOnError)
 		fs.BoolVar(&force, "force", false, "override existing sessions while restoring")
 
+		if !confirm("Restore tmux sessions from saved file?") {
+			fmt.Println("Aborted.")
+			return nil
+		}
+
 		sessions, err := loadFile()
 		if err != nil {
 			return fmt.Errorf("unable to load session from session file \n")
 		}
 
 		for _, s := range sessions {
-			err := NewSession(s ,force)
+			err := NewSession(s, force)
 			if errors.Is(err, errorSessionExists) {
 				fmt.Printf("Session already exist: %s \n", s.Name)
 				continue

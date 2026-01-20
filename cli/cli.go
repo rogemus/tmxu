@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 )
 
 var version string
@@ -95,4 +97,12 @@ func (c *cli) Run() {
 		c.help("")
 		os.Exit(1)
 	}
+}
+
+func confirm(prompt string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("%s [y/N]: ", prompt)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(strings.ToLower(input))
+	return input == "y" || input == "yes"
 }
