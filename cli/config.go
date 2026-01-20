@@ -98,3 +98,19 @@ func getSessionFilePath() (string, error) {
 
 	return filepath.Join(homeDir, configDir, sessionFile), nil
 }
+
+func loadTemplateFiles() ([]tTemplate, error) {
+	// var templates []tTemplate
+
+	// sessionToTemplate
+
+	return nil, nil
+}
+
+func saveTemplateFile(template tTemplate) error {
+	return nil
+}
+
+func deleteTemplateFile(templateName string) error {
+	return nil
+}

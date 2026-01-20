@@ -92,6 +92,10 @@ func ListSessions() ([]string, error) {
 	), nil
 }
 
+func GetSession(sessionName string) (tSession, error) {
+	return tSession{}, nil
+}
+
 func NewSession(session tSession) error {
 	hs, _ := HasSession(session.Name)
 	if hs == true {

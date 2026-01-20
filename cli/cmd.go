@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -166,6 +167,70 @@ var restoreCmd = Cmd{
 			}
 		}
 
+		return nil
+	},
+}
+
+var listTemplatesCmd = Cmd{
+	Command:   "list-templates",
+	DescShort: "List all saved templates. Templates are stored in `~/.config/tmxu/templates` \n",
+	Run: func() error {
+		ts, err := listTemplates()
+		if err != nil {
+			return fmt.Errorf("Unable to list availabe templates in `~/.config/tmxu/templates` \n")
+		}
+
+		for _, t := range ts {
+			fmt.Printf("%s: %d windows \n", t.Name, len(t.Windows))
+			for _, w := range t.Windows {
+				fmt.Printf("  window %s: %d panes \n", w.Name, len(w.Panes))
+				for _, p := range w.Panes {
+					fmt.Printf("    pane: %s [%s] \n", p.Name, p.Path)
+				}
+			}
+		}
+
+		return nil
+	},
+}
+
+var saveTemplateCmd = Cmd{
+	Command:   "save-template",
+	DescShort: "Save session as template. Templates are stored in `~/.config/tmxu/templates`",
+	Run: func() error {
+		fs := flag.NewFlagSet("save-template", flag.ContinueOnError)
+
+		var (
+			path        string
+			sessionName string
+		)
+
+		fs.StringVar(&path, "path", ".", "initail path for all panes")
+		fs.StringVar(&sessionName, "name", "", "name of the session that will be converted to template")
+
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return fmt.Errorf("Unable to read cmd options \n")
+		}
+
+		s, err := GetSession(sessionName)
+		if err != nil {
+			return fmt.Errorf("Unable to get session: %s", sessionName)
+		}
+
+		err = saveTemplate(s, path)
+		if err != nil {
+			return fmt.Errorf("Unable to save session: %s as template \n", sessionName)
+		}
+
+		return nil
+	},
+}
+
+var deleteTemplateCmd = Cmd{
+	Command:   "delete-template",
+	DescShort: "Delete saved template. Templates are stored in `~/.config/tmxu/templates`",
+	Run: func() error {
+		fmt.Println("Delete templates")
 		return nil
 	},
 }

@@ -24,6 +24,9 @@ func NewCli(v string) *cli {
 	c.newCmd(listCmd)
 	c.newCmd(saveCmd)
 	c.newCmd(restoreCmd)
+	c.newCmd(listTemplatesCmd)
+	c.newCmd(saveTemplateCmd)
+	c.newCmd(deleteTemplateCmd)
 	c.newCmd(versionCmd)
 
 	return &c
