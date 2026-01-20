@@ -12,16 +12,46 @@ type Cmd struct {
 	Command   string
 	Arg       string
 	DescShort string
+	DescLong  string
+	Flags     [][]string
+	Examples  []string
 	Run       func() error
 }
 
 func (c Cmd) helpShort() {
-	fmt.Printf(" %10s %8s    %s \n", c.Command, c.Arg, c.DescShort)
+	usage := c.Command
+	if c.Arg != "" {
+		usage += " " + c.Arg
+	}
+	fmt.Printf("  %-20s %s\n", usage, c.DescShort)
+}
+
+func (c Cmd) helpLong() {
+	fmt.Printf("%s - %s\n\n", c.Command, c.DescShort)
+
+	usage := fmt.Sprintf("  tmxu %s", c.Command)
+	if c.Arg != "" {
+		usage += " " + c.Arg
+	}
+	if len(c.Flags) > 0 {
+		usage += " [flags]"
+	}
+	fmt.Printf("USAGE:\n%s\n\n", usage)
+
+	if len(c.Flags) > 0 {
+		fmt.Println("FLAGS:")
+		for _, f := range c.Flags {
+			fmt.Printf("  -%s\n      %s\n", f[0], f[1])
+		}
+	}
 }
 
 var listCmd = Cmd{
 	Command:   "list",
 	DescShort: "List all active sessions in tmux",
+	Examples: []string{
+		"tmxu list",
+	},
 	Run: func() error {
 		ls, err := ListSessions()
 		if err != nil {
@@ -41,7 +71,10 @@ var listCmd = Cmd{
 var attachCmd = Cmd{
 	Command:   "attach",
 	DescShort: "Attach to running tmux session",
-	Arg:       "[NAME]",
+	Arg:       "[name]",
+	Examples: []string{
+		"tmxu attach mysession",
+	},
 	Run: func() error {
 		if len(os.Args) < 3 {
 			return fmt.Errorf("No session name provided. Provide tmux session name you want attach to")
@@ -59,6 +92,9 @@ var attachCmd = Cmd{
 var versionCmd = Cmd{
 	Command:   "version",
 	DescShort: "Display app version information",
+	Examples: []string{
+		"tmxu version",
+	},
 	Run: func() error {
 		ghVersion, err := getNewestVersion()
 		if err != nil {
@@ -83,6 +119,9 @@ var versionCmd = Cmd{
 var saveCmd = Cmd{
 	Command:   "save",
 	DescShort: "Save tmux sessions",
+	Examples: []string{
+		"tmxu save",
+	},
 	Run: func() error {
 		var tSessions []tSession
 
@@ -139,6 +178,9 @@ var saveCmd = Cmd{
 var restoreCmd = Cmd{
 	Command:   "restore",
 	DescShort: "Restore tmux sessions",
+	Examples: []string{
+		"tmxu restore",
+	},
 	Run: func() error {
 		sessions, err := loadFile()
 		if err != nil {
@@ -174,6 +216,9 @@ var restoreCmd = Cmd{
 var listTemplatesCmd = Cmd{
 	Command:   "list-templates",
 	DescShort: "List all saved templates. Templates are stored in `~/.config/tmxu/templates` \n",
+	Examples: []string{
+		"tmxu list-templates",
+	},
 	Run: func() error {
 		ts, err := listTemplates()
 		if err != nil {
@@ -197,22 +242,25 @@ var listTemplatesCmd = Cmd{
 var saveTemplateCmd = Cmd{
 	Command:   "save-template",
 	DescShort: "Save session as template. Templates are stored in `~/.config/tmxu/templates`",
+	Arg:       "[sessionName]",
+	Flags: [][]string{
+		{"path", "initail path for all panes"},
+	},
+	Examples: []string{
+		"tmxu save-template sessionName",
+		"tmxu save-template -path /tmp/app sessionName",
+	},
 	Run: func() error {
+		var path string
 		fs := flag.NewFlagSet("save-template", flag.ContinueOnError)
-
-		var (
-			path        string
-			sessionName string
-		)
-
 		fs.StringVar(&path, "path", ".", "initail path for all panes")
-		fs.StringVar(&sessionName, "name", "", "name of the session that will be converted to template")
 
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			return fmt.Errorf("Unable to read cmd options \n")
 		}
 
-		s, err := GetSession(sessionName)
+		sessionName := fs.Args()
+		s, err := GetSession(sessionName[0])
 		if err != nil {
 			return fmt.Errorf("Unable to get session: %s", sessionName)
 		}
@@ -229,6 +277,10 @@ var saveTemplateCmd = Cmd{
 var deleteTemplateCmd = Cmd{
 	Command:   "delete-template",
 	DescShort: "Delete saved template. Templates are stored in `~/.config/tmxu/templates`",
+	Arg:       "[sessionName]",
+	Examples: []string{
+		"tmxu delete-template sessionName",
+	},
 	Run: func() error {
 		fmt.Println("Delete templates")
 		return nil

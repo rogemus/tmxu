@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"slices"
 )
 
 var version string
@@ -28,13 +29,17 @@ func NewCli(v string) *cli {
 	c.newCmd(saveTemplateCmd)
 	c.newCmd(deleteTemplateCmd)
 	c.newCmd(versionCmd)
-
 	return &c
 }
 
-func (c *cli) help() {
+func (c *cli) help(cmdName string) {
 	fmt.Println("Tmux utilities for managing sessions with save/restore capabilities")
 	fmt.Println("")
+
+	if slices.Contains(c.cmdsOrder, cmdName) {
+		c.cmds[cmdName].helpLong()
+		return
+	}
 
 	for _, key := range c.cmdsOrder {
 		c.cmds[key].helpShort()
@@ -50,18 +55,29 @@ func (c *cli) newCmd(cmd Cmd) {
 
 func (c *cli) Run() {
 	if len(os.Args) < 2 {
-		c.help()
+		c.help("")
 		os.Exit(0)
 	}
 
-	if cmd, ok := c.cmds[os.Args[1]]; ok {
+	if len(os.Args) == 2 && os.Args[1] == "help" {
+		c.help("")
+		os.Exit(0)
+	}
+
+	if len(os.Args) == 3 && os.Args[1] == "help" {
+		c.help(os.Args[2])
+		os.Exit(0)
+	}
+
+	cmdName := os.Args[1]
+	if cmd, ok := c.cmds[cmdName]; ok {
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("%s", err.Error())
 			os.Exit(1)
 		}
 	} else {
 		fmt.Println("Invalid command ")
-		c.help()
+		c.help("")
 		os.Exit(1)
 	}
 }
