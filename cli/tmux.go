@@ -96,10 +96,16 @@ func GetSession(sessionName string) (tSession, error) {
 	return tSession{}, nil
 }
 
-func NewSession(session tSession) error {
+func NewSession(session tSession, force bool) error {
 	hs, _ := HasSession(session.Name)
-	if hs == true {
+
+	if hs == true && !force {
 		return errorSessionExists
+	} else if hs == true && force {
+		err := exec.Command("tmux", "kill-session", "-t", session.Name).Run()
+		if err != nil {
+			return fmt.Errorf("Unable to kill session: %s \n", session.Name)
+		}
 	}
 
 	err := exec.Command("tmux", "new-session", "-d", "-s", session.Name).Run()

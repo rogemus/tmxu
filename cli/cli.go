@@ -34,13 +34,13 @@ func NewCli(v string) *cli {
 }
 
 func (c *cli) help(cmdName string) {
-	fmt.Println("Tmux utilities for managing sessions with save/restore capabilities")
-	fmt.Println("")
-
 	if slices.Contains(c.cmdsOrder, cmdName) {
 		c.cmds[cmdName].helpLong()
 		return
 	}
+
+	fmt.Println("Tmux utilities for managing sessions with save/restore capabilities")
+	fmt.Println("")
 
 	c.listAllCommands()
 

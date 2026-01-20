@@ -179,17 +179,25 @@ var restoreCmd = Cmd{
 	Command:   "restore",
 	DescShort: "Restore tmux sessions",
 	DescLong:  "Recreates tmux sessions from ~/.config/tmxu/tmux-sessions.json. Skips sessions that already exist.",
+	Flags: [][]string{
+		{"force", "override existing sessions while restoring"},
+	},
 	Examples: []string{
 		"tmxu restore",
+		"tmux restore -force",
 	},
 	Run: func() error {
+		var force bool
+		fs := flag.NewFlagSet("restore", flag.ContinueOnError)
+		fs.BoolVar(&force, "force", false, "override existing sessions while restoring")
+
 		sessions, err := loadFile()
 		if err != nil {
 			return fmt.Errorf("unable to load session from session file \n")
 		}
 
 		for _, s := range sessions {
-			err := NewSession(s)
+			err := NewSession(s ,force)
 			if errors.Is(err, errorSessionExists) {
 				fmt.Printf("Session already exist: %s \n", s.Name)
 				continue
