@@ -18,14 +18,6 @@ type Cmd struct {
 	Run       func() error
 }
 
-func (c Cmd) helpShort() {
-	usage := c.Command
-	if c.Arg != "" {
-		usage += " " + c.Arg
-	}
-	fmt.Printf("  %-20s %s\n", usage, c.DescShort)
-}
-
 func (c Cmd) helpLong() {
 	fmt.Printf("%s - %s\n\n", c.Command, c.DescShort)
 
@@ -45,7 +37,7 @@ func (c Cmd) helpLong() {
 	if len(c.Flags) > 0 {
 		fmt.Println("FLAGS:")
 		for _, f := range c.Flags {
-			fmt.Printf("  -%s\n      %s\n", f[0], f[1])
+			fmt.Printf("  -%s      %s\n", f[0], f[1])
 		}
 	}
 }

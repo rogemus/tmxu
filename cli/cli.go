@@ -42,13 +42,25 @@ func (c *cli) help(cmdName string) {
 		return
 	}
 
+	c.listAllCommands()
+
+	fmt.Println("")
+	fmt.Println("Use `tmxu help [command]` to get detailed information about a specific command.")
+}
+
+func (c *cli) listAllCommands() {
+	var d [][]string
+
 	for _, key := range c.cmdsOrder {
-		c.cmds[key].helpShort()
+		cmd := c.cmds[key]
+
+		d = append(d, []string{
+			cmd.Command, cmd.Arg, cmd.DescShort,
+		})
 	}
 
-	fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
-	fmt.Println("")
-	fmt.Printf("Use `tmxu help [command]` to get detailed information about a specific command. \n")
+	d = append(d, []string{"help", "[command]", "Display help information"})
+	renderTable(d)
 }
 
 func (c *cli) newCmd(cmd Cmd) {
