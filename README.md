@@ -1,6 +1,6 @@
 # tmxu
 
-Personal Tmux utilities for managing Tmux sessions with ease.
+Tmux utilities for managing Tmux sessions with ease.
 
 ## About
 
@@ -21,17 +21,39 @@ Make sure your `$GOPATH/bin` is in your `PATH` to run the installed binary.
 ## Available Commands
 
 ```
-attach [name]              Attach to running tmux session
-list                       List all active sessions in tmux
-save                       Save tmux sessions
-restore                    Restore tmux sessions
-list-templates             List all saved templates
-save-template [session]    Save session as template
-delete-template [name]     Delete saved template
-version                    Display app version information
-help [command]             Display help information
+  attach             [name]            Attach to running tmux session
+  list                                 List all active sessions in tmux
+  save                                 Save tmux sessions
+  restore                              Restore tmux sessions
+  list-templates                       List all saved templates
+  save-template      [sessionName]     Save session as template
+  delete-template    [templateName]    Delete saved template
+  version                              Display app version information
+  help               [command]         Display help information
 ```
 
 Use `tmxu help [command]` to get detailed information about a specific command.
 
-Templates are stored in `~/.config/tmxu/templates/`.
+## Templates
+
+Templates allow you to save a tmux session layout as a reusable blueprint. This is useful for creating consistent development environments across different projects.
+
+Unlike `save`/`restore` which captures your entire workspace state, templates store only the session structure (windows and panes) with configurable paths. You can then spawn new sessions from a template with a custom base directory.
+
+Templates are stored as JSON files in `~/.config/tmxu/templates/`.
+
+### Usage
+
+```bash
+# Save current session "dev" as a template
+tmxu save-template dev
+
+# Save with a custom base path for all panes
+tmxu save-template -path /projects/myapp dev
+
+# List available templates
+tmxu list-templates
+
+# Delete a template
+tmxu delete-template dev
+```
