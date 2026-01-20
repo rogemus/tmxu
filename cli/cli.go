@@ -47,6 +47,8 @@ func (c *cli) help(cmdName string) {
 	}
 
 	fmt.Printf(" %10s %8s    %s \n", "help", "", "Display help information")
+	fmt.Println("")
+	fmt.Printf("Use `tmxu help [command]` to get detailed information about a specific command. \n")
 }
 
 func (c *cli) newCmd(cmd Cmd) {

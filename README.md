@@ -21,10 +21,17 @@ Make sure your `$GOPATH/bin` is in your `PATH` to run the installed binary.
 ## Available Commands
 
 ```
-attach [NAME]    Attach to running tmux session
-list             List all active sessions in tmux
-save             Save tmux sessions
-restore          Restore tmux sessions
-version          Display app version information
-help             Display help information
+attach [name]              Attach to running tmux session
+list                       List all active sessions in tmux
+save                       Save tmux sessions
+restore                    Restore tmux sessions
+list-templates             List all saved templates
+save-template [session]    Save session as template
+delete-template [name]     Delete saved template
+version                    Display app version information
+help [command]             Display help information
 ```
+
+Use `tmxu help [command]` to get detailed information about a specific command.
+
+Templates are stored in `~/.config/tmxu/templates/`.
