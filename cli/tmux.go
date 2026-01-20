@@ -92,8 +92,52 @@ func ListSessions() ([]string, error) {
 	), nil
 }
 
-func GetSession(sessionName string) (tSession, error) {
-	return tSession{}, nil
+func GetTSession(sessionName string) (tSession, error) {
+	_, err := HasSession(sessionName)
+	if err != nil {
+		return tSession{}, fmt.Errorf("unable to check session: %s \n", sessionName)
+	}
+
+	filter := fmt.Sprintf("#{==:#{session_name},%s}", sessionName)
+	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_id} #{session_name}", "-f", filter).Output()
+	if err != nil {
+		return tSession{}, fmt.Errorf("unable to get session information: %s \n", sessionName)
+	}
+
+	ts, err := newTSession(strings.TrimSpace(string(output)))
+	if err != nil {
+		return tSession{}, fmt.Errorf("Unable to create tSession: %s \n", ts.Name)
+	}
+
+	lw, err := ListWindows(ts.Name)
+	if err != nil {
+		return tSession{}, fmt.Errorf("Unable to list windows for session: %s \n", ts.Name)
+	}
+
+	for _, w := range lw {
+		tw, err := newTWindow(w, ts.Name)
+		if err != nil {
+			return tSession{}, fmt.Errorf("Unable to create tWindow: %s \n", tw.Name)
+		}
+
+		lp, err := ListPanes(tw.SessionWindow)
+		if err != nil {
+			return tSession{}, fmt.Errorf("Unable to list panes for window: %s \n", tw.SessionWindow)
+		}
+
+		for _, p := range lp {
+			tp, err := newTPane(p, tw.SessionName, tw.SessionWindow)
+			if err != nil {
+				return tSession{}, fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
+			}
+
+			tw.Panes = append(tw.Panes, tp)
+		}
+
+		ts.Windows = append(ts.Windows, tw)
+	}
+
+	return ts, nil
 }
 
 func NewSession(session tSession, force bool) error {

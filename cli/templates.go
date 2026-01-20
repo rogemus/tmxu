@@ -37,5 +37,13 @@ func deleteTemplate(templateName string) error {
 }
 
 func sessionToTemplate(session tSession, path string) (tTemplate, error) {
-	return tTemplate{}, nil
+	for i, w := range session.Windows {
+		for j, p := range w.Panes {
+			p.Path = "PATH"
+			w.Panes[j] = p
+		}
+		session.Windows[i] = w
+	}
+
+	return tTemplate(session), nil
 }

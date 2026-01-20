@@ -170,7 +170,7 @@ var saveCmd = Cmd{
 			tSessions = append(tSessions, ts)
 		}
 
-		err = saveFile(tSessions)
+		err = saveSessionsFile(tSessions)
 		if err != nil {
 			return fmt.Errorf("unable to save tmux sessions to file in ~/.config/tmux \n")
 		}
@@ -201,7 +201,7 @@ var restoreCmd = Cmd{
 			return nil
 		}
 
-		sessions, err := loadFile()
+		sessions, err := loadSessionsFile()
 		if err != nil {
 			return fmt.Errorf("unable to load session from session file \n")
 		}
@@ -281,7 +281,7 @@ var saveTemplateCmd = Cmd{
 		}
 
 		sessionName := fs.Args()
-		s, err := GetSession(sessionName[0])
+		s, err := GetTSession(sessionName[0])
 		if err != nil {
 			return fmt.Errorf("Unable to get session: %s", sessionName)
 		}
@@ -290,6 +290,8 @@ var saveTemplateCmd = Cmd{
 		if err != nil {
 			return fmt.Errorf("Unable to save session: %s as template \n", sessionName)
 		}
+
+		fmt.Printf("Templates saved at: ~/.config/tmxu/templates/%s.json \n", s.Name)
 
 		return nil
 	},

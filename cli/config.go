@@ -8,9 +8,10 @@ import (
 )
 
 const configDir = "/.config/tmxu/"
+const templatesDir = "templates"
 const sessionFile = "tmux-sessions.json"
 
-func saveFile(data []tSession) error {
+func saveSessionsFile(data []tSession) error {
 	hasConfigDir, err := hasConfigDir()
 	if err != nil {
 		return fmt.Errorf("cannot check for config dir at path: ~%s", configDir)
@@ -69,7 +70,7 @@ func createConfigDir() error {
 	return nil
 }
 
-func loadFile() ([]tSession, error) {
+func loadSessionsFile() ([]tSession, error) {
 	var data []tSession
 
 	path, err := getSessionFilePath()
@@ -99,6 +100,43 @@ func getSessionFilePath() (string, error) {
 	return filepath.Join(homeDir, configDir, sessionFile), nil
 }
 
+func hasTemplatesDir() (bool, error) {
+	_, err := os.UserHomeDir()
+	if err != nil {
+		return false, fmt.Errorf("unable to get home dir")
+	}
+
+	path, _ := getTemplatesDirPath()
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
+func createTemplatesDir() error {
+	_, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("unable to get home dir")
+	}
+
+	path, _ := getTemplatesDirPath()
+	if err = os.MkdirAll(path, 0755); err != nil {
+		return fmt.Errorf("unable to create tmxu templates dir: %s", path)
+	}
+
+	return nil
+}
+
+func getTemplatesDirPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("unable to get home dir")
+	}
+
+	return filepath.Join(homeDir, configDir, templatesDir), nil
+}
+
 func loadTemplateFiles() ([]tTemplate, error) {
 	// var templates []tTemplate
 
@@ -108,6 +146,29 @@ func loadTemplateFiles() ([]tTemplate, error) {
 }
 
 func saveTemplateFile(template tTemplate) error {
+	hasTemplatesDir, err := hasTemplatesDir()
+	if err != nil {
+		return fmt.Errorf("unable to create templates dir")
+	}
+
+	if !hasTemplatesDir {
+		if err := createTemplatesDir(); err != nil {
+			return fmt.Errorf("cannot create template dir: ~%s", templatesDir)
+		}
+	}
+
+	j, err := json.MarshalIndent(template, "", "  ")
+	if err != nil {
+		return fmt.Errorf("cannot marshal template data")
+	}
+
+	path, _ := getTemplatesDirPath()
+	filePath := fmt.Sprintf("%s/%s.json", path, template.Name)
+	err = os.WriteFile(filePath, j, 0644)
+	if err != nil {
+		return fmt.Errorf("cannot save template file at path: %s", filePath)
+	}
+
 	return nil
 }
 
