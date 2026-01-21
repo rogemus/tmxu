@@ -296,44 +296,49 @@ var saveTemplateCmd = Cmd{
 			return fmt.Errorf("Unable to check session: %s \n", sessionName)
 		}
 
-		if templateName == "" {
-			templateName = sessionName
-		}
-
 		const TEMP_VALUE = "TEMP_VALUE"
 		ts := tSession{
-			Name: templateName,
+			Name: sessionName,
 		}
 
-		lw, err := ListWindows(TEMP_VALUE)
+		lw, err := ListWindows(ts.Name)
 		if err != nil {
 			return fmt.Errorf("Unable to list windows for session: %s \n", ts.Name)
 		}
 
 		for _, w := range lw {
-			tw, err := newTWindow(w, TEMP_VALUE)
+			tw, err := newTWindow(w, ts.Name)
 			if err != nil {
 				return fmt.Errorf("Unable to create tWindow: %s \n", tw.Name)
 			}
 
-			lp, err := ListPanes(TEMP_VALUE)
+			lp, err := ListPanes(tw.SessionWindow)
 			if err != nil {
 				return fmt.Errorf("Unable to list panes for window: %s \n", tw.SessionWindow)
 			}
 
 			for _, p := range lp {
-				tp, err := newTPane(p, TEMP_VALUE, TEMP_VALUE)
+				tp, err := newTPane(p, ts.Name, tw.SessionWindow)
 				if err != nil {
 					return fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
 				}
 
+				tp.SessionName = TEMP_VALUE
+				tp.SessionWindow = TEMP_VALUE
 				tp.Path = TEMP_VALUE
 				tw.Panes = append(tw.Panes, tp)
 			}
 
+			tw.SessionName = TEMP_VALUE
+			tw.SessionWindow = TEMP_VALUE
 			ts.Windows = append(ts.Windows, tw)
 		}
 
+		if templateName == "" {
+			templateName = sessionName
+		}
+
+		ts.Name = templateName
 		err = saveTemplateFile(tTemplate(ts))
 		if err != nil {
 			return fmt.Errorf("Unable to save session: %s as template \n", sessionName)
