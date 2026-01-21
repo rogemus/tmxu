@@ -261,7 +261,7 @@ var listTemplatesCmd = Cmd{
 		"tmxu lt",
 	},
 	Run: func() error {
-		ts, err := listTemplates()
+		ts, err := loadTemplateFiles()
 		if err != nil {
 			return fmt.Errorf("Unable to list availabe templates in `~/.config/tmxu/templates` \n")
 		}
