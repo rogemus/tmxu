@@ -14,6 +14,8 @@ type tSession struct {
 	Windows []tWindow `json:"windows"`
 }
 
+type tTemplate = tSession
+
 func newTSession(tmuxSession string) (tSession, error) {
 	parts := strings.Split(tmuxSession, " ")
 
