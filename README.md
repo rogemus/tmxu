@@ -20,18 +20,18 @@ Make sure your `$GOPATH/bin` is in your `PATH` to run the installed binary.
 
 ## Available Commands
 
-```
-  attach             [sessionName]     Attach to running tmux session
-  list                                 List all active sessions in tmux
-  save                                 Save tmux sessions
-  restore                              Restore tmux sessions
-  new-session        [sessionName]     Create new session based on template
-  list-templates                       List all saved templates
-  save-template      [sessionName]     Save session as template
-  delete-template    [templateName]    Delete saved template
-  version                              Display app version information
-  help               [command]         Display help information
-```
+| Command | Aliases | Args | Description |
+|---------|---------|------|-------------|
+| new-session | new, ns | [sessionName] | Create new session based on template |
+| attach-session | attach, a | [sessionName] | Attach to running tmux session |
+| list-sessions | list, ls | | List all active sessions in tmux |
+| save-sessions | save, s | | Save tmux sessions |
+| restore-sessions | restore, r | | Restore tmux sessions |
+| list-templates | lt | | List all saved templates |
+| save-template | st | [sessionName] | Save session as template |
+| delete-template | dt | [templateName] | Delete saved template |
+| version | v | | Display app version information |
+| help | | [command] | Display help information |
 
 Use `tmxu help [command]` to get detailed information about a specific command.
 
@@ -48,19 +48,23 @@ Templates are stored as JSON files in `~/.config/tmxu/templates/`.
 ```bash
 # Save current session "dev" as a template
 tmxu save-template dev
+tmxu st dev
 
 # Save with a custom template name
 tmxu save-template -name mytemplate dev
 
 # List available templates
 tmxu list-templates
+tmxu lt
 
 # Create a new session from a template
 tmxu new-session -templ dev mysession
+tmxu new -templ dev mysession
 
 # Create a new session from a template with custom path
 tmxu new-session -path /projects/myapp -templ dev mysession
 
 # Delete a template
 tmxu delete-template dev
+tmxu dt dev
 ```
