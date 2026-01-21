@@ -69,7 +69,7 @@ var attachCmd = Cmd{
 	Command:   "attach",
 	DescShort: "Attach to running tmux session",
 	DescLong:  "Connects to an existing tmux session by name. The session must already be running.",
-	Arg:       "[name]",
+	Arg:       "[sessionName]",
 	Examples: []string{
 		"tmxu attach mysession",
 	},

@@ -21,7 +21,7 @@ Make sure your `$GOPATH/bin` is in your `PATH` to run the installed binary.
 ## Available Commands
 
 ```
-  attach             [name]            Attach to running tmux session
+  attach             [sessionName]     Attach to running tmux session
   list                                 List all active sessions in tmux
   save                                 Save tmux sessions
   restore                              Restore tmux sessions
@@ -47,9 +47,6 @@ Templates are stored as JSON files in `~/.config/tmxu/templates/`.
 ```bash
 # Save current session "dev" as a template
 tmxu save-template dev
-
-# Save with a custom base path for all panes
-tmxu save-template -path /projects/myapp dev
 
 # List available templates
 tmxu list-templates
