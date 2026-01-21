@@ -13,15 +13,10 @@ func listTemplates() ([]tTemplate, error) {
 	return ts, nil
 }
 
-func saveTemplate(session tSession, path string) error {
-	t, err := sessionToTemplate(session, path)
+func saveTemplate(template tTemplate) error {
+	err := saveTemplateFile(template)
 	if err != nil {
-		return fmt.Errorf("Cannot convert session: %s to template \n", t.Name)
-	}
-
-	err = saveTemplateFile(t)
-	if err != nil {
-		return fmt.Errorf("Cannot save template to file at `~/.config/tmxu/templates/%s.json` \n", t.Name)
+		return fmt.Errorf("Cannot save template to file at `~/.config/tmxu/templates/%s.json` \n", template.Name)
 	}
 
 	return nil

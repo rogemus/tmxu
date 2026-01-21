@@ -264,35 +264,59 @@ var saveTemplateCmd = Cmd{
 	DescShort: "Save session as template",
 	DescLong:  "Saves a running tmux session as a reusable template. Templates are stored in ~/.config/tmxu/templates/.",
 	Arg:       "[sessionName]",
-	Flags: [][]string{
-		{"path", "initial path for all panes"},
-	},
 	Examples: []string{
 		"tmxu save-template sessionName",
-		"tmxu save-template -path /tmp/app sessionName",
 	},
 	Run: func() error {
-		var path string
-		fs := flag.NewFlagSet("save-template", flag.ContinueOnError)
-		fs.StringVar(&path, "path", ".", "initial path for all panes")
-
-		if err := fs.Parse(os.Args[2:]); err != nil {
-			return fmt.Errorf("Unable to read cmd options \n")
+		if len(os.Args) < 3 {
+			return fmt.Errorf("No session name provided. Provide tmux session name you want save as tenmplate \n")
 		}
 
-		sessionName := fs.Args()
-		s, err := GetTSession(sessionName[0])
+		sessionName := os.Args[2]
+		hs, err := HasSession(sessionName)
+		if err != nil || !hs {
+			return fmt.Errorf("unable to check session: %s \n", sessionName)
+		}
+
+		ts := tSession{
+			Name: sessionName,
+		}
+
+		lw, err := ListWindows(sessionName)
 		if err != nil {
-			return fmt.Errorf("Unable to get session: %s", sessionName)
+			return fmt.Errorf("Unable to list windows for session: %s \n", ts.Name)
 		}
 
-		err = saveTemplate(s, path)
+		for _, w := range lw {
+			tw, err := newTWindow(w, ts.Name)
+			if err != nil {
+				return fmt.Errorf("Unable to create tWindow: %s \n", tw.Name)
+			}
+
+			lp, err := ListPanes(tw.SessionWindow)
+			if err != nil {
+				return fmt.Errorf("Unable to list panes for window: %s \n", tw.SessionWindow)
+			}
+
+			for _, p := range lp {
+				tp, err := newTPane(p, tw.SessionName, tw.SessionWindow)
+				if err != nil {
+					return fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
+				}
+
+				tp.Path = "TEMP_PATH"
+				tw.Panes = append(tw.Panes, tp)
+			}
+
+			ts.Windows = append(ts.Windows, tw)
+		}
+
+		err = saveTemplate(tTemplate(ts))
 		if err != nil {
 			return fmt.Errorf("Unable to save session: %s as template \n", sessionName)
 		}
 
-		fmt.Printf("Templates saved at: ~/.config/tmxu/templates/%s.json \n", s.Name)
-
+		fmt.Printf("Templates saved at: ~/.config/tmxu/templates/%s.json \n", ts.Name)
 		return nil
 	},
 }
@@ -307,6 +331,20 @@ var deleteTemplateCmd = Cmd{
 	},
 	Run: func() error {
 		fmt.Println("Delete templates")
+		return nil
+	},
+}
+
+var newSessionCmd = Cmd{
+	Run: func() error {
+		var path string
+		fs := flag.NewFlagSet("new-session", flag.ContinueOnError)
+		fs.StringVar(&path, "path", ".", "initial path for all panes")
+
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return fmt.Errorf("Unable to read cmd options \n")
+		}
+
 		return nil
 	},
 }
