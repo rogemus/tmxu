@@ -269,7 +269,7 @@ var saveTemplateCmd = Cmd{
 	},
 	Run: func() error {
 		if len(os.Args) < 3 {
-			return fmt.Errorf("No session name provided. Provide tmux session name you want save as tenmplate \n")
+			return fmt.Errorf("No session name provided. Provide tmux session name you want save as template \n")
 		}
 
 		sessionName := os.Args[2]
@@ -330,7 +330,16 @@ var deleteTemplateCmd = Cmd{
 		"tmxu delete-template templateName",
 	},
 	Run: func() error {
-		fmt.Println("Delete templates")
+		if len(os.Args) < 3 {
+			return fmt.Errorf("No template name provided. Provide template name you want to delete \n")
+		}
+
+		templateName := os.Args[2]
+		if err := deleteTemplateFile(templateName); err != nil {
+			return fmt.Errorf("Unable to delete template: `~/.config/tmxu/templates/%s.json` \n", templateName)
+		}
+
+		fmt.Printf("Template deleted: `~/.config/tmxu/templates/%s.json` \n", templateName)
 		return nil
 	},
 }

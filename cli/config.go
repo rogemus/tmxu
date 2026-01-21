@@ -14,28 +14,28 @@ const sessionFile = "tmux-sessions.json"
 func saveSessionsFile(data []tSession) error {
 	hasConfigDir, err := hasConfigDir()
 	if err != nil {
-		return fmt.Errorf("cannot check for config dir at path: ~%s", configDir)
+		return fmt.Errorf("Cannot check for config dir at path: ~%s \n", configDir)
 	}
 
 	if !hasConfigDir {
 		if err := createConfigDir(); err != nil {
-			return fmt.Errorf("cannot create config dir: ~%s", configDir)
+			return fmt.Errorf("Cannot create config dir: ~%s \n", configDir)
 		}
 	}
 
 	j, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return fmt.Errorf("cannot marshal sassion data")
+		return fmt.Errorf("Cannot marshal sassion data \n")
 	}
 
 	path, err := getSessionFilePath()
 	if err != nil {
-		return fmt.Errorf("unable to get file path")
+		return fmt.Errorf("Unable to get file path \n")
 	}
 
 	err = os.WriteFile(path, j, 0644)
 	if err != nil {
-		return fmt.Errorf("cannot save session file at path: %s", path)
+		return fmt.Errorf("Cannot save session file at path: %s \n", path)
 	}
 
 	return nil
@@ -44,7 +44,7 @@ func saveSessionsFile(data []tSession) error {
 func hasConfigDir() (bool, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return false, fmt.Errorf("unable to get home dir")
+		return false, fmt.Errorf("Unable to get home dir \n")
 	}
 
 	path := filepath.Join(homeDir, configDir)
@@ -59,12 +59,12 @@ func hasConfigDir() (bool, error) {
 func createConfigDir() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("unable to get home dir")
+		return fmt.Errorf("Unable to get home dir \n")
 	}
 
 	path := filepath.Join(homeDir, configDir)
 	if err = os.MkdirAll(path, 0755); err != nil {
-		return fmt.Errorf("unable to create tmxu config dir: %s", path)
+		return fmt.Errorf("Unable to create tmxu config dir: %s ]n", path)
 	}
 
 	return nil
@@ -75,17 +75,17 @@ func loadSessionsFile() ([]tSession, error) {
 
 	path, err := getSessionFilePath()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get file path")
+		return nil, fmt.Errorf("Unable to get file path \n")
 	}
 
 	out, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read tmux session file at path: %s", path)
+		return nil, fmt.Errorf("Unable to read tmux session file at path: %s \n", path)
 	}
 
 	err = json.Unmarshal(out, &data)
 	if err != nil {
-		return nil, fmt.Errorf("cannot marshal sassion data")
+		return nil, fmt.Errorf("Cannot marshal sassion data \n")
 	}
 
 	return data, nil
@@ -94,7 +94,7 @@ func loadSessionsFile() ([]tSession, error) {
 func getSessionFilePath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("unable to get home dir")
+		return "", fmt.Errorf("Unable to get home dir \n")
 	}
 
 	return filepath.Join(homeDir, configDir, sessionFile), nil
@@ -103,7 +103,7 @@ func getSessionFilePath() (string, error) {
 func hasTemplatesDir() (bool, error) {
 	_, err := os.UserHomeDir()
 	if err != nil {
-		return false, fmt.Errorf("unable to get home dir")
+		return false, fmt.Errorf("Unable to get home dir \n")
 	}
 
 	path, _ := getTemplatesDirPath()
@@ -117,12 +117,12 @@ func hasTemplatesDir() (bool, error) {
 func createTemplatesDir() error {
 	_, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("unable to get home dir")
+		return fmt.Errorf("Unable to get home dir \n")
 	}
 
 	path, _ := getTemplatesDirPath()
 	if err = os.MkdirAll(path, 0755); err != nil {
-		return fmt.Errorf("unable to create tmxu templates dir: %s", path)
+		return fmt.Errorf("Unable to create tmxu templates dir: %s \n", path)
 	}
 
 	return nil
@@ -131,7 +131,7 @@ func createTemplatesDir() error {
 func getTemplatesDirPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("unable to get home dir")
+		return "", fmt.Errorf("Unable to get home dir \n")
 	}
 
 	return filepath.Join(homeDir, configDir, templatesDir), nil
@@ -153,25 +153,41 @@ func saveTemplateFile(template tTemplate) error {
 
 	if !hasTemplatesDir {
 		if err := createTemplatesDir(); err != nil {
-			return fmt.Errorf("cannot create template dir: ~%s", templatesDir)
+			return fmt.Errorf("Cannot create template dir: ~%s \n", templatesDir)
 		}
 	}
 
 	j, err := json.MarshalIndent(template, "", "  ")
 	if err != nil {
-		return fmt.Errorf("cannot marshal template data")
+		return fmt.Errorf("Cannot marshal template data")
 	}
 
 	path, _ := getTemplatesDirPath()
 	filePath := fmt.Sprintf("%s/%s.json", path, template.Name)
 	err = os.WriteFile(filePath, j, 0644)
 	if err != nil {
-		return fmt.Errorf("cannot save template file at path: %s", filePath)
+		return fmt.Errorf("Cannot save template file at path: %s \n", filePath)
 	}
 
 	return nil
 }
 
 func deleteTemplateFile(templateName string) error {
+	hasTemplatesDir, err := hasTemplatesDir()
+	if err != nil || !hasTemplatesDir {
+		return fmt.Errorf("Unable to delete template \n")
+	}
+
+	path, _ := getTemplatesDirPath()
+	filePath := fmt.Sprintf("%s/%s.json", path, templateName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("Unable to delete template: %s \n", filePath)
+	}
+
+	err = os.Remove(filePath)
+	if err != nil {
+		return fmt.Errorf("Unable to delete template: %s \n", filePath)
+	}
+
 	return nil
 }
