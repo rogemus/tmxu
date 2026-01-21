@@ -311,7 +311,7 @@ var saveTemplateCmd = Cmd{
 			ts.Windows = append(ts.Windows, tw)
 		}
 
-		err = saveTemplate(tTemplate(ts))
+		err = saveTemplateFile(tTemplate(ts))
 		if err != nil {
 			return fmt.Errorf("Unable to save session: %s as template \n", sessionName)
 		}
