@@ -287,29 +287,31 @@ var saveTemplateCmd = Cmd{
 			Name: sessionName,
 		}
 
-		lw, err := ListWindows(sessionName)
+		const TEMP_VALUE = "TEMP_VALUE"
+
+		lw, err := ListWindows(TEMP_VALUE)
 		if err != nil {
 			return fmt.Errorf("Unable to list windows for session: %s \n", ts.Name)
 		}
 
 		for _, w := range lw {
-			tw, err := newTWindow(w, ts.Name)
+			tw, err := newTWindow(w, TEMP_VALUE)
 			if err != nil {
 				return fmt.Errorf("Unable to create tWindow: %s \n", tw.Name)
 			}
 
-			lp, err := ListPanes(tw.SessionWindow)
+			lp, err := ListPanes(TEMP_VALUE)
 			if err != nil {
 				return fmt.Errorf("Unable to list panes for window: %s \n", tw.SessionWindow)
 			}
 
 			for _, p := range lp {
-				tp, err := newTPane(p, tw.SessionName, tw.SessionWindow)
+				tp, err := newTPane(p, TEMP_VALUE, TEMP_VALUE)
 				if err != nil {
 					return fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
 				}
 
-				tp.Path = "TEMP_PATH"
+				tp.Path = TEMP_VALUE
 				tw.Panes = append(tw.Panes, tp)
 			}
 
@@ -350,13 +352,80 @@ var deleteTemplateCmd = Cmd{
 }
 
 var newSessionCmd = Cmd{
+	Command:   "new-session",
+	DescShort: "Create new session base on the template",
+	DescLong:  "Removes a template file from ~/.config/tmxu/templates/.",
+	Arg:       "[templateName]",
+	Examples: []string{
+		"tmxu new-session sessionName",
+		"tmxu new-session -templ templateName sessionName",
+		"tmxu new-session -path /temp/app -t templateName sessionName",
+	},
 	Run: func() error {
-		var path string
+		pwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("Cannot get pwd for current dir \n")
+		}
+
+		var (
+			path  string
+			templ string
+		)
+
 		fs := flag.NewFlagSet("new-session", flag.ContinueOnError)
-		fs.StringVar(&path, "path", ".", "initial path for all panes")
+		fs.StringVar(&path, "path", pwd, "Initial path for all panes. Default to pwd")
+		fs.StringVar(&templ, "templ", "", "Template to create new session base on")
 
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			return fmt.Errorf("Unable to read cmd options \n")
+		}
+
+		sessionName := fs.Arg(0)
+		if templ == "" {
+			t := tSession{
+				Name: sessionName,
+			}
+
+			err := NewSession(t, false)
+			if errors.Is(err, errorSessionExists) {
+				return fmt.Errorf("Session already exist: %s \n", t.Name)
+			} else if err != nil {
+				return fmt.Errorf("Unable to create session: %s \n", t.Name)
+			}
+
+			return nil
+		}
+
+		t, err := loadTemplateFile(templ)
+		t.Name = sessionName
+		if err != nil {
+			return fmt.Errorf("Unable to read template file: %s \n", sessionName)
+		}
+
+		err = NewSession(t, false)
+		if errors.Is(err, errorSessionExists) {
+			return fmt.Errorf("Session already exist: %s \n", t.Name)
+		} else if err != nil {
+			return fmt.Errorf("Unable to create session: %s \n", t.Name)
+		}
+
+		for i, window := range t.Windows {
+			window.SessionName = sessionName
+			window.SessionWindow = fmt.Sprintf("%s:%d", sessionName, i+1)
+
+			if err := NewWindow(window); err != nil {
+				return fmt.Errorf("Unable to create window: %s \n", window.SessionWindow)
+			}
+
+			for _, pane := range window.Panes {
+				pane.Path = path
+				pane.SessionName = sessionName
+				pane.SessionWindow = window.SessionWindow
+
+				if err := NewPane(pane); err != nil {
+					return fmt.Errorf("Unable to create pane: %s \n", pane.Name)
+				}
+			}
 		}
 
 		return nil

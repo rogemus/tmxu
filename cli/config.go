@@ -137,6 +137,27 @@ func getTemplatesDirPath() (string, error) {
 	return filepath.Join(homeDir, configDir, templatesDir), nil
 }
 
+func loadTemplateFile(templateName string) (tTemplate, error) {
+	path, err := getTemplatesDirPath()
+	if err != nil {
+		return tTemplate{}, fmt.Errorf("Cannot read templates dir \n")
+	}
+
+	filePath := fmt.Sprintf("%s/%s.json", path, templateName)
+	out, err := os.ReadFile(filePath)
+	if err != nil {
+		return tTemplate{}, fmt.Errorf("Unable to read tmux template file at path: %s \n", filePath)
+	}
+
+	var t tTemplate
+	err = json.Unmarshal(out, &t)
+	if err != nil {
+		return tTemplate{}, fmt.Errorf("Cannot unmarshal template data \n")
+	}
+
+	return t, nil
+}
+
 func loadTemplateFiles() ([]tTemplate, error) {
 	var templates []tTemplate
 
@@ -154,13 +175,13 @@ func loadTemplateFiles() ([]tTemplate, error) {
 		filePath := fmt.Sprintf("%s/%s", path, e.Name())
 		out, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to read tmux session file at path: %s \n", filePath)
+			return nil, fmt.Errorf("Unable to read tmux template file at path: %s \n", filePath)
 		}
 
 		var t tTemplate
 		err = json.Unmarshal(out, &t)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot marshal template data \n")
+			return nil, fmt.Errorf("Cannot unmarshal template data \n")
 		}
 
 		templates = append(templates, t)

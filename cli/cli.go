@@ -23,6 +23,7 @@ func NewCli(v string) *cli {
 		cmdsOrder: make([]string, 0),
 	}
 
+	c.newCmd(newSessionCmd)
 	c.newCmd(attachCmd)
 	c.newCmd(listCmd)
 	c.newCmd(saveCmd)
