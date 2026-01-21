@@ -25,6 +25,7 @@ Make sure your `$GOPATH/bin` is in your `PATH` to run the installed binary.
   list                                 List all active sessions in tmux
   save                                 Save tmux sessions
   restore                              Restore tmux sessions
+  new-session        [sessionName]     Create new session based on template
   list-templates                       List all saved templates
   save-template      [sessionName]     Save session as template
   delete-template    [templateName]    Delete saved template
@@ -48,8 +49,17 @@ Templates are stored as JSON files in `~/.config/tmxu/templates/`.
 # Save current session "dev" as a template
 tmxu save-template dev
 
+# Save with a custom template name
+tmxu save-template -name mytemplate dev
+
 # List available templates
 tmxu list-templates
+
+# Create a new session from a template
+tmxu new-session -templ dev mysession
+
+# Create a new session from a template with custom path
+tmxu new-session -path /projects/myapp -templ dev mysession
 
 # Delete a template
 tmxu delete-template dev

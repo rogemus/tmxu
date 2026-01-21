@@ -269,25 +269,41 @@ var saveTemplateCmd = Cmd{
 	DescShort: "Save session as template",
 	DescLong:  "Saves a running tmux session as a reusable template. Templates are stored in ~/.config/tmxu/templates/.",
 	Arg:       "[sessionName]",
+	Flags: [][]string{
+		{"name", "Name of the template. Defaults to session name"},
+	},
 	Examples: []string{
 		"tmxu save-template sessionName",
+		"tmxu save-template -name templateName sessionName",
 	},
 	Run: func() error {
+		var templateName string
+
+		fs := flag.NewFlagSet("new-session", flag.ContinueOnError)
+		fs.StringVar(&templateName, "name", "", "Name of the template. Default to session name")
+
 		if len(os.Args) < 3 {
 			return fmt.Errorf("No session name provided. Provide tmux session name you want save as template \n")
 		}
 
-		sessionName := os.Args[2]
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return fmt.Errorf("Unable to read flags for cmd \n")
+		}
+
+		sessionName := fs.Arg(0)
 		hs, err := HasSession(sessionName)
 		if err != nil || !hs {
 			return fmt.Errorf("Unable to check session: %s \n", sessionName)
 		}
 
-		ts := tSession{
-			Name: sessionName,
+		if templateName == "" {
+			templateName = sessionName
 		}
 
 		const TEMP_VALUE = "TEMP_VALUE"
+		ts := tSession{
+			Name: templateName,
+		}
 
 		lw, err := ListWindows(TEMP_VALUE)
 		if err != nil {
@@ -354,12 +370,16 @@ var deleteTemplateCmd = Cmd{
 var newSessionCmd = Cmd{
 	Command:   "new-session",
 	DescShort: "Create new session base on the template",
-	DescLong:  "Removes a template file from ~/.config/tmxu/templates/.",
-	Arg:       "[templateName]",
+	DescLong:  "Creates a new tmux session, optionally based on a saved template.",
+	Arg:       "[sessionName]",
+	Flags: [][]string{
+		{"path", "Initial path for all panes. Defaults to current directory"},
+		{"templ", "Template to create new session based on"},
+	},
 	Examples: []string{
 		"tmxu new-session sessionName",
 		"tmxu new-session -templ templateName sessionName",
-		"tmxu new-session -path /temp/app -t templateName sessionName",
+		"tmxu new-session -path /tmp/app -templ templateName sessionName",
 	},
 	Run: func() error {
 		pwd, err := os.Getwd()
@@ -428,6 +448,7 @@ var newSessionCmd = Cmd{
 			}
 		}
 
+		fmt.Printf("Session: %s created! \nRun `tmxu attach %s` in order to use newly created session \n", sessionName)
 		return nil
 	},
 }
