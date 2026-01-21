@@ -131,18 +131,42 @@ func createTemplatesDir() error {
 func getTemplatesDirPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("Unable to get home dir \n")
+		return "", fmt.Errorf("Unable to get templates dir \n")
 	}
 
 	return filepath.Join(homeDir, configDir, templatesDir), nil
 }
 
 func loadTemplateFiles() ([]tTemplate, error) {
-	// var templates []tTemplate
+	var templates []tTemplate
 
-	// sessionToTemplate
+	path, err := getTemplatesDirPath()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot read templates dir \n")
+	}
 
-	return nil, nil
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot read templates dir \n")
+	}
+
+	for _, e := range entries {
+		filePath := fmt.Sprintf("%s/%s", path, e.Name())
+		out, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to read tmux session file at path: %s \n", filePath)
+		}
+
+		var t tTemplate
+		err = json.Unmarshal(out, &t)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot marshal template data \n")
+		}
+
+		templates = append(templates, t)
+	}
+
+	return templates, nil
 }
 
 func saveTemplateFile(template tTemplate) error {

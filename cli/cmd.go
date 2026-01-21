@@ -245,12 +245,17 @@ var listTemplatesCmd = Cmd{
 			return fmt.Errorf("Unable to list availabe templates in `~/.config/tmxu/templates` \n")
 		}
 
+		if len(ts) == 0 {
+			fmt.Printf("No saved templates \n")
+			return nil
+		}
+
 		for _, t := range ts {
 			fmt.Printf("%s: %d windows \n", t.Name, len(t.Windows))
 			for _, w := range t.Windows {
 				fmt.Printf("  window %s: %d panes \n", w.Name, len(w.Panes))
 				for _, p := range w.Panes {
-					fmt.Printf("    pane: %s [%s] \n", p.Name, p.Path)
+					fmt.Printf("    pane: %s \n", p.Name)
 				}
 			}
 		}
