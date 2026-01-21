@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"strings"
 
 	"github.com/rogemus/tmxu/cli"
 )
@@ -10,6 +11,6 @@ import (
 var version string
 
 func main() {
-	cli := cli.NewCli(version)
+	cli := cli.NewCli(strings.TrimSpace(version))
 	cli.Run()
 }

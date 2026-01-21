@@ -52,7 +52,7 @@ var listCmd = Cmd{
 	Run: func() error {
 		ls, err := ListSessions()
 		if err != nil {
-			return fmt.Errorf("Unable to list all tmux sessions")
+			return fmt.Errorf("Unable to list all tmux sessions \n")
 		}
 
 		fmt.Println("Available sessions")
@@ -75,7 +75,7 @@ var attachCmd = Cmd{
 	},
 	Run: func() error {
 		if len(os.Args) < 3 {
-			return fmt.Errorf("No session name provided. Provide tmux session name you want attach to")
+			return fmt.Errorf("No session name provided. Provide tmux session name you want attach to \n")
 		}
 
 		err := AttachToSession(os.Args[2])
@@ -97,20 +97,20 @@ var versionCmd = Cmd{
 	Run: func() error {
 		ghVersion, err := getNewestVersion()
 		if err != nil {
-			fmt.Printf("tmxu version %s", version)
-			return fmt.Errorf("unable to check for the newes version on Github \n")
+			fmt.Printf("tmxu version %s \n", version)
+			return fmt.Errorf("Unable to check for the newest version on Github \n")
 		}
 
 		sv := newSemVer(version)
 		if sv.original == ghVersion.original {
-			fmt.Printf("tmxu version %s", version)
+			fmt.Printf("tmxu version %s \n", version)
 			return nil
 		}
 
 		fmt.Println("A new version of the tmxu is available!")
 		fmt.Println("Please run the following command to update:")
 		fmt.Printf("  go install github.com/rogemus/tmxu@%s\n\n", ghVersion.original)
-		fmt.Printf("Current tmxu version %s", version)
+		fmt.Printf("Current tmxu version %s \n", version)
 		return nil
 	},
 }
@@ -132,7 +132,7 @@ var saveCmd = Cmd{
 
 		ls, err := ListSessions()
 		if err != nil {
-			return fmt.Errorf("Unable to list all tmux sessions")
+			return fmt.Errorf("Unable to list all tmux sessions \n")
 		}
 
 		for _, s := range ls {
@@ -172,7 +172,7 @@ var saveCmd = Cmd{
 
 		err = saveSessionsFile(tSessions)
 		if err != nil {
-			return fmt.Errorf("unable to save tmux sessions to file in ~/.config/tmux \n")
+			return fmt.Errorf("Unable to save tmux sessions to file in ~/.config/tmux \n")
 		}
 
 		fmt.Printf("Tmux sessions saved at ~%s%s \n", configDir, sessionFile)
@@ -203,7 +203,7 @@ var restoreCmd = Cmd{
 
 		sessions, err := loadSessionsFile()
 		if err != nil {
-			return fmt.Errorf("unable to load session from session file \n")
+			return fmt.Errorf("Unable to load session from session file \n")
 		}
 
 		for _, s := range sessions {
@@ -212,17 +212,17 @@ var restoreCmd = Cmd{
 				fmt.Printf("Session already exist: %s \n", s.Name)
 				continue
 			} else if err != nil {
-				return fmt.Errorf("unable to create session: %s \n", s.Name)
+				return fmt.Errorf("Unable to create session: %s \n", s.Name)
 			}
 
 			for _, window := range s.Windows {
 				if err := NewWindow(window); err != nil {
-					return fmt.Errorf("unable to create window: %s \n", window.SessionWindow)
+					return fmt.Errorf("Unable to create window: %s \n", window.SessionWindow)
 				}
 
 				for _, pane := range window.Panes {
 					if err := NewPane(pane); err != nil {
-						return fmt.Errorf("unable to create pane: %s \n", pane.Name)
+						return fmt.Errorf("Unable to create pane: %s \n", pane.Name)
 					}
 				}
 			}
@@ -275,7 +275,7 @@ var saveTemplateCmd = Cmd{
 		sessionName := os.Args[2]
 		hs, err := HasSession(sessionName)
 		if err != nil || !hs {
-			return fmt.Errorf("unable to check session: %s \n", sessionName)
+			return fmt.Errorf("Unable to check session: %s \n", sessionName)
 		}
 
 		ts := tSession{
