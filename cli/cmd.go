@@ -64,9 +64,9 @@ var listSessionsCmd = Cmd{
 		}
 
 		fmt.Println("Available sessions")
-		for _, s := range ls {
+		for i, s := range ls {
 			parts := strings.Split(s, " ")
-			fmt.Printf("%4s %15s \n", parts[0], parts[1])
+			fmt.Printf(" %-3d %-20s\n", i+1, parts[1])
 		}
 
 		return nil
@@ -151,8 +151,8 @@ var saveSessionsCmd = Cmd{
 			return fmt.Errorf("Unable to list all tmux sessions \n")
 		}
 
-		for _, s := range ls {
-			ts, err := newTSession(s)
+		for i, s := range ls {
+			ts, err := newTSession(s, i+1)
 			if err != nil {
 				return fmt.Errorf("Unable to create tSession: %s \n", ts.Name)
 			}

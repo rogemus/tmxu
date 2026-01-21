@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -16,13 +17,8 @@ type tSession struct {
 
 type tTemplate = tSession
 
-func newTSession(tmuxSession string) (tSession, error) {
+func newTSession(tmuxSession string, order int) (tSession, error) {
 	parts := strings.Split(tmuxSession, " ")
-
-	order, err := strconv.Atoi(strings.TrimPrefix(parts[0], "$"))
-	if err != nil {
-		return tSession{}, fmt.Errorf("unable to convert session id to order for session: %s", parts[1])
-	}
 
 	return tSession{
 		Order: int16(order),
@@ -84,14 +80,24 @@ func newTPane(tmuxPane, sessionName, sessionWindow string) (tPane, error) {
 var errorSessionExists = errors.New("session exists")
 
 func ListSessions() ([]string, error) {
-	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_id} #{session_name}").Output()
+	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_created} #{session_name}").Output()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list tmux sessions")
 	}
 
-	return strings.Split(
+	ss := strings.Split(
 		strings.TrimSpace(string(output)), "\n",
-	), nil
+	)
+
+	sort.Slice(ss, func(i, j int) bool {
+		partsI := strings.Split(ss[i], " ")
+		partsJ := strings.Split(ss[j], " ")
+		tsI, _ := strconv.ParseInt(partsI[0], 10, 8)
+		tsJ, _ := strconv.ParseInt(partsJ[0], 10, 8)
+		return tsI < tsJ
+	})
+
+	return ss, nil
 }
 
 func NewSession(session tSession, force bool) error {
