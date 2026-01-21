@@ -448,7 +448,7 @@ var newSessionCmd = Cmd{
 			}
 		}
 
-		fmt.Printf("Session: %s created! \nRun `tmxu attach %s` in order to use newly created session \n", sessionName)
+		fmt.Printf("Session: %s created! \nRun `tmxu attach %s` in order to use newly created session \n", sessionName, sessionName)
 		return nil
 	},
 }
