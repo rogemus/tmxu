@@ -10,6 +10,7 @@ import (
 
 type Cmd struct {
 	Command   string
+	Aliases   []string
 	Arg       string
 	DescShort string
 	DescLong  string
@@ -20,6 +21,10 @@ type Cmd struct {
 
 func (c Cmd) helpLong() {
 	fmt.Printf("%s - %s\n\n", c.Command, c.DescShort)
+
+	if len(c.Aliases) > 0 {
+		fmt.Printf("ALIASES:\n  %s\n\n", strings.Join(c.Aliases, ", "))
+	}
 
 	if c.DescLong != "" {
 		fmt.Printf("DESCRIPTION:\n  %s\n\n", c.DescLong)
@@ -42,12 +47,15 @@ func (c Cmd) helpLong() {
 	}
 }
 
-var listCmd = Cmd{
-	Command:   "list",
+var listSessionsCmd = Cmd{
+	Command:   "list-sessions",
+	Aliases:   []string{"list", "ls"},
 	DescShort: "List all active sessions in tmux",
 	DescLong:  "Displays all currently running tmux sessions with their IDs and names.",
 	Examples: []string{
+		"tmxu list-sessions",
 		"tmxu list",
+		"tmxu ls",
 	},
 	Run: func() error {
 		ls, err := ListSessions()
@@ -65,13 +73,16 @@ var listCmd = Cmd{
 	},
 }
 
-var attachCmd = Cmd{
-	Command:   "attach",
+var attachSessionCmd = Cmd{
+	Command:   "attach-session",
+	Aliases:   []string{"attach", "a"},
 	DescShort: "Attach to running tmux session",
 	DescLong:  "Connects to an existing tmux session by name. The session must already be running.",
 	Arg:       "[sessionName]",
 	Examples: []string{
+		"tmxu attach-session mysession",
 		"tmxu attach mysession",
+		"tmxu a mysession",
 	},
 	Run: func() error {
 		if len(os.Args) < 3 {
@@ -89,10 +100,12 @@ var attachCmd = Cmd{
 
 var versionCmd = Cmd{
 	Command:   "version",
+	Aliases:   []string{"v"},
 	DescShort: "Display app version information",
 	DescLong:  "Shows the current tmxu version and checks GitHub for newer releases.",
 	Examples: []string{
 		"tmxu version",
+		"tmxu v",
 	},
 	Run: func() error {
 		ghVersion, err := getNewestVersion()
@@ -115,12 +128,15 @@ var versionCmd = Cmd{
 	},
 }
 
-var saveCmd = Cmd{
-	Command:   "save",
+var saveSessionsCmd = Cmd{
+	Command:   "save-sessions",
+	Aliases:   []string{"save", "s"},
 	DescShort: "Save tmux sessions",
 	DescLong:  "Captures all running tmux sessions including windows, panes, and layouts. Saves to ~/.config/tmxu/tmux-sessions.json.",
 	Examples: []string{
+		"tmxu save-sessions",
 		"tmxu save",
+		"tmux s",
 	},
 	Run: func() error {
 		if !confirm("Save all tmux sessions?") {
@@ -180,15 +196,18 @@ var saveCmd = Cmd{
 	},
 }
 
-var restoreCmd = Cmd{
-	Command:   "restore",
+var restoreSessionsCmd = Cmd{
+	Command:   "restore-sessions",
+	Aliases:   []string{"restore", "r"},
 	DescShort: "Restore tmux sessions",
 	DescLong:  "Recreates tmux sessions from ~/.config/tmxu/tmux-sessions.json. Skips sessions that already exist.",
 	Flags: [][]string{
 		{"force", "override existing sessions while restoring"},
 	},
 	Examples: []string{
-		"tmxu restore",
+		"tmxu restore-sessions",
+		"tmux restore",
+		"tmux r",
 		"tmux restore -force",
 	},
 	Run: func() error {
@@ -234,10 +253,12 @@ var restoreCmd = Cmd{
 
 var listTemplatesCmd = Cmd{
 	Command:   "list-templates",
+	Aliases:   []string{"lt"},
 	DescShort: "List all saved templates",
 	DescLong:  "Displays all saved templates with their windows and panes. Templates are stored in ~/.config/tmxu/templates/.",
 	Examples: []string{
 		"tmxu list-templates",
+		"tmxu lt",
 	},
 	Run: func() error {
 		ts, err := listTemplates()
@@ -266,6 +287,7 @@ var listTemplatesCmd = Cmd{
 
 var saveTemplateCmd = Cmd{
 	Command:   "save-template",
+	Aliases:   []string{"st"},
 	DescShort: "Save session as template",
 	DescLong:  "Saves a running tmux session as a reusable template. Templates are stored in ~/.config/tmxu/templates/.",
 	Arg:       "[sessionName]",
@@ -273,6 +295,7 @@ var saveTemplateCmd = Cmd{
 		{"name", "Name of the template. Defaults to session name"},
 	},
 	Examples: []string{
+		"tmxu st sessionName",
 		"tmxu save-template sessionName",
 		"tmxu save-template -name templateName sessionName",
 	},
@@ -351,11 +374,13 @@ var saveTemplateCmd = Cmd{
 
 var deleteTemplateCmd = Cmd{
 	Command:   "delete-template",
+	Aliases:   []string{"dt"},
 	DescShort: "Delete saved template",
 	DescLong:  "Removes a template file from ~/.config/tmxu/templates/.",
 	Arg:       "[templateName]",
 	Examples: []string{
 		"tmxu delete-template templateName",
+		"tmxu dt templateName",
 	},
 	Run: func() error {
 		if len(os.Args) < 3 {
@@ -374,6 +399,7 @@ var deleteTemplateCmd = Cmd{
 
 var newSessionCmd = Cmd{
 	Command:   "new-session",
+	Aliases:   []string{"new", "ns"},
 	DescShort: "Create new session base on the template",
 	DescLong:  "Creates a new tmux session, optionally based on a saved template.",
 	Arg:       "[sessionName]",
@@ -382,6 +408,8 @@ var newSessionCmd = Cmd{
 		{"templ", "Template to create new session based on"},
 	},
 	Examples: []string{
+		"tmxu new sessionName",
+		"tmxu ns sessionName",
 		"tmxu new-session sessionName",
 		"tmxu new-session -templ templateName sessionName",
 		"tmxu new-session -path /tmp/app -templ templateName sessionName",

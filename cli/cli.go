@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 )
 
@@ -24,10 +23,10 @@ func NewCli(v string) *cli {
 	}
 
 	c.newCmd(newSessionCmd)
-	c.newCmd(attachCmd)
-	c.newCmd(listCmd)
-	c.newCmd(saveCmd)
-	c.newCmd(restoreCmd)
+	c.newCmd(attachSessionCmd)
+	c.newCmd(listSessionsCmd)
+	c.newCmd(saveSessionsCmd)
+	c.newCmd(restoreSessionsCmd)
 	c.newCmd(listTemplatesCmd)
 	c.newCmd(saveTemplateCmd)
 	c.newCmd(deleteTemplateCmd)
@@ -37,8 +36,8 @@ func NewCli(v string) *cli {
 }
 
 func (c *cli) help(cmdName string) {
-	if slices.Contains(c.cmdsOrder, cmdName) {
-		c.cmds[cmdName].helpLong()
+	if cmd, ok := c.cmds[cmdName]; ok {
+		cmd.helpLong()
 		return
 	}
 
@@ -57,8 +56,13 @@ func (c *cli) listAllCommands() {
 	for _, key := range c.cmdsOrder {
 		cmd := c.cmds[key]
 
+		cmdName := cmd.Command
+		if len(cmd.Aliases) > 0 {
+			cmdName = fmt.Sprintf("%s (%s)", cmd.Command, strings.Join(cmd.Aliases, ", "))
+		}
+
 		d = append(d, []string{
-			cmd.Command, cmd.Arg, cmd.DescShort,
+			cmdName, cmd.Arg, cmd.DescShort,
 		})
 	}
 
@@ -69,6 +73,10 @@ func (c *cli) listAllCommands() {
 func (c *cli) newCmd(cmd Cmd) {
 	c.cmds[cmd.Command] = cmd
 	c.cmdsOrder = append(c.cmdsOrder, cmd.Command)
+
+	for _, alias := range cmd.Aliases {
+		c.cmds[alias] = cmd
+	}
 }
 
 func (c *cli) Run() {
