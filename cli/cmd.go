@@ -226,6 +226,8 @@ var restoreSessionsCmd = Cmd{
 		}
 
 		for _, s := range sessions {
+			numberOfPane := 1
+
 			err := NewSession(s, force)
 			if errors.Is(err, errorSessionExists) {
 				fmt.Printf("Session already exist: %s \n", s.Name)
@@ -244,7 +246,11 @@ var restoreSessionsCmd = Cmd{
 						return fmt.Errorf("Unable to create pane: %s \n", pane.Name)
 					}
 				}
+
+				numberOfPane += len(window.Panes)
 			}
+
+			fmt.Printf("Session created: %s (%d windows) [%d panes] \n", s.Name, len(s.Windows), numberOfPane)
 		}
 
 		return nil
