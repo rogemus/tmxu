@@ -175,11 +175,6 @@ func NewWindow(window tWindow) error {
 		}
 	}
 
-	err := SetWindowLayout(window)
-	if err != nil {
-		return fmt.Errorf("unable to set layout for window: %s \n", window.SessionWindow)
-	}
-
 	return nil
 }
 

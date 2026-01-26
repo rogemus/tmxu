@@ -247,6 +247,11 @@ var restoreSessionsCmd = Cmd{
 					}
 				}
 
+				err := SetWindowLayout(window)
+				if err != nil {
+					return fmt.Errorf("Unable to set layout for window: %s \n", window.SessionWindow)
+				}
+
 				numberOfPane += len(window.Panes)
 			}
 
