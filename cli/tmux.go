@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -123,9 +124,13 @@ func NewSession(session tSession, force bool) error {
 }
 
 func AttachToSession(sessionName string) error {
-	err := exec.Command("tmux", "attach", "-t", sessionName).Run()
-	if err != nil {
-		return fmt.Errorf("unable to attach to tmux session: %s", sessionName)
+	cmd := exec.Command("tmux", "attach", "-t", sessionName)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return err
 	}
 
 	return nil
