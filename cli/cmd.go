@@ -81,6 +81,7 @@ var attachSessionCmd = Cmd{
 	Arg:       "[sessionName]",
 	Examples: []string{
 		"tmxu attach-session mysession",
+		"tmux attach-session -menu",
 		"tmxu attach mysession",
 		"tmxu a mysession",
 	},
