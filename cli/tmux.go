@@ -113,7 +113,12 @@ func NewSession(session tSession, force bool) error {
 		}
 	}
 
-	err := exec.Command("tmux", "new-session", "-d", "-s", session.Name).Run()
+	startingDir := ""
+	if len(session.Windows) > 0 {
+		startingDir = session.Windows[0].Panes[0].Path
+	}
+
+	err := exec.Command("tmux", "new-session", "-c", startingDir, "-d", "-s", session.Name).Run()
 	if err != nil {
 		return fmt.Errorf("unable to create session: %s %s \n", session.Name, err.Error())
 	}
@@ -169,7 +174,8 @@ func NewWindow(window tWindow) error {
 
 		return nil
 	} else {
-		err := exec.Command("tmux", "new-window", "-t", window.SessionWindow, "-n", window.Name).Run()
+		firstPanePath := window.Panes[0].Path
+		err := exec.Command("tmux", "new-window", "-c", firstPanePath, "-t", window.SessionWindow, "-n", window.Name).Run()
 		if err != nil {
 			return fmt.Errorf("unable to create window: %s \n", window.Name)
 		}
@@ -209,13 +215,7 @@ func ListPanes(sessionWindow string) ([]string, error) {
 }
 
 func NewPane(pane tPane) error {
-	if pane.Order == 1 {
-		targetPane := fmt.Sprintf("%s.%d", pane.SessionWindow, pane.Order)
-		err := exec.Command("tmux", "respawn-pane", "-k", "-t", targetPane, "-c", pane.Path).Run()
-		if err != nil {
-			return fmt.Errorf("unable to set directory for first pane: %s \n", pane.Name)
-		}
-	} else {
+	if pane.Order != 1 {
 		err := exec.Command("tmux", "split-window", "-d", "-c", pane.Path, "-t", pane.SessionWindow).Run()
 		if err != nil {
 			return fmt.Errorf("unable to create pane: %s for window: %s \n", pane.Name, pane.SessionWindow)

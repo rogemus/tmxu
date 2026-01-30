@@ -11,3 +11,10 @@ run CMD:
 test:
 	go test ./... -v
 
+# Format code
+fmt:
+  go fmt ./... 
+
+# Lint
+lint: fmt 
+  go vet ./...
