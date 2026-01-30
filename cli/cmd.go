@@ -85,13 +85,52 @@ var attachSessionCmd = Cmd{
 		"tmxu a mysession",
 	},
 	Run: func() error {
-		if len(os.Args) < 3 {
+		var menuMode bool
+		fs := flag.NewFlagSet("attach-session", flag.ContinueOnError)
+		fs.BoolVar(&menuMode, "menu", false, "Use interactive menu to select session")
+
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return fmt.Errorf("unable to parse flags \n")
+		}
+
+		if menuMode {
+			ls, err := ListSessions()
+			if err != nil {
+				return fmt.Errorf("Unable to list all tmux sessions \n")
+			}
+
+			var items []menuItem
+			for _, s := range ls {
+				parts := strings.Split(s, " ")
+				items = append(items, newMenuItem(parts[1]))
+			}
+
+			selectedSession, err := interactiveMenu(items)
+			if errors.Is(err, errorAborded) {
+				fmt.Printf("Aborted \n")
+				return nil
+			}
+
+			if err != nil {
+				return fmt.Errorf("Unable to create interactive menu \n")
+			}
+
+			err = AttachToSession(selectedSession.name)
+			if err != nil {
+				return fmt.Errorf("Unable to attach to tmux session: %s \n", selectedSession.name)
+			}
+
+			return nil
+		}
+
+		sessionName := fs.Arg(0)
+		if sessionName == "" {
 			return fmt.Errorf("No session name provided. Provide tmux session name you want attach to \n")
 		}
 
-		err := AttachToSession(os.Args[2])
+		err := AttachToSession(sessionName)
 		if err != nil {
-			return fmt.Errorf("Unable to attach to tmux session: %s \n", os.Args[2])
+			return fmt.Errorf("Unable to attach to tmux session: %s \n", sessionName)
 		}
 
 		return nil
@@ -212,7 +251,7 @@ var restoreSessionsCmd = Cmd{
 	},
 	Run: func() error {
 		var force bool
-		fs := flag.NewFlagSet("restore", flag.ContinueOnError)
+		fs := flag.NewFlagSet("restore-sessions", flag.ContinueOnError)
 		fs.BoolVar(&force, "force", false, "override existing sessions while restoring")
 
 		if !confirm("Restore tmux sessions from saved file?") {
@@ -316,15 +355,15 @@ var saveTemplateCmd = Cmd{
 		fs := flag.NewFlagSet("new-session", flag.ContinueOnError)
 		fs.StringVar(&templateName, "name", "", "Name of the template. Default to session name")
 
-		if len(os.Args) < 3 {
-			return fmt.Errorf("No session name provided. Provide tmux session name you want save as template \n")
-		}
-
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			return fmt.Errorf("Unable to read flags for cmd \n")
 		}
 
 		sessionName := fs.Arg(0)
+		if sessionName == "" {
+			return fmt.Errorf("No session name provided. Provide tmux session name you want save as template. \n")
+		}
+
 		hs, err := HasSession(sessionName)
 		if err != nil || !hs {
 			return fmt.Errorf("Unable to check session: %s \n", sessionName)
