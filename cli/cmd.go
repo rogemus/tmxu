@@ -143,21 +143,21 @@ var versionCmd = Cmd{
 		"tmxu v",
 	},
 	Run: func() error {
-		ghVersion, err := getNewestVersion()
+		newestVersion, err := getNewestVersion()
 		if err != nil {
 			fmt.Printf("tmxu version %s \n", version)
-			return fmt.Errorf("Unable to check for the newest version on Github \n")
+			return fmt.Errorf("Unable to check for the newest version \n")
 		}
 
 		sv := newSemVer(version)
-		if sv.original == ghVersion.original {
+		if sv.original == newestVersion.original {
 			fmt.Printf("tmxu version %s \n", version)
 			return nil
 		}
 
 		fmt.Println("A new version of the tmxu is available!")
 		fmt.Println("Please run the following command to update:")
-		fmt.Printf("  go install github.com/rogemus/tmxu@%s\n\n", ghVersion.original)
+		fmt.Printf("  go install github.com/rogemus/tmxu@%s\n\n", newestVersion.original)
 		fmt.Printf("Current tmxu version %s \n", version)
 		return nil
 	},
