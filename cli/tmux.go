@@ -8,12 +8,44 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type tSession struct {
 	Order   int16     `json:"order"`
 	Name    string    `json:"name"`
 	Windows []tWindow `json:"windows"`
+}
+
+type tSessionSimple struct {
+	Created time.Duration
+	Name    string
+	Widnows int
+}
+
+func newTSessionSimple(s string) tSessionSimple {
+	parts := strings.Split(s, " ")
+	// Parse Unix timestamp from tmux (seconds since epoch)
+	createdTimestamp, _ := strconv.ParseInt(parts[0], 10, 64)
+	createdTime := time.Unix(createdTimestamp, 0)
+	duration := time.Since(createdTime)
+	windows, _ := strconv.Atoi(parts[2])
+
+	return tSessionSimple{
+		Created: duration,
+		Name:    parts[1],
+		Widnows: windows,
+	}
+}
+
+func (s tSessionSimple) Title() string {
+	return s.Name
+}
+
+func (s tSessionSimple) Desc() string {
+	since := TimeSince(s.Created)
+
+	return fmt.Sprintf("%d win · %s", s.Widnows, since)
 }
 
 type tTemplate = tSession
@@ -81,7 +113,7 @@ func newTPane(tmuxPane, sessionName, sessionWindow string) (tPane, error) {
 var errorSessionExists = errors.New("session exists")
 
 func ListSessions() ([]string, error) {
-	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_created} #{session_name}").Output()
+	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_created} #{session_name} #{session_windows}").Output()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list tmux sessions")
 	}

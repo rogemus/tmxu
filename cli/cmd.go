@@ -100,12 +100,7 @@ var attachSessionCmd = Cmd{
 				return fmt.Errorf("Unable to list all tmux sessions \n")
 			}
 
-			var items []menuItem
-			for _, s := range ls {
-				parts := strings.Split(s, " ")
-				items = append(items, newMenuItem(parts[1]))
-			}
-
+			items := sessionsToMenuItems(ls)
 			selectedSession, err := interactiveMenu(items)
 			if errors.Is(err, errorAborded) {
 				fmt.Printf("Aborted \n")
@@ -116,9 +111,9 @@ var attachSessionCmd = Cmd{
 				return fmt.Errorf("Unable to create interactive menu \n")
 			}
 
-			err = AttachToSession(selectedSession.name)
+			err = AttachToSession(selectedSession.Title())
 			if err != nil {
-				return fmt.Errorf("Unable to attach to tmux session: %s \n", selectedSession.name)
+				return fmt.Errorf("Unable to attach to tmux session: %s \n", selectedSession.Title())
 			}
 
 			return nil
