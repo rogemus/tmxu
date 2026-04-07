@@ -483,6 +483,18 @@ var newSessionCmd = Cmd{
 		if templ == "" {
 			t := tSession{
 				Name: sessionName,
+				Windows: []tWindow{
+					{
+						Order: 1,
+						Name:  sessionName,
+						Panes: []tPane{
+							{
+								Order: 1,
+								Path:  path,
+							},
+						},
+					},
+				},
 			}
 
 			err := NewSession(t, false)
