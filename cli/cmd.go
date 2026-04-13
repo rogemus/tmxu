@@ -511,7 +511,7 @@ var newSessionCmd = Cmd{
 		if err != nil {
 			return fmt.Errorf("Unable to read template file: %s \n", templ)
 		}
-		t.Name = sessionNam
+		t.Name = sessionName
 
 		for i := range t.Windows {
 			t.Windows[i].SessionName = sessionName
