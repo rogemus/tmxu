@@ -508,9 +508,20 @@ var newSessionCmd = Cmd{
 		}
 
 		t, err := loadTemplateFile(templ)
-		t.Name = sessionName
 		if err != nil {
-			return fmt.Errorf("Unable to read template file: %s \n", sessionName)
+			return fmt.Errorf("Unable to read template file: %s \n", templ)
+		}
+		t.Name = sessionNam
+
+		for i := range t.Windows {
+			t.Windows[i].SessionName = sessionName
+			t.Windows[i].SessionWindow = fmt.Sprintf("%s:%d", sessionName, i+1)
+
+			for j := range t.Windows[i].Panes {
+				t.Windows[i].Panes[j].Path = path
+				t.Windows[i].Panes[j].SessionName = sessionName
+				t.Windows[i].Panes[j].SessionWindow = t.Windows[i].SessionWindow
+			}
 		}
 
 		err = NewSession(t, false)
@@ -520,19 +531,12 @@ var newSessionCmd = Cmd{
 			return fmt.Errorf("Unable to create session: %s \n", t.Name)
 		}
 
-		for i, window := range t.Windows {
-			window.SessionName = sessionName
-			window.SessionWindow = fmt.Sprintf("%s:%d", sessionName, i+1)
-
+		for _, window := range t.Windows {
 			if err := NewWindow(window); err != nil {
 				return fmt.Errorf("Unable to create window: %s \n", window.SessionWindow)
 			}
 
 			for _, pane := range window.Panes {
-				pane.Path = path
-				pane.SessionName = sessionName
-				pane.SessionWindow = window.SessionWindow
-
 				if err := NewPane(pane); err != nil {
 					return fmt.Errorf("Unable to create pane: %s \n", pane.Name)
 				}
