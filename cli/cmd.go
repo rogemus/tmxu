@@ -250,6 +250,10 @@ var restoreSessionsCmd = Cmd{
 		fs := flag.NewFlagSet("restore-sessions", flag.ContinueOnError)
 		fs.BoolVar(&force, "force", false, "override existing sessions while restoring")
 
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return fmt.Errorf("unable to parse flags \n")
+		}
+
 		if !confirm("Restore tmux sessions from saved file?") {
 			fmt.Println("Aborted.")
 			return nil
