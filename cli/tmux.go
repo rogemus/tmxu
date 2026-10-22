@@ -24,16 +24,16 @@ type tSessionSimple struct {
 }
 
 func newTSessionSimple(s string) tSessionSimple {
-	parts := strings.Split(s, " ")
+	parts := strings.SplitN(s, "\t", 3)
 	// Parse Unix timestamp from tmux (seconds since epoch)
 	createdTimestamp, _ := strconv.ParseInt(parts[0], 10, 64)
 	createdTime := time.Unix(createdTimestamp, 0)
 	duration := time.Since(createdTime)
-	windows, _ := strconv.Atoi(parts[2])
+	windows, _ := strconv.Atoi(parts[1])
 
 	return tSessionSimple{
 		Created: duration,
-		Name:    parts[1],
+		Name:    parts[2],
 		Widnows: windows,
 	}
 }
@@ -51,11 +51,11 @@ func (s tSessionSimple) Desc() string {
 type tTemplate = tSession
 
 func newTSession(tmuxSession string, order int) (tSession, error) {
-	parts := strings.Split(tmuxSession, " ")
+	parts := strings.SplitN(tmuxSession, "\t", 3)
 
 	return tSession{
 		Order: int16(order),
-		Name:  parts[1],
+		Name:  parts[2],
 	}, nil
 }
 
@@ -69,17 +69,17 @@ type tWindow struct {
 }
 
 func newTWindow(tmuxWindow, sessionName string) (tWindow, error) {
-	parts := strings.Split(tmuxWindow, " ")
+	parts := strings.SplitN(tmuxWindow, "\t", 3)
 
 	order, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return tWindow{}, fmt.Errorf("unable to parse order for window: %s", parts[1])
+		return tWindow{}, fmt.Errorf("unable to parse order for window: %s", parts[2])
 	}
 
 	return tWindow{
 		Order:         int16(order),
-		Name:          parts[1],
-		Layout:        parts[2],
+		Name:          parts[2],
+		Layout:        parts[1],
 		SessionName:   sessionName,
 		SessionWindow: fmt.Sprintf("%s:%s", sessionName, parts[0]),
 	}, nil
@@ -94,17 +94,17 @@ type tPane struct {
 }
 
 func newTPane(tmuxPane, sessionName, sessionWindow string) (tPane, error) {
-	parts := strings.Split(tmuxPane, " ")
+	parts := strings.SplitN(tmuxPane, "\t", 3)
 
 	order, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return tPane{}, fmt.Errorf("unable to parse order for pane: %s", parts[1])
+		return tPane{}, fmt.Errorf("unable to parse order for pane: %s", parts[2])
 	}
 
 	return tPane{
 		Order:         int16(order),
-		Name:          parts[1],
-		Path:          parts[2],
+		Name:          parts[2],
+		Path:          parts[1],
 		SessionWindow: sessionWindow,
 		SessionName:   sessionName,
 	}, nil
@@ -113,7 +113,7 @@ func newTPane(tmuxPane, sessionName, sessionWindow string) (tPane, error) {
 var errorSessionExists = errors.New("session exists")
 
 func ListSessions() ([]string, error) {
-	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_created} #{session_name} #{session_windows}").Output()
+	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_created}\t#{session_windows}\t#{session_name}").Output()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list tmux sessions")
 	}
@@ -123,8 +123,8 @@ func ListSessions() ([]string, error) {
 	)
 
 	sort.Slice(ss, func(i, j int) bool {
-		partsI := strings.Split(ss[i], " ")
-		partsJ := strings.Split(ss[j], " ")
+		partsI := strings.SplitN(ss[i], "\t", 3)
+		partsJ := strings.SplitN(ss[j], "\t", 3)
 		tsI, _ := strconv.ParseInt(partsI[0], 10, 8)
 		tsJ, _ := strconv.ParseInt(partsJ[0], 10, 8)
 		return tsI < tsJ
@@ -172,7 +172,7 @@ func AttachToSession(sessionName string) error {
 }
 
 func ListWindows(sessionName string) ([]string, error) {
-	output, err := exec.Command("tmux", "list-windows", "-t", sessionName, "-F", "#{window_index} #{window_name} #{window_layout}").Output()
+	output, err := exec.Command("tmux", "list-windows", "-t", sessionName, "-F", "#{window_index}\t#{window_layout}\t#{window_name}").Output()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list tmux windows for session: %s", sessionName)
 	}
@@ -235,7 +235,7 @@ func RenameWindow(window tWindow) error {
 }
 
 func ListPanes(sessionWindow string) ([]string, error) {
-	output, err := exec.Command("tmux", "list-panes", "-t", sessionWindow, "-F", "#{pane_index} #{pane_title} #{pane_current_path}").Output()
+	output, err := exec.Command("tmux", "list-panes", "-t", sessionWindow, "-F", "#{pane_index}\t#{pane_current_path}\t#{pane_title}").Output()
 	if err != nil {
 		return nil, fmt.Errorf("unable to list panes for window: %s \n", sessionWindow)
 	}

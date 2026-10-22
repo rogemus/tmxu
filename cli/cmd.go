@@ -65,8 +65,8 @@ var listSessionsCmd = Cmd{
 
 		fmt.Println("Available sessions")
 		for i, s := range ls {
-			parts := strings.Split(s, " ")
-			fmt.Printf(" %-3d %-20s\n", i+1, parts[1])
+			parts := strings.SplitN(s, "\t", 3)
+			fmt.Printf(" %-3d %-20s\n", i+1, parts[2])
 		}
 
 		return nil
