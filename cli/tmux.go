@@ -93,7 +93,7 @@ type tPane struct {
 	SessionWindow string `json:"sessionWindow"`
 }
 
-func newTPane(tmuxPane, sessionName, sessionWindow string) (tPane, error) {
+func newTPane(tmuxPane, sessionName, sessionWindow, windowName string) (tPane, error) {
 	parts := strings.SplitN(tmuxPane, "\t", 3)
 
 	order, err := strconv.Atoi(parts[0])
@@ -101,9 +101,14 @@ func newTPane(tmuxPane, sessionName, sessionWindow string) (tPane, error) {
 		return tPane{}, fmt.Errorf("unable to parse order for pane: %s", parts[2])
 	}
 
+	name := parts[2]
+	if name == "" {
+		name = windowName
+	}
+
 	return tPane{
 		Order:         int16(order),
-		Name:          parts[2],
+		Name:          name,
 		Path:          parts[1],
 		SessionWindow: sessionWindow,
 		SessionName:   sessionName,
