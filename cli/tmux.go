@@ -130,8 +130,8 @@ func ListSessions() ([]string, error) {
 	sort.Slice(ss, func(i, j int) bool {
 		partsI := strings.SplitN(ss[i], "\t", 3)
 		partsJ := strings.SplitN(ss[j], "\t", 3)
-		tsI, _ := strconv.ParseInt(partsI[0], 10, 8)
-		tsJ, _ := strconv.ParseInt(partsJ[0], 10, 8)
+		tsI, _ := strconv.ParseInt(partsI[0], 10, 64)
+		tsJ, _ := strconv.ParseInt(partsJ[0], 10, 64)
 		return tsI < tsJ
 	})
 
