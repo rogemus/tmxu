@@ -261,7 +261,7 @@ var restoreSessionsCmd = Cmd{
 		}
 
 		for _, s := range sessions {
-			numberOfPane := 1
+			numberOfPane := 0
 
 			err := NewSession(s, force)
 			if errors.Is(err, errorSessionExists) {
