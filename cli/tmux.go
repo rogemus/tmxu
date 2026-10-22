@@ -155,7 +155,8 @@ func NewSession(session tSession, force bool) error {
 		startingDir = session.Windows[0].Panes[0].Path
 	}
 
-	err := exec.Command("tmux", "new-session", "-c", startingDir, "-d", "-s", session.Name).Run()
+	args := append([]string{"new-session"}, startDirArgs(startingDir)...)
+	err := exec.Command("tmux", append(args, "-d", "-s", session.Name)...).Run()
 	if err != nil {
 		return fmt.Errorf("unable to create session: %s %s \n", session.Name, err.Error())
 	}
@@ -201,6 +202,16 @@ func HasSession(sessionName string) (bool, error) {
 	return false, nil
 }
 
+// startDirArgs returns the tmux `-c` args for path, or nothing when path is not
+// an existing directory so tmux inherits the session's working directory.
+func startDirArgs(path string) []string {
+	if info, err := os.Stat(path); err != nil || !info.IsDir() {
+		return nil
+	}
+
+	return []string{"-c", path}
+}
+
 func NewWindow(window tWindow) error {
 	if window.Order == 1 {
 		err := RenameWindow(window)
@@ -211,8 +222,8 @@ func NewWindow(window tWindow) error {
 
 		return nil
 	} else {
-		firstPanePath := window.Panes[0].Path
-		err := exec.Command("tmux", "new-window", "-c", firstPanePath, "-t", window.SessionWindow, "-n", window.Name).Run()
+		args := append(startDirArgs(window.Panes[0].Path), "-t", window.SessionWindow, "-n", window.Name)
+		err := exec.Command("tmux", append([]string{"new-window"}, args...)...).Run()
 		if err != nil {
 			return fmt.Errorf("unable to create window: %s \n", window.Name)
 		}
@@ -253,7 +264,8 @@ func ListPanes(sessionWindow string) ([]string, error) {
 
 func NewPane(pane tPane) error {
 	if pane.Order != 1 {
-		err := exec.Command("tmux", "split-window", "-d", "-c", pane.Path, "-t", pane.SessionWindow).Run()
+		args := append([]string{"split-window", "-d"}, startDirArgs(pane.Path)...)
+		err := exec.Command("tmux", append(args, "-t", pane.SessionWindow)...).Run()
 		if err != nil {
 			return fmt.Errorf("unable to create pane: %s for window: %s \n", pane.Name, pane.SessionWindow)
 		}
