@@ -212,9 +212,14 @@ func startDirArgs(path string) []string {
 	return []string{"-c", path}
 }
 
-func NewWindow(window tWindow) error {
-	if window.Order == 1 {
-		err := RenameWindow(window)
+// NewWindow renames the window created with the session when first is true,
+// otherwise it creates a new one. The first window is targeted by session name
+// because its saved index may differ from the current base-index.
+func NewWindow(window tWindow, first bool) error {
+	if first {
+		initial := window
+		initial.SessionWindow = window.SessionName
+		err := RenameWindow(initial)
 
 		if err != nil {
 			return fmt.Errorf("unable to rename initial window in the session: %s \n", window.SessionName)

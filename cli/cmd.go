@@ -275,8 +275,8 @@ var restoreSessionsCmd = Cmd{
 				return fmt.Errorf("Unable to create session: %s \n", s.Name)
 			}
 
-			for _, window := range s.Windows {
-				if err := NewWindow(window); err != nil {
+			for i, window := range s.Windows {
+				if err := NewWindow(window, i == 0); err != nil {
 					return fmt.Errorf("Unable to create window: %s \n", window.SessionWindow)
 				}
 
@@ -535,8 +535,8 @@ var newSessionCmd = Cmd{
 			return fmt.Errorf("Unable to create session: %s \n", t.Name)
 		}
 
-		for _, window := range t.Windows {
-			if err := NewWindow(window); err != nil {
+		for i, window := range t.Windows {
+			if err := NewWindow(window, i == 0); err != nil {
 				return fmt.Errorf("Unable to create window: %s \n", window.SessionWindow)
 			}
 
