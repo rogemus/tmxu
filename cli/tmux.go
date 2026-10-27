@@ -93,22 +93,30 @@ type tPane struct {
 	SessionWindow string `json:"sessionWindow"`
 }
 
-func newTPane(tmuxPane, sessionName, sessionWindow, windowName string) (tPane, error) {
+// paneName derives a stable pane name from its window. Pane titles are not
+// used because programs (shells, Claude Code) overwrite them dynamically.
+func paneName(windowName string, order int16, paneCount int) string {
+	if paneCount <= 1 {
+		return windowName
+	}
+
+	return fmt.Sprintf("%s_%d", windowName, order)
+}
+
+func newTPane(tmuxPane, sessionName, sessionWindow, windowName string, paneCount int) (tPane, error) {
 	parts := strings.SplitN(tmuxPane, "\t", 3)
+	if len(parts) < 3 {
+		return tPane{}, fmt.Errorf("unable to parse pane: %q", tmuxPane)
+	}
 
 	order, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return tPane{}, fmt.Errorf("unable to parse order for pane: %s", parts[2])
-	}
-
-	name := parts[2]
-	if name == "" {
-		name = windowName
+		return tPane{}, fmt.Errorf("unable to parse order for pane: %s", parts[0])
 	}
 
 	return tPane{
 		Order:         int16(order),
-		Name:          name,
+		Name:          paneName(windowName, int16(order), paneCount),
 		Path:          parts[1],
 		SessionWindow: sessionWindow,
 		SessionName:   sessionName,

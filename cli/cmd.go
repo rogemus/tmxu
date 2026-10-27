@@ -209,7 +209,7 @@ var saveSessionsCmd = Cmd{
 				}
 
 				for _, p := range lp {
-					tp, err := newTPane(p, tw.SessionName, tw.SessionWindow, tw.Name)
+					tp, err := newTPane(p, tw.SessionName, tw.SessionWindow, tw.Name, len(lp))
 					if err != nil {
 						return fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
 					}
@@ -391,7 +391,7 @@ var saveTemplateCmd = Cmd{
 			}
 
 			for _, p := range lp {
-				tp, err := newTPane(p, ts.Name, tw.SessionWindow, tw.Name)
+				tp, err := newTPane(p, ts.Name, tw.SessionWindow, tw.Name, len(lp))
 				if err != nil {
 					return fmt.Errorf("Unable to create tPane: %s \n", tp.Name)
 				}
