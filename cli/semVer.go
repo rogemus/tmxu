@@ -14,9 +14,12 @@ type semVer struct {
 }
 
 func newSemVer(v string) semVer {
-	sv := semVer{original: strings.TrimSpace(v)}
+	sv := semVer{
+		original: strings.TrimSpace(v),
+	}
+
+	v = strings.TrimPrefix(sv.original, "v")
 	parts := strings.Split(v, ".")
-	v = strings.TrimPrefix(v, "v")
 
 	if len(parts) > 0 {
 		sv.major, _ = strconv.Atoi(parts[0])
