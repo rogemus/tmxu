@@ -119,7 +119,7 @@ func TestTimeSince(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := TimeSince(test.since)
+			got := timeSince(test.since)
 
 			if got != test.want {
 				t.Errorf("TimeSince(%v) = %s, want %s", test.since, got, test.want)

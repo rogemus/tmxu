@@ -43,7 +43,7 @@ func (s tSessionSimple) Title() string {
 }
 
 func (s tSessionSimple) Desc() string {
-	since := TimeSince(s.Created)
+	since := timeSince(s.Created)
 
 	return fmt.Sprintf("%d win · %s", s.Widnows, since)
 }

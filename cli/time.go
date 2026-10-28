@@ -9,7 +9,7 @@ const day = 24 * time.Hour
 const month = 28 * day
 const year = 12 * month
 
-func TimeSince(d time.Duration) string {
+func timeSince(d time.Duration) string {
 	if d >= year {
 		years := d / year
 
