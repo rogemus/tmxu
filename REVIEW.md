@@ -12,21 +12,6 @@ Baseline: `go vet`, `gofmt -l` and `go test ./...` are clean (16 tests). Finding
 
 These are real defects, not style. Fix them first and add a test for each.
 
-### 1.1 `TimeSince` reports wrong units (`cli/time.go`)
-
-- `case seconds < oneMin` is unreachable because `seconds < 60` is caught earlier. Minutes are never reported.
-- The unit labels are shifted: a branch under one hour divides by `oneHour`, giving 0, and prints "1h ago". The menu shows "1h ago" for a 5-minute-old session.
-- `oneMonth` is 28 days and `oneYear` is 336 days; they are package `var`s with redundant `int()` conversions.
-- **Fix:** keep a `time.Duration` and `switch` on `d < time.Minute`, `d < time.Hour`, `d < 24*time.Hour`, and so on. Write a table test first.
-- **Learn:** `time.Duration` arithmetic, table-driven tests.
-
-### 1.2 `newSemVer` ignores the real major version (`cli/semVer.go:16-19`)
-
-- `strings.Split(v, ".")` runs before `strings.TrimPrefix(v, "v")`, so the trimmed value is dead and `"v0.7.0"` parses major as `Atoi("v0") = 0`. `v1.x` and `v2.x` both compare as major 0.
-- `Atoi` errors are discarded (`semVer.go:22-28`), so a wrong parse is silent.
-- **Fix:** trim first, then split, check `len(parts) == 3`, return errors, and add a `Compare(other) int` method. Compare versions instead of strings in `cmd.go:152-153`, otherwise a locally newer dev build is told to "update".
-- **Library alternative:** `golang.org/x/mod/semver`.
-
 ### 1.3 `versions.go` is fragile
 
 - `io.ReadAll` error ignored; `fmt.Printf("[%v]\n", res)` prints a debug value; `http.Get` has no timeout and no status check.
