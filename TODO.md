@@ -5,7 +5,6 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 
 ## 1. Bugs (fix first)
 
-- [ ] Fix `TimeSince` unit logic: unreachable branch, shifted labels (`cli/time.go`)
 - [ ] Fix `newSemVer`: trim `v` before splitting, handle `Atoi` errors (`cli/semVer.go`)
 - [ ] Fix `versions.go`: empty tag list panic, ignored `io.ReadAll` error, no timeout, no status check
 - [ ] Fix `HasSession`: "session absent" must be `(false, nil)`, not an error
