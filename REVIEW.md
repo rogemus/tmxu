@@ -12,13 +12,6 @@ Baseline: `go vet`, `gofmt -l` and `go test ./...` are clean (16 tests). Finding
 
 These are real defects, not style. Fix them first and add a test for each.
 
-### 1.3 `versions.go` is fragile
-
-- `io.ReadAll` error ignored; `fmt.Printf("[%v]\n", res)` prints a debug value; `http.Get` has no timeout and no status check.
-- `getNewestVersion` panics on an empty tag list (`sorted[len(sorted)-1]`; `strings.Split("", "\n")` yields `[""]`).
-- The `version` command hits the network on every call, which makes `tmxu --version` unusable offline and in scripts. The comment says GitHub, but the code queries `proxy.golang.org`.
-- **Fix:** `http.Client{Timeout: 3 * time.Second}` with `http.NewRequestWithContext`, check `StatusCode`, wrap the body in `io.LimitReader`, handle empty results. Make the check opt-in (`version --check`) and degrade to the local version on failure.
-
 ### 1.4 `HasSession` treats "no" as an error (`cli/tmux.go:150,199-211`)
 
 - `tmux has-session` exits 1 when the session does not exist, so the normal "no" case returns an error. `NewSession` discards it (`hs, _ :=`) and only works by accident. `cmd.go:367-369` cannot tell "absent" from "tmux failed". `hs == true` is non-idiomatic.
@@ -68,7 +61,7 @@ These are real defects, not style. Fix them first and add a test for each.
 
 ### 2.1 No wrapping, capitalized, trailing `\n`, causes dropped
 
-- No `%w` anywhere. Typical: `fmt.Errorf("Unable to read ... \n")`, `fmt.Errorf("Unable to create tPane: %s \n", tp.Name)`, where `tp.Name` is empty because the call failed. Files: `config.go` (about 30 sites), `cmd.go`, `tmux.go`, `versions.go`. Staticcheck ST1005 flags these.
+- No `%w` anywhere. Typical: `fmt.Errorf("Unable to read ... \n")`, `fmt.Errorf("Unable to create tPane: %s \n", tp.Name)`, where `tp.Name` is empty because the call failed. Files: `config.go` (about 30 sites), `cmd.go`, `tmux.go`. Staticcheck ST1005 flags these.
 - Root causes are lost: a failed `os.ReadFile` reports only "Unable to read" with no reason (permission denied vs not found). Mid-restore failures only show the outer message.
 - `cli.Run` (`cli.go:101`) prints with `%s` and no newline, which is why every message carries a hand-added `\n`.
 - **Fix:** `fmt.Errorf("read sessions file %s: %w", path, err)`. Lowercase, no trailing punctuation or newline. Add the newline in exactly one place: `fmt.Fprintln(os.Stderr, "tmxu:", err)`. Return or wrap `err` instead of replacing it with a generic message (`cmd.go:63,186,197,226,264,275,516`).
@@ -77,7 +70,7 @@ These are real defects, not style. Fix them first and add a test for each.
 
 ### 2.2 Swallowed errors
 
-`tmux.go:29,32,141,142,150`, `semVer.go:22-28`, `versions.go:19`, `menu.go:21,50,55`, `cli.go:114`, `config.go:109,123,210,226` (`path, _ := getTemplatesDirPath()`). A wrong-but-silent parse is worse than a failure. Check every one.
+`tmux.go:29,32,141,142,150`, `menu.go:21,50,55`, `cli.go:114`, `config.go:109,123,210,226` (`path, _ := getTemplatesDirPath()`). A wrong-but-silent parse is worse than a failure. Check every one.
 
 ### 2.3 Sentinels and typed errors
 
@@ -100,8 +93,7 @@ These are real defects, not style. Fix them first and add a test for each.
 ### 2.4 Exit, stderr and stdout
 
 - `cli.Run` calls `os.Exit` in five places (`cli.go:85,90,95,102,107`), so a method named `Run` is not testable. There is no `log.Fatal` or deliberate `panic`; the panics are accidental (1.5).
-- Errors go to stdout via `fmt.Printf`. `version` prints partial output and then returns an error (`cmd.go:148-149`).
-- Unknown command prints "Invalid command " (trailing space, no name). `-h`/`--help` fall through to "Invalid command". `help` is handled with a `len(os.Args)==N` chain (`cli.go:88-96`).
+- Errors go to stdout via `fmt.Printf`.- Unknown command prints "Invalid command " (trailing space, no name). `-h`/`--help` fall through to "Invalid command". `help` is handled with a `len(os.Args)==N` chain (`cli.go:88-96`).
 - **Fix:** `func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error`, with a single `os.Exit` in `main.go` that maps errors to codes via `errors.As` on a typed `usageError`. Codes: 0 success, 1 runtime failure, 2 usage error, 130 interrupt. Print only data to stdout; errors, prompts, "Aborted" go to stderr. Handle `flag.ErrHelp` (exit 0, help to stdout).
 - Inject `io.Writer` instead of calling `fmt.Print*` directly (`cmd.go:66-69,148-161,229,272,297,320-330,420,445,550`, `menu.go`, `output.go:24-27`); that makes output testable and golden-file friendly.
 
@@ -118,7 +110,6 @@ These are real defects, not style. Fix them first and add a test for each.
 
 - Everything is in one package `cli`, with exported functions that are not an API (`ListSessions`, `NewSession`, `AttachToSession`, `Max`, `Min`, `TimeSince`). Exported functions take unexported types (`NewSession(session tSession...)`).
 - `t` prefixes (`tSession`, `tWindow`, `tPane`, `tTemplate = tSession`) are non-idiomatic. Rename to `Session`, `Window`, `Pane`, `Template`. `tSessionSimple` (and its `Widnows` typo) is a view model that belongs next to the menu. `newTSession` returns an `error` that is always nil and ignores `parts[0..1]`.
-- `semVer.go` -> `semver.go`; merge `versions.go` into `update.go`.
 - `math.go`: delete; Go 1.21+ has builtin `min` and `max` (`menu.go:60,62`).
 - `output.go`: `renderTable` pads by `len(cell)` (bytes) and breaks on multibyte names; use `text/tabwriter` (5 lines).
 - `main.go`: `cli := cli.NewCli(...)` shadows the package name.
@@ -146,7 +137,7 @@ These are real defects, not style. Fix them first and add a test for each.
 | Flag/help text                               | flags declared in `Cmd.Flags [][]string` and again in `fs.BoolVar`/`StringVar` with different wording (`cmd.go:239/251, 344/356, 456/479`); README is a third copy; `Cmd.Examples` stored but never printed      | Build the `FlagSet` once per command and generate help from `fs.VisitAll`; define a `Flag` struct instead of `[][]string`; print examples or delete them                     |
 | `SessionName`/`SessionWindow`                | copied into every `Window` and `Pane` (`tmux.go:62-94`) although derivable (`name:index`)                                                                                                                        | Remove from persisted structs; compute targets at restore time (`fmt.Sprintf("%s:%d", ...)`). This changes the JSON schema, so add a `"version"` field and migrate old files |
 | Raw tmux line parsing                        | `strings.SplitN(s, "\t", 3)` in `cmd.go:68`, `tmux.go:27,54,72,107,139-140`, each with different bounds checks; `ListSessions() []string` returns tab-joined strings and the sort re-parses them each comparison | Parse once into typed structs with `Created time.Time`                                                                                                                       |
-| Splitting output                             | `strings.Split(strings.TrimSpace(string(output)), "\n")` (`tmux.go:134,194,272`, `versions.go:21`)                                                                                                               | One helper (`lines(out []byte) []string` that returns nil for empty)                                                                                                         |
+| Splitting output                             | `strings.Split(strings.TrimSpace(string(output)), "\n")` (`tmux.go:134,194,272`)                                                                                                               | One helper (`lines(out []byte) []string` that returns nil for empty)                                                                                                         |
 | `exec.Command("tmux", ...)`                  | 12 sites (`tmux.go:129,155,167,176,189,200,239,249,258,267,281,297`)                                                                                                                                             | One `run()` helper (and the test seam, 5.1)                                                                                                                                  |
 
 Typos and wrong text found along the way: the `list` output says "with their IDs and names" but prints an index and a name; examples use "tmux" where "tmxu" is meant (`cmd.go:84,174,244-246`); `new-session` flag set is named `"new-session"` inside save-template (`cmd.go:355`, copy-paste), so flag errors name the wrong command; `tTemplate(ts)` at `cmd.go:415` is a no-op conversion on an alias.
@@ -246,7 +237,7 @@ Parse tmux output once into `SessionInfo{Name string; Created time.Time; ...}`, 
 
 ### 5.3 Tests worth writing
 
-- **Pure unit tests (no seam needed):** `TimeSince`, semver parse/compare/sort, `renderTable`.
+- **Pure unit tests (no seam needed):** `TimeSince`, `renderTable`.
 - **Tmux layer with the fake:** `ListSessions` ordering by `session_created`; empty output (currently panics); `NewSession` with and without force; `startDirArgs` (use `t.TempDir()` for an existing dir and a regular file for the "not a directory" case, `tmux.go:215`); `NewWindow` first vs later windows.
 - **Config:** make a `store{dir string}` so no `$HOME` mutation is needed (otherwise `t.Setenv("HOME", t.TempDir())`). Cases: round trip, missing file, malformed JSON, template name with a path separator (must be rejected), a non-`.json` file in the templates dir, delete of a missing template. Compare with `reflect.DeepEqual`.
 - **Golden files** in `testdata/` with an `-update` flag: the saved sessions JSON (pins the on-disk schema before you drop `SessionName`/`SessionWindow`), `help`/`helpLong` output (needs writer injection), `renderTable`.
@@ -266,7 +257,6 @@ Parse tmux output once into `SessionInfo{Name string; Created time.Time; ...}`, 
 
 - No `context` anywhere. Add `ctx context.Context` as the first parameter of everything that shells out or does network I/O. In `main`: `ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM); defer stop()`.
 - `exec.Command` -> `exec.CommandContext(ctx, "tmux", ...)`. For non-interactive calls wrap with `context.WithTimeout(ctx, 5*time.Second)` so a hung tmux server socket cannot block the CLI forever. Do **not** put a timeout on `AttachToSession` (interactive, long-lived); pass only the signal context there.
-- HTTP: see 1.3.
 - `CommandContext` kills the child on cancel, so Ctrl-C mid-restore leaves a half-restored session. Decide: clean up, or report which session was in progress.
 
 ### 6.2 Raw mode and signals
@@ -320,7 +310,7 @@ Baseline: hand-rolled dispatch in `cli/cli.go:82-109` on `os.Args`; per-command 
 ### 7.1 Help, version and flag conventions
 
 - `tmxu -h`, `tmxu ls -h`, `tmxu --help` print "Invalid command" plus full help and exit 1. Handle `flag.ErrHelp`: help to stdout, exit 0. Usage errors go to stderr, exit 2.
-- `-V`/`--version` globally; the `version` subcommand is local (print `tmxu 0.7.0`, one line, no trailing space; `cmd.go:148,154,161` print a trailing space). Network check behind `version --check`, and `TMXU_NO_UPDATE_CHECK`.
+- `-V`/`--version` globally; print `tmxu 0.7.0`, one line, no trailing space (the `version` subcommand prints a trailing space).
 - Help layout: Usage, Commands, Options, Environment, Exit status. Print `Examples`.
 - stdlib `flag` accepts `-flag` and `--flag` identically but has **no short/long pairs, no combined short flags, and stops at the first positional argument**. So `tmxu new mysession -path /tmp` silently treats `-path` as a positional argument and ignores it. Fix by documenting "flags before arguments" and detecting stray `-x` tokens in positional args, or by pre-splitting `args` into flags and positionals yourself. Support the `--` terminator so a session named `-x` works (the `flag` package stops at `--`; remember to honor it in any pre-splitting).
 - Missing required argument: print usage, exit 2 (today `new-session` creates an unnamed session).
@@ -409,7 +399,7 @@ Write `man/tmxu.1` in roff with sections NAME, SYNOPSIS, DESCRIPTION, COMMANDS, 
 ## 8. Repo hygiene and release
 
 - **`.gitignore`** (`CLAUDE.md`, `tmxu`): the unanchored `tmxu` also ignores any directory or file named `tmxu` (a future `cmd/tmxu/`). Use `/tmxu`. Add `.DS_Store`, `dist/`, `.claude/`, `*.test`, `coverage.out`. No stray binary is committed.
-- **CLAUDE.md** is gitignored and stale: it mentions `gh.go` (the file is `versions.go`), `Formula/tmxu.rb` and `brew install --formula Formula/tmxu.rb` (no `Formula/` directory exists) and `tSession` names. Either track it and fix it, or leave it untracked.
+- **CLAUDE.md** is gitignored and stale: it mentions `gh.go`, `Formula/tmxu.rb` and `brew install --formula Formula/tmxu.rb` (no `Formula/` directory exists) and `tSession` names. Either track it and fix it, or leave it untracked.
 - **README:** Go "1.16+" is wrong (`go.mod` requires 1.26). Add the tmux version, install sections, completion setup, exit codes, JSON format, the fzf recipe, and how it differs from tmux-resurrect, tmuxinator and sesh. Save/restore prompt for confirmation, so cron backups are impossible until `-y` exists.
 - **CI** (`.github/workflows/release.yaml`): the only workflow tags `version.txt` on push to main. There is no build, vet, test or lint on PRs. Add `ci.yaml`: `go build ./...`, `go vet ./...`, `gofmt -l` diff check, `go test -race ./...`, staticcheck, `go mod tidy` diff check. Pin actions by SHA (`actions/checkout@v5` is unpinned); add Dependabot for modules and actions.
 - **Release flow problems:** `git tag "$VERSION"` fails if the tag already exists (any re-edit of `version.txt`); no `git config user.name/email`; no check that the tag matches `v*`; no GitHub Release, no binaries, no checksums, no changelog. The version lives in two places (`version.txt` embedded in the binary, and the tag).
@@ -435,4 +425,4 @@ Write `man/tmxu.1` in roff with sections NAME, SYNOPSIS, DESCRIPTION, COMMANDS, 
 9. **Unix polish** (section 7): help/exit codes/flags first, then TTY and `$TMUX` handling, then `--json` and `-0`, then hand-written completion and the man page last (most work, least idiomatic by hand).
 10. **CI and release** (section 8).
 
-Optional shortcut if you later decide that learning speed matters less: cobra (flags, completion, man), `x/mod/semver`, `x/sync/errgroup`, goreleaser.
+Optional shortcut if you later decide that learning speed matters less: cobra (flags, completion, man), `x/sync/errgroup`, goreleaser.

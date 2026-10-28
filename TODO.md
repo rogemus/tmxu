@@ -5,7 +5,6 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 
 ## 1. Bugs (fix first)
 
-- [ ] Fix `versions.go`: empty tag list panic, ignored `io.ReadAll` error, no timeout, no status check
 - [ ] Fix `HasSession`: "session absent" must be `(false, nil)`, not an error
 - [ ] Fix menu: negative `strings.Repeat`, ignored `MakeRaw`/`ReadByte` errors, empty `items`, EOF busy loop, Ctrl-C (byte 3)
 - [ ] Reject template names containing `/`, `..`, empty or leading `.` (path traversal)
@@ -25,12 +24,11 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 - [ ] Add sentinels `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`exec.ErrNotFound`)
 - [ ] Add typed `*TmuxError{Args, Stderr, Err}` from one `run()` helper
 - [ ] Use `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist`
-- [ ] Handle every swallowed error (`tmux.go:29,32,141,142,150`, `semVer.go:22-28`, `cli.go:114`, `config.go:109,123,210,226`)
+- [ ] Handle every swallowed error (`tmux.go:29,32,141,142,150`, `cli.go:114`, `config.go:109,123,210,226`)
 - [ ] `Run(ctx, args) error`; single `os.Exit` in `main.go`
 - [ ] Errors to stderr, data to stdout, `tmxu:` prefix on errors
 - [ ] Exit codes: 0 ok, 1 failure, 2 usage, 130 interrupt
 - [ ] Use `errors.Join` to collect restore errors
-- [ ] Remove debug print `versions.go:14`
 
 ## 3. Architecture and structure
 
@@ -39,7 +37,6 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 - [ ] Drop `t` prefixes: `Session`, `Window`, `Pane`, `Template`; move `tSessionSimple` next to menu code
 - [ ] Use `int` for `Order` (not `int16`)
 - [ ] Parse tmux output once into typed structs (`SessionInfo` with `time.Time`); stop passing tab-joined strings
-- [ ] Rename `semVer.go` -> `semver.go`; merge with `versions.go` into `update.go`
 - [ ] Delete `math.go`; use builtin `min`/`max`
 - [ ] Replace `renderTable` with `text/tabwriter`
 - [ ] Split `cmd.go` (553 lines) into per-command files
@@ -69,7 +66,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 - [ ] Add `Runner` interface (`Run`, `Attach`) + `execRunner`; `Tmux` struct holds it
 - [ ] Add `fakeRunner` recording args and returning canned output
 - [ ] Add config `store{dir}` so tests use `t.TempDir()`
-- [ ] Table tests: `TimeSince`, semver parse/compare, `renderTable`
+- [ ] Table tests: `TimeSince`, `renderTable`
 - [ ] Table tests: tmux arg building (`NewSession`, `NewWindow`, `startDirArgs`), `ListSessions` ordering, empty output
 - [ ] Config tests: round trip, missing file, bad JSON, traversal name, non-`.json` file, delete missing
 - [ ] Golden files in `testdata/` with `-update` flag (session JSON, help output, table)
@@ -82,8 +79,6 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 
 - [ ] Thread `ctx` through everything; `signal.NotifyContext` in `main`
 - [ ] `exec.CommandContext` with 5s timeout for non-interactive calls; no timeout for `attach`
-- [ ] `http.Client{Timeout: 3s}`, status check and `io.LimitReader` for the version check; degrade gracefully
-- [ ] Make the update check opt-in (`version --check`); `TMXU_NO_UPDATE_CHECK`
 - [ ] Optional: parallel snapshot with `sync.WaitGroup`, indexed result slice and a channel semaphore (measure first)
 - [ ] Keep restore sequential (server start race, index dependencies)
 - [ ] Decide on Ctrl-C during restore: clean up or report the partial session
@@ -91,7 +86,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 ## 7. Unix-style CLI
 
 - [ ] `-h`/`--help` globally and per command (exit 0, stdout); usage errors exit 2 on stderr
-- [ ] `-V`/`--version`; make `version` local, no network
+- [ ] `-V`/`--version`
 - [ ] Standard help layout: Usage, Commands, Options, Environment, Exit status; print Examples
 - [ ] Support `--` terminator and flags after positional args (today `-path` after a name is silently ignored)
 - [ ] Short and long flag pairs via a small helper
