@@ -1,3 +1,5 @@
+// Package cli implements the tmxu command-line interface: command
+// registration, tmux interaction and session/template storage.
 package cli
 
 import (
