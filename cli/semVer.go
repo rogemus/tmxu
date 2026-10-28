@@ -14,21 +14,27 @@ type semVer struct {
 }
 
 func newSemVer(v string) semVer {
-	sv := semVer{
-		original: strings.TrimSpace(v),
-	}
-
+	sv := semVer{original: strings.TrimSpace(v)}
 	v = strings.TrimPrefix(sv.original, "v")
 	parts := strings.Split(v, ".")
 
+	var maErr, miErr, pErr error
+
 	if len(parts) > 0 {
-		sv.major, _ = strconv.Atoi(parts[0])
+		sv.major, maErr = strconv.Atoi(parts[0])
 	}
 	if len(parts) > 1 {
-		sv.minor, _ = strconv.Atoi(parts[1])
+		sv.minor, miErr = strconv.Atoi(parts[1])
 	}
 	if len(parts) > 2 {
-		sv.patch, _ = strconv.Atoi(parts[2])
+		sv.patch, pErr = strconv.Atoi(parts[2])
+	}
+
+	if miErr != nil || maErr != nil || pErr != nil {
+		sv.major = 0
+		sv.minor = 0
+		sv.patch = 0
+		return sv
 	}
 
 	return sv

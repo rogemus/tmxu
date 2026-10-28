@@ -59,9 +59,9 @@ func TestNewSemVer(t *testing.T) {
 			want:  semVer{original: "abc"},
 		},
 		{
-			name:  "non numeric part defaults to zero",
+			name:  "non numeric part returns zero version",
 			input: "1.x.3",
-			want:  semVer{original: "1.x.3", major: 1, patch: 3},
+			want:  semVer{original: "1.x.3"},
 		},
 	}
 
