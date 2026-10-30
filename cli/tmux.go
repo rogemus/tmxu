@@ -11,6 +11,24 @@ import (
 	"time"
 )
 
+var (
+	ErrCannotCreateSession   = errors.New("cannot create session")
+	ErrCannotKillSession     = errors.New("cannot kill session")
+	ErrCannotAttachSession   = errors.New("cannot attach to session")
+	ErrCannotListSessions    = errors.New("cannot list sessions")
+	ErrCannotCreatePane      = errors.New("cannot create pane")
+	ErrCannotRenamePane      = errors.New("cannot rename pane")
+	ErrCannotListPanes       = errors.New("cannot list panes")
+	ErrCannotListWindows     = errors.New("cannot list windows for session")
+	ErrCannotValidateSession = errors.New("cannot validate session")
+	ErrCannotCreateWindow    = errors.New("cannot create window")
+	ErrCannotRenameWindow    = errors.New("cannot rename window")
+	ErrCannotSetLayout       = errors.New("cannot set window layout")
+	ErrCannotParseWindow     = errors.New("cannot parse window")
+	ErrCannotParsePane       = errors.New("cannot parse pane")
+	ErrSessionExists         = errors.New("session exists")
+)
+
 type tSession struct {
 	Order   int16     `json:"order"`
 	Name    string    `json:"name"`
@@ -20,7 +38,7 @@ type tSession struct {
 type tSessionSimple struct {
 	Created time.Duration
 	Name    string
-	Widnows int
+	Windows int
 }
 
 func newTSessionSimple(s string) tSessionSimple {
@@ -34,7 +52,7 @@ func newTSessionSimple(s string) tSessionSimple {
 	return tSessionSimple{
 		Created: duration,
 		Name:    parts[2],
-		Widnows: windows,
+		Windows: windows,
 	}
 }
 
@@ -45,7 +63,7 @@ func (s tSessionSimple) Title() string {
 func (s tSessionSimple) Desc() string {
 	since := timeSince(s.Created)
 
-	return fmt.Sprintf("%d win · %s", s.Widnows, since)
+	return fmt.Sprintf("%d win · %s", s.Windows, since)
 }
 
 type tTemplate = tSession
@@ -73,7 +91,7 @@ func newTWindow(tmuxWindow, sessionName string) (tWindow, error) {
 
 	order, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return tWindow{}, fmt.Errorf("unable to parse order for window: %s", parts[2])
+		return tWindow{}, fmt.Errorf("%w: %s %w", ErrCannotParseWindow, parts[2], err)
 	}
 
 	return tWindow{
@@ -106,12 +124,12 @@ func paneName(windowName string, order int16, paneCount int) string {
 func newTPane(tmuxPane, sessionName, sessionWindow, windowName string, paneCount int) (tPane, error) {
 	parts := strings.SplitN(tmuxPane, "\t", 3)
 	if len(parts) < 3 {
-		return tPane{}, fmt.Errorf("unable to parse pane: %q", tmuxPane)
+		return tPane{}, fmt.Errorf("%w: %s", ErrCannotParsePane, tmuxPane)
 	}
 
 	order, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return tPane{}, fmt.Errorf("unable to parse order for pane: %s", parts[0])
+		return tPane{}, fmt.Errorf("%w: %s %w", ErrCannotParsePane, parts[0], err)
 	}
 
 	return tPane{
@@ -123,12 +141,10 @@ func newTPane(tmuxPane, sessionName, sessionWindow, windowName string, paneCount
 	}, nil
 }
 
-var errorSessionExists = errors.New("session exists")
-
 func ListSessions() ([]string, error) {
 	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_created}\t#{session_windows}\t#{session_name}").Output()
 	if err != nil {
-		return nil, fmt.Errorf("unable to list tmux sessions")
+		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
 	}
 
 	ss := strings.Split(
@@ -148,13 +164,12 @@ func ListSessions() ([]string, error) {
 
 func NewSession(session tSession, force bool) error {
 	hs, _ := HasSession(session.Name)
-
-	if hs == true && !force {
-		return errorSessionExists
-	} else if hs == true && force {
+	if hs && !force {
+		return fmt.Errorf("%w: %s", ErrSessionExists, session.Name)
+	} else if hs && force {
 		err := exec.Command("tmux", "kill-session", "-t", session.Name).Run()
 		if err != nil {
-			return fmt.Errorf("Unable to kill session: %s \n", session.Name)
+			return fmt.Errorf("%w: %s %w", ErrCannotKillSession, session.Name, err)
 		}
 	}
 
@@ -166,7 +181,7 @@ func NewSession(session tSession, force bool) error {
 	args := append([]string{"new-session"}, startDirArgs(startingDir)...)
 	err := exec.Command("tmux", append(args, "-d", "-s", session.Name)...).Run()
 	if err != nil {
-		return fmt.Errorf("unable to create session: %s %s \n", session.Name, err.Error())
+		return fmt.Errorf("%w: %s %w", ErrCannotCreateSession, session.Name, err)
 	}
 
 	return nil
@@ -179,7 +194,7 @@ func AttachToSession(sessionName string) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("%w: %s %w", ErrCannotAttachSession, sessionName, err)
 	}
 
 	return nil
@@ -188,7 +203,7 @@ func AttachToSession(sessionName string) error {
 func ListWindows(sessionName string) ([]string, error) {
 	output, err := exec.Command("tmux", "list-windows", "-t", sessionName, "-F", "#{window_index}\t#{window_layout}\t#{window_name}").Output()
 	if err != nil {
-		return nil, fmt.Errorf("unable to list tmux windows for session: %s", sessionName)
+		return nil, fmt.Errorf("%w: %s %w", ErrCannotListWindows, sessionName, err)
 	}
 
 	return strings.Split(
@@ -200,7 +215,7 @@ func HasSession(sessionName string) (bool, error) {
 	output, err := exec.Command("tmux", "has-session", "-t", sessionName).Output()
 
 	if err != nil {
-		return false, fmt.Errorf("unable to validate session: %s", sessionName)
+		return false, fmt.Errorf("%w: %s %w", ErrCannotValidateSession, sessionName, err)
 	}
 
 	if strings.TrimSpace(string(output)) == "" {
@@ -230,7 +245,7 @@ func NewWindow(window tWindow, first bool) error {
 		err := RenameWindow(initial)
 
 		if err != nil {
-			return fmt.Errorf("unable to rename initial window in the session: %s \n", window.SessionName)
+			return fmt.Errorf("%w: %s %w", ErrCannotRenameWindow, window.SessionName, err)
 		}
 
 		return nil
@@ -238,7 +253,7 @@ func NewWindow(window tWindow, first bool) error {
 		args := append(startDirArgs(window.Panes[0].Path), "-t", window.SessionWindow, "-n", window.Name)
 		err := exec.Command("tmux", append([]string{"new-window"}, args...)...).Run()
 		if err != nil {
-			return fmt.Errorf("unable to create window: %s \n", window.Name)
+			return fmt.Errorf("%w: %s %w", ErrCannotCreateWindow, window.Name, err)
 		}
 	}
 
@@ -248,7 +263,7 @@ func NewWindow(window tWindow, first bool) error {
 func SetWindowLayout(window tWindow) error {
 	err := exec.Command("tmux", "select-layout", "-t", window.SessionWindow, window.Layout).Run()
 	if err != nil {
-		return fmt.Errorf("unable to select layout for window: %s", window.SessionWindow)
+		return fmt.Errorf("%w: %s %w", ErrCannotSetLayout, window.SessionWindow, err)
 	}
 
 	return nil
@@ -257,7 +272,7 @@ func SetWindowLayout(window tWindow) error {
 func RenameWindow(window tWindow) error {
 	err := exec.Command("tmux", "rename-window", "-t", window.SessionWindow, window.Name).Run()
 	if err != nil {
-		return fmt.Errorf("unable to rename window: %s", window.SessionWindow)
+		return fmt.Errorf("%w: %s %w", ErrCannotRenameWindow, window.SessionWindow, err)
 	}
 
 	return nil
@@ -266,7 +281,7 @@ func RenameWindow(window tWindow) error {
 func ListPanes(sessionWindow string) ([]string, error) {
 	output, err := exec.Command("tmux", "list-panes", "-t", sessionWindow, "-F", "#{pane_index}\t#{pane_current_path}\t#{pane_title}").Output()
 	if err != nil {
-		return nil, fmt.Errorf("unable to list panes for window: %s \n", sessionWindow)
+		return nil, fmt.Errorf("%w: %s %w", ErrCannotListPanes, sessionWindow, err)
 	}
 
 	return strings.Split(
@@ -280,7 +295,7 @@ func NewPane(pane tPane) error {
 		args := append([]string{"split-window", "-d"}, startDirArgs(pane.Path)...)
 		err := exec.Command("tmux", append(args, "-t", pane.SessionWindow)...).Run()
 		if err != nil {
-			return fmt.Errorf("unable to create pane: %s for window: %s \n", pane.Name, pane.SessionWindow)
+			return fmt.Errorf("%w: %s|%s %w", ErrCannotCreatePane, pane.SessionWindow, pane.Name, err)
 		}
 	}
 
@@ -296,7 +311,7 @@ func RenamePane(pane tPane) error {
 	targetPane := fmt.Sprintf("%s.%d", pane.SessionWindow, pane.Order)
 	err := exec.Command("tmux", "select-pane", "-t", targetPane, "-T", pane.Name).Run()
 	if err != nil {
-		return fmt.Errorf("unable to rename pane: %s \n", targetPane)
+		return fmt.Errorf("%w: %s %w", ErrCannotRenamePane, targetPane, err)
 	}
 
 	return nil
