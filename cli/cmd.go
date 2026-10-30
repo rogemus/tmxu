@@ -253,7 +253,7 @@ var restoreSessionsCmd = Cmd{
 			numberOfPane := 0
 
 			err := NewSession(s, force)
-			if errors.Is(err, errorSessionExists) {
+			if errors.Is(err, ErrSessionExists) {
 				fmt.Printf("Session already exist: %s \n", s.Name)
 				continue
 			} else if err != nil {
@@ -487,7 +487,7 @@ var newSessionCmd = Cmd{
 			}
 
 			err := NewSession(t, false)
-			if errors.Is(err, errorSessionExists) {
+			if errors.Is(err, ErrSessionExists) {
 				return fmt.Errorf("Session already exist: %s \n", t.Name)
 			} else if err != nil {
 				return fmt.Errorf("Unable to create session: %s \n", t.Name)
@@ -514,7 +514,7 @@ var newSessionCmd = Cmd{
 		}
 
 		err = NewSession(t, false)
-		if errors.Is(err, errorSessionExists) {
+		if errors.Is(err, ErrSessionExists) {
 			return fmt.Errorf("Session already exist: %s \n", t.Name)
 		} else if err != nil {
 			return fmt.Errorf("Unable to create session: %s \n", t.Name)
