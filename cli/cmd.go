@@ -102,7 +102,7 @@ var attachSessionCmd = Cmd{
 
 			items := sessionsToMenuItems(ls)
 			selectedSession, err := interactiveMenu(items)
-			if errors.Is(err, errorAborded) {
+			if errors.Is(err, ErrAborted) {
 				fmt.Printf("Aborted \n")
 				return nil
 			}

@@ -17,14 +17,18 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 
 ## 2. Errors
 
-- [ ] Lowercase error strings, no trailing `\n` or punctuation
-- [ ] Wrap with `%w` everywhere; stop replacing causes with generic text
-- [ ] Fix typos: "sassion", "abborded", "availabe", "Widnows", `"%s ]n"`
-- [ ] Rename sentinels `errorSessionExists` -> `errSessionExists`, `errorAborded` -> `errAborted`
+- [ ] Clean up `cmd.go`: no custom errors, no ad-hoc `fmt.Errorf`
+  - Define each error in the function that fails (`tmux.go`, `config.go`, `menu.go`), never in `cmd.go`
+  - `Run` funcs just `return err` when the callee already wraps a sentinel (list/attach/new session, window, pane, layout, template load/delete)
+  - Callee that returns no error today gets one: `newTSession` returns `ErrCannotParseSession`
+  - Drop redundant wrappers: `ErrCannotSaveSessions`, `ErrCannotLoadSessions`, `ErrCannotListTemplates` (`config.go` already has `ErrCannotSaveSessionFile`, `ErrCannotReadSessionFile`, `ErrCannotReadTemplatesDir`)
+  - Flag parse, menu, pwd: wrap with `%w` in a helper next to the code, not inline
+  - Missing-argument errors (`ErrNoSessionName`, `ErrNoTemplateName`) live with the arg-parsing helper, not in `cmd.go`
+  - Split `err != nil || !hs` so a nil `err` is never wrapped
 - [ ] Add sentinels `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`exec.ErrNotFound`)
 - [ ] Add typed `*TmuxError{Args, Stderr, Err}` from one `run()` helper
 - [ ] Use `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist`
-- [ ] Handle every swallowed error (`tmux.go:29,32,141,142,150`, `cli.go:114`, `config.go:109,123,210,226`)
+- [ ] Handle every swallowed error (`cli.go:116`, `config.go:127,141,228,248`, `menu.go:21,50`, `tmux.go:167,168,176`)
 - [ ] `Run(ctx, args) error`; single `os.Exit` in `main.go`
 - [ ] Errors to stderr, data to stdout, `tmxu:` prefix on errors
 - [ ] Exit codes: 0 ok, 1 failure, 2 usage, 130 interrupt

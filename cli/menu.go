@@ -10,7 +10,7 @@ import (
 	"golang.org/x/term"
 )
 
-var errorAborded = errors.New("abborded")
+var ErrAborted = errors.New("aborted")
 
 type menuItem interface {
 	Desc() string
@@ -63,14 +63,14 @@ func interactiveMenu(items []menuItem) (menuItem, error) {
 					}
 				}
 			} else {
-				return nil, errorAborded
+				return nil, ErrAborted
 			}
 		case 13: // Enter
 			fmt.Print("\033[H\033[2J")
 			return items[selected], nil
 		case 'q':
 			fmt.Print("\033[H\033[2J")
-			return nil, errorAborded
+			return nil, ErrAborted
 		}
 	}
 }
@@ -79,7 +79,10 @@ func sessionsToMenuItems(sessions []string) []menuItem {
 	var items []menuItem
 
 	for _, s := range sessions {
-		items = append(items, newTSessionSimple(s))
+		ses, err := newTSessionSimple(s)
+		if err == nil {
+			items = append(items, ses)
+		}
 	}
 
 	return items

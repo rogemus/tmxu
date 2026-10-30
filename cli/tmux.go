@@ -27,6 +27,9 @@ var (
 	ErrCannotParseWindow     = errors.New("cannot parse window")
 	ErrCannotParsePane       = errors.New("cannot parse pane")
 	ErrSessionExists         = errors.New("session exists")
+	ErrInvalidTimestamp      = errors.New("invalid timestamp")
+	ErrInvalidWindowsIndex   = errors.New("invalid windows index")
+	ErrInvalidSessionIndex   = errors.New("invalid session index")
 )
 
 type tSession struct {
@@ -41,19 +44,26 @@ type tSessionSimple struct {
 	Windows int
 }
 
-func newTSessionSimple(s string) tSessionSimple {
+func newTSessionSimple(s string) (tSessionSimple, error) {
 	parts := strings.SplitN(s, "\t", 3)
 	// Parse Unix timestamp from tmux (seconds since epoch)
-	createdTimestamp, _ := strconv.ParseInt(parts[0], 10, 64)
+	createdTimestamp, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return tSessionSimple{}, ErrInvalidTimestamp
+	}
+
 	createdTime := time.Unix(createdTimestamp, 0)
 	duration := time.Since(createdTime)
-	windows, _ := strconv.Atoi(parts[1])
+	windows, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return tSessionSimple{}, ErrInvalidWindowsIndex
+	}
 
 	return tSessionSimple{
 		Created: duration,
 		Name:    parts[2],
 		Windows: windows,
-	}
+	}, nil
 }
 
 func (s tSessionSimple) Title() string {
