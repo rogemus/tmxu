@@ -23,7 +23,7 @@ func line(sessionID, windowID, paneID string, windowIndex, paneIndex int) TmuxLi
 func windowIDs(d TmuxData, sessionID string) []string {
 	ids := []string{}
 	for _, w := range d.windows[sessionID] {
-		ids = append(ids, w.Id)
+		ids = append(ids, w.ID)
 	}
 
 	return ids
@@ -32,7 +32,7 @@ func windowIDs(d TmuxData, sessionID string) []string {
 func paneIDs(d TmuxData, windowID string) []string {
 	ids := []string{}
 	for _, p := range d.panes[windowID] {
-		ids = append(ids, p.Id)
+		ids = append(ids, p.ID)
 	}
 
 	return ids
@@ -174,17 +174,17 @@ func TestParseTmuxLinesFields(t *testing.T) {
 	got := parseTmuxLines([]TmuxLine{line("test-session-id", "test-window-id", "test-pane-id", 4, 2)})
 
 	s := got.sessions["test-session-id"]
-	if s.Id != "test-session-id" || s.Name != "test-session-id-name" {
+	if s.ID != "test-session-id" || s.Name != "test-session-id-name" {
 		t.Errorf("session = %+v", s)
 	}
 
 	w := got.windows["test-session-id"][0]
-	if w.Id != "test-window-id" || w.Index != 4 || w.Name != "test-window-id-name" {
+	if w.ID != "test-window-id" || w.Index != 4 || w.Name != "test-window-id-name" {
 		t.Errorf("window = %+v", w)
 	}
 
 	p := got.panes["test-window-id"][0]
-	if p.Id != "test-pane-id" || p.Index != 2 || p.Path != "/path/test-pane-id" || p.Title != "test-pane-id-title" {
+	if p.ID != "test-pane-id" || p.Index != 2 || p.Path != "/path/test-pane-id" || p.Title != "test-pane-id-title" {
 		t.Errorf("pane = %+v", p)
 	}
 }

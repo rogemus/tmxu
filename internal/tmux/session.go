@@ -1,20 +1,20 @@
 package tmux
 
 type Session struct {
-	Id      string   `json:"id"`
-	Name    string   `json:"name"`
-	Windows []Window `json:"windows"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	FirstWindowName string `json:"firstWindowName"`
 }
 
 func NewSession(l TmuxLine) Session {
 	return Session{
-		Id:      l.SessionID,
-		Name:    l.SessionName,
-		Windows: make([]Window, 0),
+		ID:              l.SessionID,
+		Name:            l.SessionName,
+		FirstWindowName: l.WindowName,
 	}
 }
 
 func (s Session) Eq(c Comperable) bool {
 	i, ok := c.(Session)
-	return ok && s.Id == i.Id
+	return ok && s.ID == i.ID
 }

@@ -1,3 +1,5 @@
+// Package tmux holds the logic for interacting with the tmux API. It runs tmux
+// commands, parses their output, and models sessions, windows and panes.
 package tmux
 
 import (
@@ -46,10 +48,10 @@ func (d TmuxData) String() string {
 		fmt.Fprintf(&b, "%s %q\n", sid, d.sessions[sid].Name)
 
 		for _, w := range d.windows[sid] {
-			fmt.Fprintf(&b, "  %s [%d] %q\n", w.Id, w.Index, w.Name)
+			fmt.Fprintf(&b, "  %s [%d] %q\n", w.ID, w.Index, w.Name)
 
-			for _, p := range d.panes[w.Id] {
-				fmt.Fprintf(&b, "    %s [%d] %q %s\n", p.Id, p.Index, p.Title, p.Path)
+			for _, p := range d.panes[w.ID] {
+				fmt.Fprintf(&b, "    %s [%d] %q %s\n", p.ID, p.Index, p.Title, p.Path)
 			}
 		}
 	}
@@ -99,17 +101,17 @@ func parseTmuxLines(lines []TmuxLine) TmuxData {
 		if _, ok := sessions[l.SessionID]; ok {
 			s = sessions[l.SessionID]
 		} else {
-			sessions[s.Id] = s
+			sessions[s.ID] = s
 		}
 
 		w := NewWindow(l)
-		if !Contain(windows[s.Id], w) {
-			windows[s.Id] = append(windows[s.Id], w)
+		if !Contain(windows[s.ID], w) {
+			windows[s.ID] = append(windows[s.ID], w)
 		}
 
 		p := NewPane(l)
-		if !Contain(panes[w.Id], p) {
-			panes[w.Id] = append(panes[w.Id], p)
+		if !Contain(panes[w.ID], p) {
+			panes[w.ID] = append(panes[w.ID], p)
 		}
 	}
 

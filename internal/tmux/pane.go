@@ -5,7 +5,7 @@ import (
 )
 
 type Pane struct {
-	Id    string `json:"id"`
+	ID    string `json:"id"`
 	Index int    `json:"index"`
 	Title string `json:"title"`
 	Path  string `json:"path"`
@@ -19,7 +19,7 @@ var (
 
 func NewPane(l TmuxLine) Pane {
 	return Pane{
-		Id:    l.PaneID,
+		ID:    l.PaneID,
 		Index: l.PaneIndex,
 		Title: l.PaneTitle,
 		Path:  l.PanePath,
@@ -28,5 +28,5 @@ func NewPane(l TmuxLine) Pane {
 
 func (p Pane) Eq(c Comperable) bool {
 	i, ok := c.(Pane)
-	return ok && p.Id == i.Id
+	return ok && p.ID == i.ID
 }
