@@ -39,10 +39,6 @@ func (p Pane) Eq(c utils.Comperable) bool {
 }
 
 func buildNewPanesCmd(window Window, panes []Pane) string {
-	if len(panes) == 0 {
-		return ""
-	}
-
 	cmds := make([]string, 0)
 	for _, p := range panes {
 		cmds = append(cmds, buildSplitPaneCmd(window, p))

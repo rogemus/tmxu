@@ -58,17 +58,19 @@ func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 	cmds := make([]string, 0)
 
 	for _, w := range windows {
-		// NOTE: windows will always have at least 1 pane
 		panes, ok := panesMap[w.ID]
 		if !ok {
-			return ""
+			panic("windows need to always have at least 1 pane")
 		}
 
 		firstPane := panes[0]
 		restOfPanes := panes[1:]
 		cmds = append(cmds, buildNewWindowCmd(w, firstPane))
 		cmds = append(cmds, buildRenamePaneCmd(w, firstPane))
-		cmds = append(cmds, buildNewPanesCmd(w, restOfPanes))
+
+		if len(restOfPanes) > 0 {
+			cmds = append(cmds, buildNewPanesCmd(w, restOfPanes))
+		}
 	}
 
 	return strings.Join(cmds, " ; ")
