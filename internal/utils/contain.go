@@ -1,4 +1,4 @@
-package tmux
+package utils
 
 type Comperable interface {
 	Eq(el Comperable) bool

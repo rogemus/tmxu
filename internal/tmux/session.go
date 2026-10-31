@@ -12,20 +12,18 @@ var (
 )
 
 type Session struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	FirstWindowName string `json:"firstWindowName"`
-	FirstWindowPath string `json:"firstWindowPath"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func NewSession(l TmuxLine) Session {
 	return Session{
-		ID:              l.SessionID,
-		Name:            l.SessionName,
-		FirstWindowName: l.WindowName,
-		FirstWindowPath: l.PanePath,
+		ID:   l.SessionID,
+		Name: l.SessionName,
 	}
 }
+
+func (s Session) StrName() string { return "\"" + s.Name + "\"" }
 
 func (s Session) Eq(c Comperable) bool {
 	i, ok := c.(Session)
@@ -50,7 +48,7 @@ func buildNewSessionsCmd(sessions []Session) string {
 	cmds := make([]string, 0)
 
 	for _, s := range sessions {
-		cmd := strings.Join([]string{"new-session -d -s", s.Name, "-n", s.FirstWindowName, "-c", s.FirstWindowPath}, " ")
+		cmd := strings.Join([]string{"new-session -d -s", s.StrName()}, " ")
 		cmds = append(cmds, cmd)
 	}
 
