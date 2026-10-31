@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var (
@@ -27,21 +29,23 @@ func NewWindow(l TmuxLine) Window {
 	}
 }
 
-func (w Window) StrName() string { return "\"" + w.Name + "\"" }
+func (w Window) StrName() string { return utils.Quote(w.Name) }
 
-func (w Window) SessionIndex() string { return fmt.Sprintf("\"%s:%d\"", w.SessionName, w.Index) }
+func (w Window) SessionIndex() string {
+	return utils.Quote(fmt.Sprintf("%s:%d", w.SessionName, w.Index))
+}
 
-func (w Window) Eq(c Comperable) bool {
+func (w Window) Eq(c utils.Comperable) bool {
 	i, ok := c.(Window)
 	return ok && i.ID == w.ID
 }
 
-func CreateWindows(baseIndex int, windows []Window, panes map[string][]Pane) error {
+func CreateWindows(windows []Window, panes map[string][]Pane) error {
 	if len(windows) == 0 {
 		return nil
 	}
 
-	cmd := buildNewWindowsCmd(baseIndex, windows, panes)
+	cmd := buildNewWindowsCmd(windows, panes)
 	_, err := exec.Command("tmux", cmd).Output()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCreateWindows, err)
@@ -50,7 +54,7 @@ func CreateWindows(baseIndex int, windows []Window, panes map[string][]Pane) err
 	return nil
 }
 
-func buildNewWindowsCmd(baseIndex int, windows []Window, panesMap map[string][]Pane) string {
+func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 	cmds := make([]string, 0)
 
 	for _, w := range windows {

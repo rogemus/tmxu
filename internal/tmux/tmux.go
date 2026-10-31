@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var (
@@ -105,12 +107,12 @@ func parseTmuxLines(lines []TmuxLine) TmuxData {
 		}
 
 		w := NewWindow(l)
-		if !Contain(windows[s.ID], w) {
+		if !utils.Contain(windows[s.ID], w) {
 			windows[s.ID] = append(windows[s.ID], w)
 		}
 
 		p := NewPane(l)
-		if !Contain(panes[w.ID], p) {
+		if !utils.Contain(panes[w.ID], p) {
 			panes[w.ID] = append(panes[w.ID], p)
 		}
 	}

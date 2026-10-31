@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var (
@@ -23,9 +25,9 @@ func NewSession(l TmuxLine) Session {
 	}
 }
 
-func (s Session) StrName() string { return "\"" + s.Name + "\"" }
+func (s Session) StrName() string { return utils.Quote(s.Name) }
 
-func (s Session) Eq(c Comperable) bool {
+func (s Session) Eq(c utils.Comperable) bool {
 	i, ok := c.(Session)
 	return ok && s.ID == i.ID
 }

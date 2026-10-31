@@ -3,6 +3,8 @@ package tmux
 import (
 	"errors"
 	"strings"
+
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 type Pane struct {
@@ -27,11 +29,11 @@ func NewPane(l TmuxLine) Pane {
 	}
 }
 
-func (p Pane) StrTitle() string { return "\"" + p.Title + "\"" }
+func (p Pane) StrTitle() string { return utils.Quote(p.Title) }
 
-func (p Pane) StrPath() string { return "\"" + p.Path + "\"" }
+func (p Pane) StrPath() string { return utils.Quote(p.Path) }
 
-func (p Pane) Eq(c Comperable) bool {
+func (p Pane) Eq(c utils.Comperable) bool {
 	i, ok := c.(Pane)
 	return ok && p.ID == i.ID
 }
