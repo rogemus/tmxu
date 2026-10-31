@@ -9,7 +9,7 @@ func TestWindowSessionIndex(t *testing.T) {
 	w := Window{Index: 3, SessionName: "test-session"}
 
 	got := w.SessionIndex()
-	if want := "'test-session:3'"; got != want {
+	if want := "'=test-session:3'"; got != want {
 		t.Errorf("SessionIndex() = %s, want %s", got, want)
 	}
 }
@@ -25,25 +25,25 @@ func TestBuildNewWindowCmd(t *testing.T) {
 			name:   "plain values",
 			window: Window{Index: 1, Name: "test-window", SessionName: "test-session"},
 			pane:   Pane{Path: "/test/path"},
-			want:   "new-window -k -d -t 'test-session:1' -n 'test-window' -c '/test/path'",
+			want:   "new-window -k -d -t '=test-session:1' -n 'test-window' -c '/test/path'",
 		},
 		{
 			name:   "index is part of the target",
 			window: Window{Index: 4, Name: "test-window", SessionName: "test-session"},
 			pane:   Pane{Path: "/test/path"},
-			want:   "new-window -k -d -t 'test-session:4' -n 'test-window' -c '/test/path'",
+			want:   "new-window -k -d -t '=test-session:4' -n 'test-window' -c '/test/path'",
 		},
 		{
 			name:   "spaces in session, window and path",
 			window: Window{Index: 2, Name: "test window", SessionName: "test session"},
 			pane:   Pane{Path: "/test/my path"},
-			want:   "new-window -k -d -t 'test session:2' -n 'test window' -c '/test/my path'",
+			want:   "new-window -k -d -t '=test session:2' -n 'test window' -c '/test/my path'",
 		},
 		{
 			name:   "single quote in window name",
 			window: Window{Index: 1, Name: "it's", SessionName: "test-session"},
 			pane:   Pane{Path: "/test/path"},
-			want:   `new-window -k -d -t 'test-session:1' -n 'it'\''s' -c '/test/path'`,
+			want:   `new-window -k -d -t '=test-session:1' -n 'it'\''s' -c '/test/path'`,
 		},
 	}
 
@@ -84,10 +84,10 @@ func TestBuildNewWindowsCmd(t *testing.T) {
 				"test-window-1": {pane("pane-1"), pane("pane-2")},
 			},
 			want: strings.Join([]string{
-				"new-window -k -d -t 'test-session:1' -n 'test-window-1' -c '/test/pane-1'",
-				"select-pane -t 'test-session:1' -T 'pane-1-title'",
-				"split-window -h -t 'test-session:1' -c '/test/pane-2'",
-				"select-pane -t 'test-session:1' -T 'pane-2-title'",
+				"new-window -k -d -t '=test-session:1' -n 'test-window-1' -c '/test/pane-1'",
+				"select-pane -t '=test-session:1' -T 'pane-1-title'",
+				"split-window -h -t '=test-session:1' -c '/test/pane-2'",
+				"select-pane -t '=test-session:1' -T 'pane-2-title'",
 			}, " ; "),
 		},
 		{
@@ -98,14 +98,14 @@ func TestBuildNewWindowsCmd(t *testing.T) {
 				"test-window-2": {pane("pane-3"), pane("pane-4")},
 			},
 			want: strings.Join([]string{
-				"new-window -k -d -t 'test-session:1' -n 'test-window-1' -c '/test/pane-1'",
-				"select-pane -t 'test-session:1' -T 'pane-1-title'",
-				"split-window -h -t 'test-session:1' -c '/test/pane-2'",
-				"select-pane -t 'test-session:1' -T 'pane-2-title'",
-				"new-window -k -d -t 'test-session:2' -n 'test-window-2' -c '/test/pane-3'",
-				"select-pane -t 'test-session:2' -T 'pane-3-title'",
-				"split-window -h -t 'test-session:2' -c '/test/pane-4'",
-				"select-pane -t 'test-session:2' -T 'pane-4-title'",
+				"new-window -k -d -t '=test-session:1' -n 'test-window-1' -c '/test/pane-1'",
+				"select-pane -t '=test-session:1' -T 'pane-1-title'",
+				"split-window -h -t '=test-session:1' -c '/test/pane-2'",
+				"select-pane -t '=test-session:1' -T 'pane-2-title'",
+				"new-window -k -d -t '=test-session:2' -n 'test-window-2' -c '/test/pane-3'",
+				"select-pane -t '=test-session:2' -T 'pane-3-title'",
+				"split-window -h -t '=test-session:2' -c '/test/pane-4'",
+				"select-pane -t '=test-session:2' -T 'pane-4-title'",
 			}, " ; "),
 		},
 	}
