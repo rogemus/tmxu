@@ -18,7 +18,7 @@ var (
 	ErrCannotParseTmuxLines = errors.New("cannot parse tmux lines")
 )
 
-type TmuxLine struct {
+type Line struct {
 	SessionID   string `json:"session_id"`
 	SessionName string `json:"session_name"`
 	WindowID    string `json:"window_id"`
@@ -30,13 +30,13 @@ type TmuxLine struct {
 	PaneTitle   string `json:"pane_title"`
 }
 
-type TmuxData struct {
+type Data struct {
 	sessions map[string]Session
 	windows  map[string][]Window
 	panes    map[string][]Pane
 }
 
-func (d TmuxData) String() string {
+func (d Data) String() string {
 	ids := make([]string, 0, len(d.sessions))
 	for id := range d.sessions {
 		ids = append(ids, id)
@@ -61,7 +61,7 @@ func (d TmuxData) String() string {
 	return b.String()
 }
 
-func GetTmuxData() (TmuxData, error) {
+func GetTmuxData() (Data, error) {
 	format := "{" + strings.Join(
 		[]string{
 			`"session_id": "#{session_id}"`,
@@ -78,21 +78,21 @@ func GetTmuxData() (TmuxData, error) {
 
 	o, err := exec.Command("tmux", "list-panes", "-a", "-F", format).Output()
 	if err != nil {
-		return TmuxData{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
+		return Data{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
 	}
 
 	doc := "[" + strings.TrimSuffix(strings.TrimSpace(string(o)), ",") + "]"
-	var l []TmuxLine
+	var l []Line
 	err = json.Unmarshal([]byte(doc), &l)
 	if err != nil {
-		return TmuxData{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
+		return Data{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
 	}
 
 	data := parseTmuxLines(l)
 	return data, nil
 }
 
-func parseTmuxLines(lines []TmuxLine) TmuxData {
+func parseTmuxLines(lines []Line) Data {
 	sessions := make(map[string]Session, 0)
 	windows := make(map[string][]Window, 0)
 	panes := make(map[string][]Pane, 0)
@@ -117,5 +117,5 @@ func parseTmuxLines(lines []TmuxLine) TmuxData {
 		}
 	}
 
-	return TmuxData{sessions, windows, panes}
+	return Data{sessions, windows, panes}
 }

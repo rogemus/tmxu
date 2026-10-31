@@ -1,7 +1,6 @@
 package tmux
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/rogemus/tmxu/internal/utils"
@@ -14,13 +13,7 @@ type Pane struct {
 	Path  string `json:"path"`
 }
 
-var (
-	ErrCannotCreatePane = errors.New("cannot create pane")
-	ErrCannotRenamePane = errors.New("cannot rename pane")
-	ErrCannotListPanes  = errors.New("cannot list panes")
-)
-
-func NewPane(l TmuxLine) Pane {
+func NewPane(l Line) Pane {
 	return Pane{
 		ID:    l.PaneID,
 		Index: l.PaneIndex,
@@ -29,9 +22,9 @@ func NewPane(l TmuxLine) Pane {
 	}
 }
 
-func (p Pane) StrTitle() string { return utils.Quote(p.Title) }
+func (p Pane) GetTitle() string { return utils.Quote(p.Title) }
 
-func (p Pane) StrPath() string { return utils.Quote(p.Path) }
+func (p Pane) GetPath() string { return utils.Quote(p.Path) }
 
 func (p Pane) Eq(c utils.Comperable) bool {
 	i, ok := c.(Pane)
@@ -49,11 +42,11 @@ func buildNewPanesCmd(window Window, panes []Pane) string {
 }
 
 func buildSplitPaneCmd(window Window, pane Pane) string {
-	cmd := []string{"split-window", "-h", "-t", window.SessionIndex(), "-c", pane.StrPath()}
+	cmd := []string{"split-window", "-h", "-t", window.SessionIndex(), "-c", pane.GetPath()}
 	return strings.Join(cmd, " ")
 }
 
 func buildRenamePaneCmd(window Window, pane Pane) string {
-	cmd := []string{"select-pane", "-t", window.SessionIndex(), "-T", pane.StrTitle()}
+	cmd := []string{"select-pane", "-t", window.SessionIndex(), "-T", pane.GetTitle()}
 	return strings.Join(cmd, " ")
 }

@@ -6,8 +6,8 @@ import (
 )
 
 // line builds a TmuxLine, deriving names and paths from the ids.
-func line(sessionID, windowID, paneID string, windowIndex, paneIndex int) TmuxLine {
-	return TmuxLine{
+func line(sessionID, windowID, paneID string, windowIndex, paneIndex int) Line {
+	return Line{
 		SessionID:   sessionID,
 		SessionName: sessionID + "-name",
 		WindowID:    windowID,
@@ -20,7 +20,7 @@ func line(sessionID, windowID, paneID string, windowIndex, paneIndex int) TmuxLi
 	}
 }
 
-func windowIDs(d TmuxData, sessionID string) []string {
+func windowIDs(d Data, sessionID string) []string {
 	ids := []string{}
 	for _, w := range d.windows[sessionID] {
 		ids = append(ids, w.ID)
@@ -29,7 +29,7 @@ func windowIDs(d TmuxData, sessionID string) []string {
 	return ids
 }
 
-func paneIDs(d TmuxData, windowID string) []string {
+func paneIDs(d Data, windowID string) []string {
 	ids := []string{}
 	for _, p := range d.panes[windowID] {
 		ids = append(ids, p.ID)
@@ -41,7 +41,7 @@ func paneIDs(d TmuxData, windowID string) []string {
 func TestParseTmuxLines(t *testing.T) {
 	tests := []struct {
 		name         string
-		lines        []TmuxLine
+		lines        []Line
 		wantSessions []string
 		wantWindows  map[string][]string // session id -> window ids
 		wantPanes    map[string][]string // window id -> pane ids
@@ -55,14 +55,14 @@ func TestParseTmuxLines(t *testing.T) {
 		},
 		{
 			name:         "single pane",
-			lines:        []TmuxLine{line("session-1", "window-1", "pane-1", 1, 1)},
+			lines:        []Line{line("session-1", "window-1", "pane-1", 1, 1)},
 			wantSessions: []string{"session-1"},
 			wantWindows:  map[string][]string{"session-1": {"window-1"}},
 			wantPanes:    map[string][]string{"window-1": {"pane-1"}},
 		},
 		{
 			name: "two panes in one window",
-			lines: []TmuxLine{
+			lines: []Line{
 				line("session-1", "window-1", "pane-1", 1, 1),
 				line("session-1", "window-1", "pane-2", 1, 2),
 			},
@@ -72,7 +72,7 @@ func TestParseTmuxLines(t *testing.T) {
 		},
 		{
 			name: "two windows with two panes each keep both windows",
-			lines: []TmuxLine{
+			lines: []Line{
 				line("session-1", "window-1", "pane-1", 1, 1),
 				line("session-1", "window-1", "pane-2", 1, 2),
 				line("session-1", "window-2", "pane-3", 2, 1),
@@ -87,7 +87,7 @@ func TestParseTmuxLines(t *testing.T) {
 		},
 		{
 			name: "three windows in a row keep all windows",
-			lines: []TmuxLine{
+			lines: []Line{
 				line("session-1", "window-1", "pane-1", 1, 1),
 				line("session-1", "window-2", "pane-2", 2, 1),
 				line("session-1", "window-3", "pane-3", 3, 1),
@@ -103,7 +103,7 @@ func TestParseTmuxLines(t *testing.T) {
 		},
 		{
 			name: "two sessions keep their own windows and panes",
-			lines: []TmuxLine{
+			lines: []Line{
 				line("session-1", "window-1", "pane-1", 1, 1),
 				line("session-1", "window-1", "pane-2", 1, 2),
 				line("session-2", "window-2", "pane-3", 1, 1),
@@ -122,7 +122,7 @@ func TestParseTmuxLines(t *testing.T) {
 		},
 		{
 			name: "duplicate line is not added twice",
-			lines: []TmuxLine{
+			lines: []Line{
 				line("session-1", "window-1", "pane-1", 1, 1),
 				line("session-1", "window-1", "pane-1", 1, 1),
 			},
@@ -171,7 +171,7 @@ func TestParseTmuxLines(t *testing.T) {
 }
 
 func TestParseTmuxLinesFields(t *testing.T) {
-	got := parseTmuxLines([]TmuxLine{line("test-session-id", "test-window-id", "test-pane-id", 4, 2)})
+	got := parseTmuxLines([]Line{line("test-session-id", "test-window-id", "test-pane-id", 4, 2)})
 
 	s := got.sessions["test-session-id"]
 	if s.ID != "test-session-id" || s.Name != "test-session-id-name" {

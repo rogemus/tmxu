@@ -20,7 +20,7 @@ type Window struct {
 	SessionName string `json:"sessionName"`
 }
 
-func NewWindow(l TmuxLine) Window {
+func NewWindow(l Line) Window {
 	return Window{
 		ID:          l.WindowID,
 		Name:        l.WindowName,
@@ -29,10 +29,10 @@ func NewWindow(l TmuxLine) Window {
 	}
 }
 
-func (w Window) StrName() string { return utils.Quote(w.Name) }
+func (w Window) GetName() string { return utils.Quote(w.Name) }
 
 func (w Window) SessionIndex() string {
-	return utils.Quote(fmt.Sprintf("%s:%d", w.SessionName, w.Index))
+	return utils.Quote(fmt.Sprintf("=%s:%d", w.SessionName, w.Index))
 }
 
 func (w Window) Eq(c utils.Comperable) bool {
@@ -77,6 +77,6 @@ func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 }
 
 func buildNewWindowCmd(window Window, pane Pane) string {
-	cmd := []string{"new-window", "-k", "-d", "-t", window.SessionIndex(), "-n", window.StrName(), "-c", pane.StrPath()}
+	cmd := []string{"new-window", "-k", "-d", "-t", window.SessionIndex(), "-n", window.GetName(), "-c", pane.GetPath()}
 	return strings.Join(cmd, " ")
 }

@@ -18,7 +18,7 @@ type Session struct {
 	Name string `json:"name"`
 }
 
-func NewSession(l TmuxLine) Session {
+func NewSession(l Line) Session {
 	return Session{
 		ID:   l.SessionID,
 		Name: l.SessionName,
