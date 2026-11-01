@@ -62,17 +62,17 @@ func (c *Cli) newCmd(cmd cmd.Cmd) {
 	}
 }
 
-func New(cfg config.Cfg) *Cli {
+func New(cfg config.Config) *Cli {
 	c := Cli{
 		cmds:      make(map[string]cmd.Cmd),
 		cmdsOrder: make([]string, 0),
 	}
 
-	lsCmd := cmd.NewListSessionsCmd()
+	lsCmd := cmd.NewListSessions()
 	c.newCmd(lsCmd)
-	ssCmd := cmd.NewSaveSessionsCmd(cfg)
+	ssCmd := cmd.NewSaveSessions(cfg)
 	c.newCmd(ssCmd)
-	vCmd := cmd.NewVersionCmd(cfg)
+	vCmd := cmd.NewVersion(cfg)
 	c.newCmd(vCmd)
 
 	// c.newCmd(newSessionCmd)

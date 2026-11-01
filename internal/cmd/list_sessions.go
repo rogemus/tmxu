@@ -11,31 +11,31 @@ var (
 	ErrCannotListSessionCmd = errors.New("cannot list sessions in cmd")
 )
 
-var _ Cmd = ListSessionsCmd{}
+var _ Cmd = ListSessions{}
 
-// ListSessionsCmd prints the running tmux sessions.
-type ListSessionsCmd struct{}
+// ListSessions prints the running tmux sessions.
+type ListSessions struct{}
 
-// NewListSessionsCmd builds a ListSessionsCmd. It needs no config.
-func NewListSessionsCmd() ListSessionsCmd {
-	return ListSessionsCmd{}
+// NewListSessions builds a ListSessionsCmd. It needs no config.
+func NewListSessions() ListSessions {
+	return ListSessions{}
 }
 
-func (c ListSessionsCmd) Command() string { return "list-sessions" }
+func (c ListSessions) Command() string { return "list-sessions" }
 
-func (c ListSessionsCmd) Aliases() []string { return []string{"list", "ls"} }
+func (c ListSessions) Aliases() []string { return []string{"list", "ls"} }
 
-func (c ListSessionsCmd) Arg() string { return "" }
+func (c ListSessions) Arg() string { return "" }
 
-func (c ListSessionsCmd) DescShort() string { return "List all active sessions in tmux" }
+func (c ListSessions) DescShort() string { return "List all active sessions in tmux" }
 
-func (c ListSessionsCmd) DescLong() string {
+func (c ListSessions) DescLong() string {
 	return "Displays all currently running tmux sessions with their IDs and names."
 }
 
-func (c ListSessionsCmd) Flags() [][]string { return nil }
+func (c ListSessions) Flags() [][]string { return nil }
 
-func (c ListSessionsCmd) Examples() []string {
+func (c ListSessions) Examples() []string {
 	return []string{
 		"tmxu list-sessions",
 		"tmxu list",
@@ -43,7 +43,7 @@ func (c ListSessionsCmd) Examples() []string {
 	}
 }
 
-func (c ListSessionsCmd) Run() error {
+func (c ListSessions) Run() error {
 	sessions, err := tmux.ListSessions()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotListSessionCmd, err)

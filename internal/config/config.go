@@ -2,11 +2,11 @@
 // path where saved sessions live, so it can be passed to commands.
 package config
 
-type Cfg struct {
+type Config struct {
 	Path    string
 	Version string
 }
 
-func New(version, path string) Cfg {
-	return Cfg{Path: path, Version: version}
+func New(version, path string) Config {
+	return Config{Path: path, Version: version}
 }

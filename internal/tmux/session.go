@@ -41,7 +41,7 @@ func ListSessions() ([]Session, error) {
 		[]string{
 			`"session_id": "#{session_id}"`,
 			`"session_name": "#{session_name}"`,
-			`"session_windows": session_windows"`,
+			`"session_windows": #{session_windows}`,
 		}, ",",
 	) + "},"
 

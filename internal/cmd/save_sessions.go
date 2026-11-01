@@ -8,34 +8,34 @@ import (
 	"github.com/rogemus/tmxu/internal/utils"
 )
 
-var _ Cmd = SaveSessionsCmd{}
+var _ Cmd = SaveSessions{}
 
-// SaveSessionsCmd captures the running tmux sessions and saves them to the
+// SaveSessions captures the running tmux sessions and saves them to the
 // path from the app config.
-type SaveSessionsCmd struct {
-	cfg config.Cfg
+type SaveSessions struct {
+	cfg config.Config
 }
 
-// NewSaveSessionsCmd builds a SaveSessionsCmd from the app config.
-func NewSaveSessionsCmd(cfg config.Cfg) SaveSessionsCmd {
-	return SaveSessionsCmd{cfg: cfg}
+// NewSaveSessions builds a SaveSessionsCmd from the app config.
+func NewSaveSessions(cfg config.Config) SaveSessions {
+	return SaveSessions{cfg: cfg}
 }
 
-func (c SaveSessionsCmd) Command() string { return "save-sessions" }
+func (c SaveSessions) Command() string { return "save-sessions" }
 
-func (c SaveSessionsCmd) Aliases() []string { return []string{"save", "s"} }
+func (c SaveSessions) Aliases() []string { return []string{"save", "s"} }
 
-func (c SaveSessionsCmd) Arg() string { return "" }
+func (c SaveSessions) Arg() string { return "" }
 
-func (c SaveSessionsCmd) DescShort() string { return "Save tmux sessions" }
+func (c SaveSessions) DescShort() string { return "Save tmux sessions" }
 
-func (c SaveSessionsCmd) DescLong() string {
+func (c SaveSessions) DescLong() string {
 	return "Captures all running tmux sessions including windows, panes, and layouts. Saves to ~/.config/tmxu/tmux-sessions.json."
 }
 
-func (c SaveSessionsCmd) Flags() [][]string { return nil }
+func (c SaveSessions) Flags() [][]string { return nil }
 
-func (c SaveSessionsCmd) Examples() []string {
+func (c SaveSessions) Examples() []string {
 	return []string{
 		"tmxu save-sessions",
 		"tmxu save",
@@ -43,7 +43,7 @@ func (c SaveSessionsCmd) Examples() []string {
 	}
 }
 
-func (c SaveSessionsCmd) Run() error {
+func (c SaveSessions) Run() error {
 	if !utils.Confirm("Save all tmux sessions?") {
 		fmt.Print("Aborted")
 		return nil
