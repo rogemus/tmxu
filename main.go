@@ -31,7 +31,7 @@ func main() {
 	err = c.Run(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "tmxu: %v\n", err)
-		if errors.Is(err, cli.ErrUnknownCommand) {
+		if errors.Is(err, cli.ErrUnknownCommand) || errors.Is(err, cmd.ErrSessionNameNotProvided) {
 			os.Exit(2)
 		}
 

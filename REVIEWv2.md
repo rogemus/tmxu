@@ -2,7 +2,7 @@
 
 Review of the rewrite in `internal/tmux`, `internal/utils`, `internal/cmd`, `internal/cli` and `internal/config`, compared with the old top-level `cli/` package. Short checklist: [TODOv2.md](TODOv2.md). The original review is [REVIEW.md](REVIEW.md) and its checklist [TODO.md](TODO.md).
 
-Scope: restore functionality first (sections 1 to 7), then the new CLI skeleton (section 8). `main` calls `internal/cli`, but `Run` only prints help; restore is not wired.
+Scope: restore functionality first (sections 1 to 7), then the new CLI skeleton (section 8). `main` calls `internal/cli`; `Run` dispatches `ls`, `save`, `version` and `help`; restore is not wired.
 
 Baseline: `go build`, `go vet` and `go test ./...` are clean (86 tests across the repo, last run on commit `0175190`). Claims about tmux behavior that were not run are marked **verify**.
 
@@ -214,36 +214,28 @@ REVIEW 6.3 recommended keeping restore as separate sequential calls for error at
 ### 8.1 What is good
 
 - `cmd.Cmd` is `Info() Info` plus `Run(args []string) error`. Each command keeps its `Info` in a package-level var, compile-time checks (`var _ Cmd = X{}`) guard the interface, and each command lives in its own file.
-- `cli.New(cfg)` builds the registry with constructors; aliases are map keys; help uses `tabwriter` over an `io.Writer`.
+- `cli.New(cfg)` builds the registry with constructors; aliases are map keys; help writes to an injected `io.Writer`: `tabwriter` for the command list, `text/template` for per-command help.
 - `config.New(version)` trims the version, resolves the config dir (`$XDG_CONFIG_HOME` or `~/.config` on macOS, `os.UserConfigDir` elsewhere) and returns an error. `Config{DirPath, Version}` is immutable and passed by value.
 - `cmd` defines no custom errors; `ListSessions.Run` returns the `tmux` error.
 
 ### 8.2 Problems
 
-1. ~~**`Cli.Run` only prints help.**~~ **Fixed in `c40da67`.** `Run(args) error` dispatches, handles `help` and unknown commands (`ErrUnknownCommand`, help on stderr). `main` maps errors to exit 1 or 2.
-2. **Help order is random.** `listAllCommands` ranges over the `cmds` map. `cmdsOrder` is filled and never read, and the `seen` set exists only because aliases are also map keys. `help` ignores its `cmdName` and `args` arguments. **Partial:** it now writes to an injected `io.Writer`.
-3. **`main.go`** ~~panics on a config error, ignores `Run`'s result and shadows the `cli` package~~ **Fixed in `c40da67`:** writes to stderr and exits 1, handles `Run`'s error, uses `c`. **Still open:** the config message drops `err` and has no `tmxu:` prefix or newline, and the `io` variable shadows the stdlib package name.
-4. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`). ~~`Aborted` is printed without a newline.~~ **Fixed:** `Fprintln` to stderr.
-5. ~~**`ls` output.**~~ **Fixed in `c40da67`:** header removed, format fixed, `tabwriter` with `Flush`. Order differs from the old command (3.9, still open).
-6. **`utils.Confirm`** builds a new `bufio.Reader` per call, ignores the read error, and silently returns false on EOF (REVIEW 1.9). **Partial:** it takes an `io.Reader` and writes the prompt to an injected writer. The writer param is named `err`; rename to `out`.
-7. **Commands call package functions directly** (`tmux.ListSessions`, `tmux.GetTmuxData`), so they cannot be tested without a real tmux server. Inject a small interface.
-8. **`Info.Flags` is `[][]string`**, stringly typed. A `Flag{Name, Desc}` struct is clearer.
-9. **No alias-collision check** in `newCmd`: a duplicate alias silently overwrites.
-10. **Config gaps:** no directory creation, no `TMXU_CONFIG_DIR` or `--config-dir`, a relative `$XDG_CONFIG_HOME` is accepted (the XDG spec requires absolute), no tests (`t.Setenv` makes the env branches easy), and `New`, `Config`, `DirPath` have no doc comments. The darwin branch only runs on macOS.
-11. **Doc comments were dropped** from the `cmd` types and constructors in the interface simplification, and `internal/cli` has no package comment.
-12. **Old package still present.** The top-level `cli/` (full old implementation) sits next to `internal/cli`; two packages named `cli` are confusing until parity.
+1. **`main.go`:** the `io` variable shadows the stdlib package name.
+2. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`).
+3. **`utils.Confirm`** builds a new `bufio.Reader` per call, ignores the read error, and silently returns false on EOF (REVIEW 1.9). The writer param is named `err`; rename to `out`.
+4. **Commands call package functions directly** (`tmux.ListSessions`, `tmux.GetTmuxData`), so they cannot be tested without a real tmux server. Inject a small interface.
+5. **`Info.Flags` is `[][]string`**, stringly typed (`index . 0` in the help template). A `Flag{Name, Desc}` struct is clearer.
+6. **No alias-collision check** in `newCmd`: a duplicate alias silently overwrites.
+7. **Config gaps:** no directory creation, no `TMXU_CONFIG_DIR` or `--config-dir`, a relative `$XDG_CONFIG_HOME` is accepted (the XDG spec requires absolute), no tests (`t.Setenv` makes the env branches easy), and `New`, `Config`, `DirPath` have no doc comments. The darwin branch only runs on macOS.
+8. **Doc comments were dropped** from the `cmd` types and constructors in the interface simplification, and `internal/cli` has no package comment.
+9. **`internal/cli` has no tests** (help output, command lookup, `ErrUnknownCommand`).
+10. **`tmux.AttachToSession` is a stub** that returns `nil`; its two sentinels are unused.
+11. **Old package still present.** The top-level `cli/` (full old implementation) sits next to `internal/cli`; two packages named `cli` are confusing until parity.
 
 ### 8.3 Maps to the old TODO
 
 | `TODO.md` item                                              | Status                                                            |
 | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| Remove package-level `version` global and `Cmd` vars        | **Done** (the `//go:embed` var in `main` remains)                 |
-| Split `cmd.go` per command                                  | **Done**                                                          |
-| Decide flat `cli/` vs `internal/`                           | **Decided**: `internal/`                                          |
-| Explicit XDG paths (keep macOS on `~/.config`)              | **Done** in `internal/config`                                     |
 | Print real resolved paths in messages                       | **Partial**: `cfg.DirPath` exists, messages are still literal     |
-| `Run(args) error`                                           | **Done** in `c40da67`: dispatch, `help`, unknown command          |
 | Remove `os.Args` from commands                              | **Started**: commands receive `args`, nothing parses them yet     |
-| One `os.Exit` in `main`, exit codes, stderr/stdout          | **Done** in `c40da67`: one exit site, 1 or 2, `tmxu:` prefix      |
 | `confirm` on non-TTY                                        | **Not fixed** (moved to `utils`; now injectable)                  |
-| `Cmd` custom errors (`ErrCannotListSessionCmd`)             | **Removed**                                                       |

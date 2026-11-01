@@ -2,7 +2,7 @@
 
 Checklist for the rewrite in `internal/tmux`, `internal/utils`, `internal/cmd`, `internal/cli` and `internal/config`. Details and reasoning: [REVIEWv2.md](REVIEWv2.md). The old list for the top-level `cli/` package is [TODO.md](TODO.md).
 
-Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cli`, but `Run` only prints help so far; restore is not wired.
+Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cli`; `Run` dispatches `ls`, `save`, `version` and `help`; restore is not wired.
 
 ## 1. Restore safety (fix first)
 
@@ -70,21 +70,16 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 
 ## 7. CLI surface
 
-- [x] `Cli.Run(args)`: dispatch on args, return an error, unknown-command handling, register `help`
 - [ ] Wire `internal/tmux` into `restore`, `new-session`, `attach` (`ls` and `save` call it; `save` writes nothing)
-- [ ] Help: range over `cmdsOrder` and drop the `seen` set (map order is random); use the `cmdName` argument; per-command help from `DescLong`, `Examples`, `Flags` (done: writes to an injected `io.Writer`)
 - [ ] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`
 - [ ] Detect alias collisions in `newCmd`
-- [x] `ls`: drop the "Available sessions" header on a pipe (or send it to stderr); fix the trailing `\n ` in the format; use `tabwriter`
-- [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (done: injectable `io.Reader`/`io.Writer`, prompt on stderr, newline after "Aborted")
+- [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
 - [ ] `utils.Confirm`: rename the `err io.Writer` param to `out`
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
-- [x] `main.go`: replace `panic` on a config error with stderr + `os.Exit(1)`, handle `Run`'s error, stop shadowing the `cli` package, remove the commented code
-- [ ] `main.go`: config error message drops `err`, has no `tmxu:` prefix and no newline; the `io` variable shadows the stdlib package name
-- [ ] `Cli`: mixed receivers (`*Cli` and `Cli`); pick pointer
+- [ ] `main.go`: the `io` variable shadows the stdlib package name
 - [ ] `tmux.AttachToSession` is a stub that returns `nil`; implement it or remove it, and use or delete `ErrCannotAttachToSession` / `ErrSessionNameNotProvided`
 - [ ] Prompts, `--yes`, `--dry-run`, `-q` / `-v`
-- [x] Exit codes (1 runtime, 2 unknown command), stderr/stdout split, `tmxu:` prefix
+- [ ] Tests for `internal/cli` (help output, command lookup, `ErrUnknownCommand`)
 - [ ] Atomic writes, `0600` files
 - [ ] `config`: create the dir on first use, `TMXU_CONFIG_DIR` / `--config-dir`, ignore a relative `XDG_CONFIG_HOME`, docs on `Config`, `DirPath` and `New`
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
@@ -116,5 +111,9 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 - [x] `tmux.ListSessions` wraps its rows in `[...]` and the `session_windows` format is fixed
 - [x] `config.New(version)` trims the version, resolves the dir (XDG on macOS, `os.UserConfigDir` elsewhere) and returns an error
 - [x] `version` prints without a trailing space
-- [x] Help rendered with `tabwriter`; the per-command boilerplate is gone
-- [x] Commit `c40da67`: commands get `cmd.IOs{In, Out, Err}` by constructor; `version`, `ls` write to `Out`, prompts and "Aborted" to `Err`
+- [x] Help: command list with `tabwriter` in `cmdsOrder`; per-command help (aliases, description, usage, flags, examples) from a `text/template`; both write to an injected `io.Writer`
+- [x] Commands get `cmd.IOs{In, Out, Err}` by constructor; `version` and `ls` write to `Out`, prompts and "Aborted" to `Err`
+- [x] `Cli.Run(args) error`: dispatch, `help [command]`, `ErrUnknownCommand` through one `unknownCmdError` helper; consistent `*Cli` receivers, no shadowing of the `cmd` package
+- [x] `ls`: no header, `tabwriter` with `Flush`
+- [x] `main.go`: one exit site, exit 1 for runtime errors and 2 for an unknown command, `tmxu:` prefix on stderr, no `panic`
+- [x] `utils.Confirm` takes an `io.Reader` and writes the prompt to stderr; "Aborted" goes to stderr with a newline
