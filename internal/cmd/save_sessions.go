@@ -10,8 +10,6 @@ import (
 
 var _ Cmd = SaveSessions{}
 
-// SaveSessions captures the running tmux sessions and saves them to the
-// path from the app config.
 type SaveSessions struct {
 	cfg config.Config
 }
@@ -21,29 +19,22 @@ func NewSaveSessions(cfg config.Config) SaveSessions {
 	return SaveSessions{cfg: cfg}
 }
 
-func (c SaveSessions) Command() string { return "save-sessions" }
-
-func (c SaveSessions) Aliases() []string { return []string{"save", "s"} }
-
-func (c SaveSessions) Arg() string { return "" }
-
-func (c SaveSessions) DescShort() string { return "Save tmux sessions" }
-
-func (c SaveSessions) DescLong() string {
-	return "Captures all running tmux sessions including windows, panes, and layouts. Saves to ~/.config/tmxu/tmux-sessions.json."
-}
-
-func (c SaveSessions) Flags() [][]string { return nil }
-
-func (c SaveSessions) Examples() []string {
-	return []string{
+var saveSessionsInfo = Info{
+	Command:   "save-sessions",
+	Aliases:   []string{"save", "s"},
+	Arg:       "",
+	DescShort: "Save tmux sessions",
+	DescLong:  "Captures all running tmux sessions including windows, panes, and layouts. Saves to ~/.config/tmxu/tmux-sessions.json.",
+	Flags:     nil,
+	Examples: []string{
 		"tmxu save-sessions",
 		"tmxu save",
 		"tmux s",
-	}
+	},
 }
 
-func (c SaveSessions) Run() error {
+func (c SaveSessions) Info() Info { return saveSessionsInfo }
+func (c SaveSessions) Run(args []string) error {
 	if !utils.Confirm("Save all tmux sessions?") {
 		fmt.Print("Aborted")
 		return nil

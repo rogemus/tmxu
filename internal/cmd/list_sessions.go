@@ -13,37 +13,28 @@ var (
 
 var _ Cmd = ListSessions{}
 
-// ListSessions prints the running tmux sessions.
 type ListSessions struct{}
 
-// NewListSessions builds a ListSessionsCmd. It needs no config.
 func NewListSessions() ListSessions {
 	return ListSessions{}
 }
 
-func (c ListSessions) Command() string { return "list-sessions" }
-
-func (c ListSessions) Aliases() []string { return []string{"list", "ls"} }
-
-func (c ListSessions) Arg() string { return "" }
-
-func (c ListSessions) DescShort() string { return "List all active sessions in tmux" }
-
-func (c ListSessions) DescLong() string {
-	return "Displays all currently running tmux sessions with their IDs and names."
-}
-
-func (c ListSessions) Flags() [][]string { return nil }
-
-func (c ListSessions) Examples() []string {
-	return []string{
+var listSessionsInfo = Info{
+	Command:   "list-sessions",
+	Aliases:   []string{"list", "ls"},
+	Arg:       "",
+	DescShort: "List all active sessions in tmux",
+	DescLong:  "Displays all currently running tmux sessions with their IDs and names.",
+	Flags:     nil,
+	Examples: []string{
 		"tmxu list-sessions",
 		"tmxu list",
 		"tmxu ls",
-	}
+	},
 }
 
-func (c ListSessions) Run() error {
+func (c ListSessions) Info() Info { return listSessionsInfo }
+func (c ListSessions) Run(args []string) error {
 	sessions, err := tmux.ListSessions()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotListSessionCmd, err)

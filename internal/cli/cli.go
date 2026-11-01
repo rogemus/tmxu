@@ -36,7 +36,8 @@ func (c Cli) listAllCommands(w io.Writer) {
 
 	tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
 	for _, c := range c.cmds {
-		name := c.Command()
+		info := c.Info()
+		name := info.Command
 
 		if seen[name] {
 			continue
@@ -44,20 +45,21 @@ func (c Cli) listAllCommands(w io.Writer) {
 			seen[name] = true
 		}
 
-		if aliases := c.Aliases(); len(aliases) > 0 {
+		if aliases := info.Aliases; len(aliases) > 0 {
 			name += " (" + strings.Join(aliases, ", ") + ")"
 		}
 
-		fmt.Fprintf(tw, "  %s\t%s\t%s\n", name, c.Arg(), c.DescShort())
+		fmt.Fprintf(tw, "  %s\t%s\t%s\n", name, info.Arg, info.DescShort)
 	}
 	tw.Flush()
 }
 
 func (c *Cli) newCmd(cmd cmd.Cmd) {
-	c.cmds[cmd.Command()] = cmd
-	c.cmdsOrder = append(c.cmdsOrder, cmd.Command())
+	info := cmd.Info()
+	c.cmds[info.Command] = cmd
+	c.cmdsOrder = append(c.cmdsOrder, info.Command)
 
-	for _, alias := range cmd.Aliases() {
+	for _, alias := range info.Aliases {
 		c.cmds[alias] = cmd
 	}
 }
