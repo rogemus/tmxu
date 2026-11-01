@@ -178,7 +178,7 @@ Infrastructure:
 | 3.1 Global `Cmd` vars, `version` global, `NewCli` returns an unexported type                           | **Done.** Interface, constructors, exported `Cli`.                                                                  |
 | 3.1 Split `cmd.go` per command                                                                         | **Done.**                                                                                                           |
 | 7.6 Explicit XDG paths, keep macOS on `~/.config`                                                      | **Done** in `internal/config`. `TMXU_CONFIG_DIR` and `--config-dir` are not.                                        |
-| 4 `renderTable` to `tabwriter`                                                                         | **Done** for help; `ls` does not use it.                                                                            |
+| 4 `renderTable` to `tabwriter`                                                                         | **Done** for help and `ls`.                                                                            |
 | 1.4 `HasSession`, 2.3 `TmuxError`, `ErrNoSession`, 1.9 rollback and `-force`, layout items            | **Not addressed.**                                                                                                  |
 | `-t =name` exact targets                                                                               | **Partial.** Window and pane targets only.                                                                          |
 
@@ -220,12 +220,12 @@ REVIEW 6.3 recommended keeping restore as separate sequential calls for error at
 
 ### 8.2 Problems
 
-1. **`Cli.Run` only prints help.** No dispatch on args, no error return, no exit code, no unknown-command handling, and `help` is not registere as a command.
-2. **Help order is random.** `listAllCommands` ranges over the `cmds` map. `cmdsOrder` is filled and never read, and the `seen` set exists only because aliases are also map keys. `help` ignores its `cmdName` argument, hard-codes `os.Stdout` and prints its footer without a newline.
-3. **`main.go` panics on a config error** (`panic(fmt.Errorf("%w: cannot read config dir", err))`), repeats the sentinel's text, ignores `Run`'s result and still shadows the `cli` package (`cli := cli.New(cfg)`).
-4. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`). `Aborted` is printed without a newline.
-5. **`ls` output.** It prints an "Available sessions" header to stdout (pollutes pipes), formats rows with a trailing `\n ` (a stray space on the next line), and does not use `tabwriter`. Order differs from the old command (3.9).
-6. **`utils.Confirm`** builds a new `bufio.Reader` per call, ignores the read error, is hard-wired to `os.Stdin`/`os.Stdout`, and silently returns false on EOF (REVIEW 1.9).
+1. ~~**`Cli.Run` only prints help.**~~ **Fixed in `c40da67`.** `Run(args) error` dispatches, handles `help` and unknown commands (`ErrUnknownCommand`, help on stderr). `main` maps errors to exit 1 or 2.
+2. **Help order is random.** `listAllCommands` ranges over the `cmds` map. `cmdsOrder` is filled and never read, and the `seen` set exists only because aliases are also map keys. `help` ignores its `cmdName` and `args` arguments. **Partial:** it now writes to an injected `io.Writer`.
+3. **`main.go`** ~~panics on a config error, ignores `Run`'s result and shadows the `cli` package~~ **Fixed in `c40da67`:** writes to stderr and exits 1, handles `Run`'s error, uses `c`. **Still open:** the config message drops `err` and has no `tmxu:` prefix or newline, and the `io` variable shadows the stdlib package name.
+4. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`). ~~`Aborted` is printed without a newline.~~ **Fixed:** `Fprintln` to stderr.
+5. ~~**`ls` output.**~~ **Fixed in `c40da67`:** header removed, format fixed, `tabwriter` with `Flush`. Order differs from the old command (3.9, still open).
+6. **`utils.Confirm`** builds a new `bufio.Reader` per call, ignores the read error, and silently returns false on EOF (REVIEW 1.9). **Partial:** it takes an `io.Reader` and writes the prompt to an injected writer. The writer param is named `err`; rename to `out`.
 7. **Commands call package functions directly** (`tmux.ListSessions`, `tmux.GetTmuxData`), so they cannot be tested without a real tmux server. Inject a small interface.
 8. **`Info.Flags` is `[][]string`**, stringly typed. A `Flag{Name, Desc}` struct is clearer.
 9. **No alias-collision check** in `newCmd`: a duplicate alias silently overwrites.
@@ -242,8 +242,8 @@ REVIEW 6.3 recommended keeping restore as separate sequential calls for error at
 | Decide flat `cli/` vs `internal/`                           | **Decided**: `internal/`                                          |
 | Explicit XDG paths (keep macOS on `~/.config`)              | **Done** in `internal/config`                                     |
 | Print real resolved paths in messages                       | **Partial**: `cfg.DirPath` exists, messages are still literal     |
-| `Run(args) error`                                           | **Signature only**: no dispatch                                   |
+| `Run(args) error`                                           | **Done** in `c40da67`: dispatch, `help`, unknown command          |
 | Remove `os.Args` from commands                              | **Started**: commands receive `args`, nothing parses them yet     |
-| One `os.Exit` in `main`, exit codes, stderr/stdout          | **Not started**                                                   |
-| `confirm` on non-TTY                                        | **Not fixed** (moved to `utils`)                                  |
+| One `os.Exit` in `main`, exit codes, stderr/stdout          | **Done** in `c40da67`: one exit site, 1 or 2, `tmxu:` prefix      |
+| `confirm` on non-TTY                                        | **Not fixed** (moved to `utils`; now injectable)                  |
 | `Cmd` custom errors (`ErrCannotListSessionCmd`)             | **Removed**                                                       |

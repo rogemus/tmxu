@@ -23,7 +23,7 @@ func main() {
 
 	cfg, err := config.New(version)
 	if err != nil {
-		fmt.Fprintf(io.Err, "cannot read config dir")
+		fmt.Fprintf(io.Err, "tmxu: %v\n", err)
 		os.Exit(1)
 	}
 

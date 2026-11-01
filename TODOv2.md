@@ -70,17 +70,21 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 
 ## 7. CLI surface
 
-- [ ] `Cli.Run(args)`: dispatch on args, return an error, unknown-command handling, register `help`
+- [x] `Cli.Run(args)`: dispatch on args, return an error, unknown-command handling, register `help`
 - [ ] Wire `internal/tmux` into `restore`, `new-session`, `attach` (`ls` and `save` call it; `save` writes nothing)
-- [ ] Help: range over `cmdsOrder` and drop the `seen` set (map order is random); use the `cmdName` argument; per-command help from `DescLong`, `Examples`, `Flags`; write to an injected `io.Writer`, with a trailing newline
+- [ ] Help: range over `cmdsOrder` and drop the `seen` set (map order is random); use the `cmdName` argument; per-command help from `DescLong`, `Examples`, `Flags` (done: writes to an injected `io.Writer`)
 - [ ] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`
 - [ ] Detect alias collisions in `newCmd`
-- [ ] `ls`: drop the "Available sessions" header on a pipe (or send it to stderr); fix the trailing `\n ` in the format; use `tabwriter`
-- [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY, injectable `io.Reader`/`io.Writer`; newline after "Aborted"
+- [x] `ls`: drop the "Available sessions" header on a pipe (or send it to stderr); fix the trailing `\n ` in the format; use `tabwriter`
+- [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (done: injectable `io.Reader`/`io.Writer`, prompt on stderr, newline after "Aborted")
+- [ ] `utils.Confirm`: rename the `err io.Writer` param to `out`
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
-- [ ] `main.go`: replace `panic` on a config error with stderr + `os.Exit(1)`, handle `Run`'s error, stop shadowing the `cli` package, remove the commented code
+- [x] `main.go`: replace `panic` on a config error with stderr + `os.Exit(1)`, handle `Run`'s error, stop shadowing the `cli` package, remove the commented code
+- [ ] `main.go`: config error message drops `err`, has no `tmxu:` prefix and no newline; the `io` variable shadows the stdlib package name
+- [ ] `Cli`: mixed receivers (`*Cli` and `Cli`); pick pointer
+- [ ] `tmux.AttachToSession` is a stub that returns `nil`; implement it or remove it, and use or delete `ErrCannotAttachToSession` / `ErrSessionNameNotProvided`
 - [ ] Prompts, `--yes`, `--dry-run`, `-q` / `-v`
-- [ ] Exit codes, stderr/stdout split, `tmxu:` prefix
+- [x] Exit codes (1 runtime, 2 unknown command), stderr/stdout split, `tmxu:` prefix
 - [ ] Atomic writes, `0600` files
 - [ ] `config`: create the dir on first use, `TMXU_CONFIG_DIR` / `--config-dir`, ignore a relative `XDG_CONFIG_HOME`, docs on `Config`, `DirPath` and `New`
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
@@ -113,3 +117,4 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 - [x] `config.New(version)` trims the version, resolves the dir (XDG on macOS, `os.UserConfigDir` elsewhere) and returns an error
 - [x] `version` prints without a trailing space
 - [x] Help rendered with `tabwriter`; the per-command boilerplate is gone
+- [x] Commit `c40da67`: commands get `cmd.IOs{In, Out, Err}` by constructor; `version`, `ls` write to `Out`, prompts and "Aborted" to `Err`
