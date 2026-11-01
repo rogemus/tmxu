@@ -1,14 +1,20 @@
 package cmd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/rogemus/tmxu/internal/config"
+	"github.com/rogemus/tmxu/internal/tmux"
 )
 
 var _ Cmd = AttachSession{}
+
+var (
+	ErrCannotParseAttachCmdFlags = errors.New("cannot parse attach cmd flags")
+	ErrSessionNameNotProvided    = errors.New("session name not provided")
+)
 
 type AttachSession struct {
 	cfg config.Config
@@ -35,19 +41,23 @@ var attachSessionInfo = Info{
 
 func (c AttachSession) Info() Info { return attachSessionInfo }
 func (c AttachSession) Run(args []string) error {
+
+	if len(args) == 0 {
+		return ErrSessionNameNotProvided
+	}
+
 	var menuMode bool
 	fs := flag.NewFlagSet("attach-session", flag.ContinueOnError)
 	fs.BoolVar(&menuMode, "menu", false, "Use interactive menu to select session")
 
-	if err := fs.Parse(os.Args[2:]); err != nil {
-		return fmt.Errorf("unable to parse flags \n")
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotParseAttachCmdFlags, err)
 	}
 
-	// err := tmux.AttachToSession(sessionName)
-	// if err != nil {
-	// 	return err
-	// }
+	err := tmux.AttachToSession(args[0])
+	if err != nil {
+		return err
+	}
 
 	return nil
-
 }

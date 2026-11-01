@@ -22,7 +22,7 @@ type Cli struct {
 	ios       cmd.IOs
 }
 
-func (c Cli) Run(args []string) error {
+func (c *Cli) Run(args []string) error {
 	if len(args) == 0 {
 		return c.helpAll(c.ios.Out)
 	}
@@ -73,9 +73,9 @@ EXAMPLES:
 {{- end}}
 `))
 
-func (c Cli) help(w io.Writer, args []string) error {
+func (c *Cli) help(w io.Writer, args []string) error {
 	if len(args) == 0 {
-		return c.helpAll(c.ios.Err)
+		return c.helpAll(c.ios.Out)
 	}
 
 	command, ok := c.cmds[args[0]]
@@ -86,11 +86,11 @@ func (c Cli) help(w io.Writer, args []string) error {
 	return c.helpCmd(w, command)
 }
 
-func (c Cli) helpCmd(w io.Writer, command cmd.Cmd) error {
+func (c *Cli) helpCmd(w io.Writer, command cmd.Cmd) error {
 	return cmdHelpTmpl.Execute(w, command.Info())
 }
 
-func (c Cli) helpAll(w io.Writer) error {
+func (c *Cli) helpAll(w io.Writer) error {
 	var bw strings.Builder
 	fmt.Fprintln(&bw, "Tmux utilities for managing sessions with save/restore capabilities")
 	fmt.Fprintln(&bw)
@@ -98,13 +98,13 @@ func (c Cli) helpAll(w io.Writer) error {
 	c.listAllCommands(&bw)
 
 	fmt.Fprintln(&bw)
-	fmt.Fprintf(&bw, "Use `tmxu help [command]` to get detailed information about a specific command\n")
+	fmt.Fprintln(&bw, "Use `tmxu help [command]` to get detailed information about a specific command")
 
 	_, err := io.WriteString(w, bw.String())
 	return err
 }
 
-func (c Cli) listAllCommands(w io.Writer) {
+func (c *Cli) listAllCommands(w io.Writer) {
 	tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
 	for _, name := range c.cmdsOrder {
 		info := c.cmds[name].Info()
@@ -120,7 +120,7 @@ func (c Cli) listAllCommands(w io.Writer) {
 	tw.Flush()
 }
 
-func (c Cli) unknownCmdError(name string) error {
+func (c *Cli) unknownCmdError(name string) error {
 	_ = c.helpAll(c.ios.Err) // best effort; the unknown-command error matters more
 	return fmt.Errorf("%w: %q", ErrUnknownCommand, name)
 }
@@ -142,6 +142,8 @@ func New(cfg config.Config, ios cmd.IOs) *Cli {
 		ios:       ios,
 	}
 
+	aCmd := cmd.NewAttachSession(cfg, ios)
+	c.newCmd(aCmd)
 	lsCmd := cmd.NewListSessions(cfg, ios)
 	c.newCmd(lsCmd)
 	ssCmd := cmd.NewSaveSessions(cfg, ios)
