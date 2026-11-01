@@ -2,7 +2,14 @@
 // interface, which exposes its name, help text and a Run function.
 package cmd
 
-import "io"
+import (
+	"errors"
+	"io"
+)
+
+// ErrUsage marks errors caused by wrong invocation (unknown command, bad flag,
+// missing argument). main maps it to exit code 2.
+var ErrUsage = errors.New("usage error")
 
 type Info struct {
 	Command   string

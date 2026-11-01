@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"io"
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
@@ -12,8 +12,8 @@ import (
 var _ Cmd = AttachSession{}
 
 var (
-	ErrCannotParseAttachCmdFlags = errors.New("cannot parse attach cmd flags")
-	ErrSessionNameNotProvided    = errors.New("session name not provided")
+	ErrCannotParseAttachCmdFlags = fmt.Errorf("%w: cannot parse attach cmd flags", ErrUsage)
+	ErrSessionNameNotProvided    = fmt.Errorf("%w: session name not provided", ErrUsage)
 )
 
 type AttachSession struct {
@@ -42,22 +42,21 @@ var attachSessionInfo = Info{
 func (c AttachSession) Info() Info { return attachSessionInfo }
 func (c AttachSession) Run(args []string) error {
 
-	if len(args) == 0 {
-		return ErrSessionNameNotProvided
-	}
-
+	// TODO: implement fzf style menu
 	var menuMode bool
 	fs := flag.NewFlagSet("attach-session", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
 	fs.BoolVar(&menuMode, "menu", false, "Use interactive menu to select session")
 
-	if err := fs.Parse(args); err != nil {
+	err := fs.Parse(args)
+	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseAttachCmdFlags, err)
 	}
 
-	err := tmux.AttachToSession(args[0])
-	if err != nil {
-		return err
+	if len(fs.Args()) == 0 {
+		return ErrSessionNameNotProvided
 	}
 
-	return nil
+	return tmux.AttachToSession(fs.Arg(0))
 }

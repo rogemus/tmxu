@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -13,7 +12,7 @@ import (
 )
 
 var (
-	ErrUnknownCommand = errors.New("unknown command")
+	ErrUnknownCommand = fmt.Errorf("%w: unknown command", cmd.ErrUsage)
 )
 
 type Cli struct {
@@ -28,13 +27,17 @@ func (c *Cli) Run(args []string) error {
 	}
 
 	name, rest := args[0], args[1:]
-	if name == "help" {
+	if name == "help" || name == "-h" || name == "--help" {
 		return c.help(c.ios.Out, rest)
 	}
 
 	command, ok := c.cmds[name]
 	if !ok {
 		return c.unknownCmdError(name)
+	}
+
+	if c.wantsHelp(rest) {
+		return c.helpCmd(c.ios.Out, command)
 	}
 
 	return command.Run(rest)
@@ -123,6 +126,19 @@ func (c *Cli) listAllCommands(w io.Writer) {
 func (c *Cli) unknownCmdError(name string) error {
 	_ = c.helpAll(c.ios.Err) // best effort; the unknown-command error matters more
 	return fmt.Errorf("%w: %q", ErrUnknownCommand, name)
+}
+
+func (c *Cli) wantsHelp(args []string) bool {
+	for _, a := range args {
+		if a == "--" {
+			return false
+		}
+		if a == "-h" || a == "-help" || a == "--help" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *Cli) newCmd(command cmd.Cmd) {

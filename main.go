@@ -15,7 +15,7 @@ import (
 var version string
 
 func main() {
-	io := cmd.IOs{
+	ios := cmd.IOs{
 		Out: os.Stdout,
 		In:  os.Stdin,
 		Err: os.Stderr,
@@ -23,15 +23,15 @@ func main() {
 
 	cfg, err := config.New(version)
 	if err != nil {
-		fmt.Fprintf(io.Err, "tmxu: %v\n", err)
+		fmt.Fprintf(ios.Err, "tmxu: %v\n", err)
 		os.Exit(1)
 	}
 
-	c := cli.New(cfg, io)
+	c := cli.New(cfg, ios)
 	err = c.Run(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "tmxu: %v\n", err)
-		if errors.Is(err, cli.ErrUnknownCommand) || errors.Is(err, cmd.ErrSessionNameNotProvided) {
+		if errors.Is(err, cmd.ErrUsage) {
 			os.Exit(2)
 		}
 
