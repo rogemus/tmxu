@@ -12,11 +12,12 @@ var _ Cmd = SaveSessions{}
 
 type SaveSessions struct {
 	cfg config.Config
+	ios IOs
 }
 
 // NewSaveSessions builds a SaveSessionsCmd from the app config.
-func NewSaveSessions(cfg config.Config) SaveSessions {
-	return SaveSessions{cfg: cfg}
+func NewSaveSessions(cfg config.Config, ios IOs) SaveSessions {
+	return SaveSessions{cfg, ios}
 }
 
 var saveSessionsInfo = Info{
@@ -35,8 +36,8 @@ var saveSessionsInfo = Info{
 
 func (c SaveSessions) Info() Info { return saveSessionsInfo }
 func (c SaveSessions) Run(args []string) error {
-	if !utils.Confirm("Save all tmux sessions?") {
-		fmt.Print("Aborted")
+	if !utils.Confirm("Save all tmux sessions?", c.ios.In, c.ios.Err) {
+		fmt.Fprintln(c.ios.Err, "Aborted")
 		return nil
 	}
 

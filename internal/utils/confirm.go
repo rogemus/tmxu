@@ -3,14 +3,17 @@ package utils
 import (
 	"bufio"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 )
 
-func Confirm(prompt string) bool {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("%s [y/N]: ", prompt)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(strings.ToLower(input))
-	return input == "y" || input == "yes"
+func Confirm(prompt string, in io.Reader, err io.Writer) bool {
+	fmt.Fprintf(err, "%s [y/N]: ", prompt)
+	input, _ := bufio.NewReader(in).ReadString('\n')
+
+	switch strings.ToLower(strings.TrimSpace(input)) {
+	case "y", "yes":
+		return true
+	}
+	return false
 }

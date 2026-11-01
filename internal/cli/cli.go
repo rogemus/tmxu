@@ -1,9 +1,9 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"text/tabwriter"
 
@@ -11,17 +11,38 @@ import (
 	"github.com/rogemus/tmxu/internal/config"
 )
 
+var (
+	ErrUnknownCommand = errors.New("unknown command")
+)
+
 type Cli struct {
 	cmds      map[string]cmd.Cmd
 	cmdsOrder []string
+	io        cmd.IOs
 }
 
-func (c *Cli) Run() {
-	c.help("")
+func (c *Cli) Run(args []string) error {
+	if len(args) == 0 {
+		c.help(c.io.Out, "", nil)
+		return nil
+	}
+
+	name, rest := args[0], args[1:]
+	if name == "help" {
+		c.help(c.io.Out, name, rest)
+		return nil
+	}
+
+	cmd, ok := c.cmds[name]
+	if !ok {
+		c.help(c.io.Err, "", []string{})
+		return fmt.Errorf("%w: %q", ErrUnknownCommand, name)
+	}
+
+	return cmd.Run(rest)
 }
 
-func (c Cli) help(cmdName string) {
-	w := os.Stdout
+func (c Cli) help(w io.Writer, cmdName string, args []string) {
 	fmt.Fprintln(w, "Tmux utilities for managing sessions with save/restore capabilities")
 	fmt.Fprintln(w)
 
@@ -64,17 +85,18 @@ func (c *Cli) newCmd(cmd cmd.Cmd) {
 	}
 }
 
-func New(cfg config.Config) *Cli {
+func New(cfg config.Config, ios cmd.IOs) *Cli {
 	c := Cli{
 		cmds:      make(map[string]cmd.Cmd),
 		cmdsOrder: make([]string, 0),
+		io:        ios,
 	}
 
-	lsCmd := cmd.NewListSessions()
+	lsCmd := cmd.NewListSessions(cfg, ios)
 	c.newCmd(lsCmd)
-	ssCmd := cmd.NewSaveSessions(cfg)
+	ssCmd := cmd.NewSaveSessions(cfg, ios)
 	c.newCmd(ssCmd)
-	vCmd := cmd.NewVersion(cfg)
+	vCmd := cmd.NewVersion(cfg, ios)
 	c.newCmd(vCmd)
 
 	// c.newCmd(newSessionCmd)

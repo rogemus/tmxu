@@ -220,7 +220,7 @@ REVIEW 6.3 recommended keeping restore as separate sequential calls for error at
 
 ### 8.2 Problems
 
-1. **`Cli.Run` only prints help.** No dispatch on args, no error return, no exit code, no unknown-command handling, and `help` is not registered as a command.
+1. **`Cli.Run` only prints help.** No dispatch on args, no error return, no exit code, no unknown-command handling, and `help` is not registere as a command.
 2. **Help order is random.** `listAllCommands` ranges over the `cmds` map. `cmdsOrder` is filled and never read, and the `seen` set exists only because aliases are also map keys. `help` ignores its `cmdName` argument, hard-codes `os.Stdout` and prints its footer without a newline.
 3. **`main.go` panics on a config error** (`panic(fmt.Errorf("%w: cannot read config dir", err))`), repeats the sentinel's text, ignores `Run`'s result and still shadows the `cli` package (`cli := cli.New(cfg)`).
 4. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`). `Aborted` is printed without a newline.

@@ -10,10 +10,11 @@ var _ Cmd = Version{}
 
 type Version struct {
 	cfg config.Config
+	ios IOs
 }
 
-func NewVersion(cfg config.Config) Version {
-	return Version{cfg: cfg}
+func NewVersion(cfg config.Config, io IOs) Version {
+	return Version{cfg, io}
 }
 
 var versionInfo = Info{
@@ -31,6 +32,6 @@ var versionInfo = Info{
 
 func (c Version) Info() Info { return versionInfo }
 func (c Version) Run(args []string) error {
-	fmt.Printf("Current tmxu version %s\n", c.cfg.Version)
-	return nil
+	_, err := fmt.Fprintf(c.ios.Out, "Current tmxu version %s\n", c.cfg.Version)
+	return err
 }

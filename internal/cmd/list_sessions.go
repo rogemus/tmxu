@@ -2,16 +2,21 @@ package cmd
 
 import (
 	"fmt"
+	"text/tabwriter"
 
+	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
 var _ Cmd = ListSessions{}
 
-type ListSessions struct{}
+type ListSessions struct {
+	cfg config.Config
+	ios IOs
+}
 
-func NewListSessions() ListSessions {
-	return ListSessions{}
+func NewListSessions(cfg config.Config, ios IOs) ListSessions {
+	return ListSessions{cfg, ios}
 }
 
 var listSessionsInfo = Info{
@@ -35,10 +40,10 @@ func (c ListSessions) Run(args []string) error {
 		return err
 	}
 
-	fmt.Println("Available sessions")
+	w := tabwriter.NewWriter(c.ios.Out, 2, 0, 2, ' ', 0)
 	for _, s := range sessions {
-		fmt.Printf(" %s %-20s [win:%d]\n ", s.ID, s.Name, s.WindowsCount)
+		fmt.Fprintf(w, "%s\t%s\t%d\n", s.ID, s.Name, s.WindowsCount)
 	}
 
-	return nil
+	return w.Flush()
 }

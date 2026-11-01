@@ -2,6 +2,8 @@
 // interface, which exposes its name, help text and a Run function.
 package cmd
 
+import "io"
+
 type Info struct {
 	Command   string
 	Aliases   []string
@@ -10,6 +12,12 @@ type Info struct {
 	DescLong  string
 	Flags     [][]string
 	Examples  []string
+}
+
+type IOs struct {
+	In  io.Reader
+	Out io.Writer
+	Err io.Writer
 }
 
 type Cmd interface {

@@ -13,6 +13,8 @@ import (
 var (
 	ErrCannotCreateSessions = errors.New("cannot create session")
 	ErrCannotListSessions   = errors.New("cannot list sessions")
+	ErrCannotAttachToSession = errors.New("cannot attach to session")
+	ErrSessionNameNotProvided = errors.New("session name not provided")
 )
 
 type Session struct {
@@ -58,6 +60,19 @@ func ListSessions() ([]Session, error) {
 	}
 
 	return sessions, nil
+}
+
+func AttachToSession(sessionName string) error {
+
+	// if sessionName == "" {
+	// 	return fmt.Errorf("No session name provided. Provide tmux session name you want attach to \n")
+	// }
+	//
+	//
+	// if err != nil {
+	// 	return fmt.Errorf("Unable to attach to tmux session: %s \n", sessionName)
+	// }
+	return nil
 }
 
 func CreateSessions(sessions []Session) error {

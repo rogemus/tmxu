@@ -2,9 +2,12 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/rogemus/tmxu/internal/cli"
+	"github.com/rogemus/tmxu/internal/cmd"
 	"github.com/rogemus/tmxu/internal/config"
 )
 
@@ -12,18 +15,26 @@ import (
 var version string
 
 func main() {
-	// cli := cli.NewCli(strings.TrimSpace(version))
-	// d, err := tmux.GetTmuxData()
-	// if err != nil {
-	// 	print("err:", err.Error(), "\n")
-	// }
+	io := cmd.IOs{
+		Out: os.Stdout,
+		In:  os.Stdin,
+		Err: os.Stderr,
+	}
 
 	cfg, err := config.New(version)
 	if err != nil {
-		panic(fmt.Errorf("%w: cannot read config dir", err))
+		fmt.Fprintf(io.Err, "cannot read config dir")
+		os.Exit(1)
 	}
 
-	cli := cli.New(cfg)
-	cli.Run()
-	// cli.Run()
+	c := cli.New(cfg, io)
+	err = c.Run(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "tmxu: %v\n", err)
+		if errors.Is(err, cli.ErrUnknownCommand) {
+			os.Exit(2)
+		}
+
+		os.Exit(1)
+	}
 }
