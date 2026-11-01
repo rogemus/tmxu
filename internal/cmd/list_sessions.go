@@ -1,14 +1,9 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/rogemus/tmxu/internal/tmux"
-)
-
-var (
-	ErrCannotListSessionCmd = errors.New("cannot list sessions in cmd")
 )
 
 var _ Cmd = ListSessions{}
@@ -37,7 +32,7 @@ func (c ListSessions) Info() Info { return listSessionsInfo }
 func (c ListSessions) Run(args []string) error {
 	sessions, err := tmux.ListSessions()
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotListSessionCmd, err)
+		return err
 	}
 
 	fmt.Println("Available sessions")

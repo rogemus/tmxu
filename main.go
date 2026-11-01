@@ -2,6 +2,8 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
+
 	"github.com/rogemus/tmxu/internal/cli"
 	"github.com/rogemus/tmxu/internal/config"
 )
@@ -16,7 +18,11 @@ func main() {
 	// 	print("err:", err.Error(), "\n")
 	// }
 
-	cfg := config.New(version, "~/.config/tmxu")
+	cfg, err := config.New(version)
+	if err != nil {
+		panic(fmt.Errorf("%w: cannot read config dir", err))
+	}
+
 	cli := cli.New(cfg)
 	cli.Run()
 	// cli.Run()

@@ -9,11 +9,11 @@ import (
 var _ Cmd = Version{}
 
 type Version struct {
-	version string
+	cfg config.Config
 }
 
 func NewVersion(cfg config.Config) Version {
-	return Version{version: cfg.Version}
+	return Version{cfg: cfg}
 }
 
 var versionInfo = Info{
@@ -31,6 +31,6 @@ var versionInfo = Info{
 
 func (c Version) Info() Info { return versionInfo }
 func (c Version) Run(args []string) error {
-	fmt.Printf("Current tmxu version %s \n", c.version)
+	fmt.Printf("Current tmxu version %s\n", c.cfg.Version)
 	return nil
 }

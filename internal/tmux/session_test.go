@@ -56,7 +56,7 @@ func TestBuildNewSessionsCmd(t *testing.T) {
 }
 
 func TestSessionStrName(t *testing.T) {
-	got := Session{Name: "test-session"}.StrName()
+	got := Session{Name: "test-session"}.GetName()
 	if want := "'test-session'"; got != want {
 		t.Errorf("StrName() = %s, want %s", got, want)
 	}

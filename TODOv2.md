@@ -49,7 +49,7 @@ Policy: stdlib-first. Write by hand to learn Go. The new code is not wired into 
 
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set
 - [ ] Rename `GetTmuxData` and `GetBaseIndex` (stutter and `Get` prefix), e.g. `Snapshot()` and `BaseIndex()`
-- [ ] Finish the quoting-method rename: `Session.StrName` still has the old name, and `GetName`/`GetTitle`/`GetPath` carry a non-idiomatic `Get` prefix; or use one quoting helper at the call site
+- [ ] Remove the `GetName`/`GetTitle`/`GetPath` quoting methods (non-idiomatic `Get` prefix, and they return a shell-quoted copy, not the field): call `utils.Quote(x.Name)` at the call site in the `build*Cmd` functions, or rename to `QuotedName`/`QuotedTitle`/`QuotedPath`; consider `Target()` for `Window.SessionIndex`
 - [ ] Rename `baseIndex.go` to `base_index.go`
 - [ ] Single map lookup in `parseTmuxLines`; drop `make(map, 0)` hints
 - [ ] Doc comments on exported identifiers; unexport what is not API

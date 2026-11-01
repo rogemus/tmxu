@@ -29,7 +29,7 @@ func NewSession(l Line) Session {
 	}
 }
 
-func (s Session) StrName() string { return utils.Quote(s.Name) }
+func (s Session) GetName() string { return utils.Quote(s.Name) }
 
 func (s Session) Eq(c utils.Comperable) bool {
 	i, ok := c.(Session)
@@ -50,8 +50,9 @@ func ListSessions() ([]Session, error) {
 		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
 	}
 
+	sess := "[" + strings.TrimSuffix(strings.TrimSpace(string(o)), ",") + "]"
 	var sessions []Session
-	err = json.Unmarshal(o, &sessions)
+	err = json.Unmarshal([]byte(sess), &sessions)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
 	}
@@ -77,7 +78,7 @@ func buildNewSessionsCmd(sessions []Session) string {
 	cmds := make([]string, 0)
 
 	for _, s := range sessions {
-		cmd := strings.Join([]string{"new-session -d -s", s.StrName()}, " ")
+		cmd := strings.Join([]string{"new-session -d -s", s.GetName()}, " ")
 		cmds = append(cmds, cmd)
 	}
 
