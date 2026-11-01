@@ -76,8 +76,11 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 - [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
 - [ ] `utils.Confirm`: rename the `err io.Writer` param to `out`
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
-- [ ] `main.go`: the `io` variable shadows the stdlib package name
-- [ ] `tmux.AttachToSession` is a stub that returns `nil`; implement it or remove it, and use or delete `ErrCannotAttachToSession` / `ErrSessionNameNotProvided`
+- [ ] `attach`: inside tmux (`$TMUX` set) use `switch-client` instead of `attach`; target with `=name` (exact match)
+- [ ] `attach`: implement `-menu` (fzf-style menu) or remove the flag and its example; fix the `tmux attach-session -menu` typo in `Examples`; drop the blank first line of `Run`
+- [ ] `tmux.AttachToSession` writes to `os.Stdin`/`Stdout`/`Stderr`; take the `cmd.IOs` streams instead; error format `%w %s: %w` is missing a colon
+- [ ] `wantsHelp` is a method that does not use `c`; make it a plain function
+- [ ] Unused `cfg` field in `AttachSession`, `ListSessions`, `Version`
 - [ ] Prompts, `--yes`, `--dry-run`, `-q` / `-v`
 - [ ] Tests for `internal/cli` (help output, command lookup, `ErrUnknownCommand`)
 - [ ] Atomic writes, `0600` files
@@ -107,7 +110,7 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 - [x] `Cmd` interface reduced to `Info()` and `Run(args []string)`, with metadata in one `Info` struct per command
 - [x] Package-level `Cmd` vars and the `version` global are gone; commands built by constructors from `config.Config`
 - [x] `cmd` types and `config.Config` no longer stutter; command fields unexported and consistent
-- [x] `cmd` defines no custom errors (`ListSessions.Run` returns the `tmux` error)
+- [x] `cmd` defines one shared `ErrUsage` plus the `attach` sentinels; `ListSessions.Run` returns the `tmux` error
 - [x] `tmux.ListSessions` wraps its rows in `[...]` and the `session_windows` format is fixed
 - [x] `config.New(version)` trims the version, resolves the dir (XDG on macOS, `os.UserConfigDir` elsewhere) and returns an error
 - [x] `version` prints without a trailing space
@@ -115,5 +118,7 @@ Policy: stdlib-first. Write by hand to learn Go. `main` is wired to `internal/cl
 - [x] Commands get `cmd.IOs{In, Out, Err}` by constructor; `version` and `ls` write to `Out`, prompts and "Aborted" to `Err`
 - [x] `Cli.Run(args) error`: dispatch, `help [command]`, `ErrUnknownCommand` through one `unknownCmdError` helper; consistent `*Cli` receivers, no shadowing of the `cmd` package
 - [x] `ls`: no header, `tabwriter` with `Flush`
-- [x] `main.go`: one exit site, exit 1 for runtime errors and 2 for an unknown command, `tmxu:` prefix on stderr, no `panic`
+- [x] `main.go`: one exit site, exit 1 for runtime errors and 2 for any `cmd.ErrUsage` (unknown command, bad flag, missing session name), `tmxu:` prefix on stderr, no `panic`, no `io` shadowing
+- [x] `-h`, `-help`, `--help` handled in `Cli.Run` for every command (help to stdout, exit 0); `tmxu -h` and `tmxu --help` print general help; scanning stops at `--`
+- [x] `attach-session`: flags parsed with a silent `FlagSet`, session name checked after `Parse`, `tmux attach -t` wired to the terminal
 - [x] `utils.Confirm` takes an `io.Reader` and writes the prompt to stderr; "Aborted" goes to stderr with a newline

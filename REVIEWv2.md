@@ -216,20 +216,21 @@ REVIEW 6.3 recommended keeping restore as separate sequential calls for error at
 - `cmd.Cmd` is `Info() Info` plus `Run(args []string) error`. Each command keeps its `Info` in a package-level var, compile-time checks (`var _ Cmd = X{}`) guard the interface, and each command lives in its own file.
 - `cli.New(cfg)` builds the registry with constructors; aliases are map keys; help writes to an injected `io.Writer`: `tabwriter` for the command list, `text/template` for per-command help.
 - `config.New(version)` trims the version, resolves the config dir (`$XDG_CONFIG_HOME` or `~/.config` on macOS, `os.UserConfigDir` elsewhere) and returns an error. `Config{DirPath, Version}` is immutable and passed by value.
-- `cmd` defines no custom errors; `ListSessions.Run` returns the `tmux` error.
+- `cmd.ErrUsage` is the one shared sentinel for wrong invocation. Unknown command, bad flag and missing session name wrap it, and `main` maps it to exit 2 with a single `errors.Is`. `ListSessions.Run` returns the `tmux` error.
+- `Cli.Run` handles `-h`, `-help` and `--help` for every command before it runs (help to stdout, exit 0), so commands need no `flag.ErrHelp` handling.
 
 ### 8.2 Problems
 
-1. **`main.go`:** the `io` variable shadows the stdlib package name.
-2. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`).
-3. **`utils.Confirm`** builds a new `bufio.Reader` per call, ignores the read error, and silently returns false on EOF (REVIEW 1.9). The writer param is named `err`; rename to `out`.
-4. **Commands call package functions directly** (`tmux.ListSessions`, `tmux.GetTmuxData`), so they cannot be tested without a real tmux server. Inject a small interface.
-5. **`Info.Flags` is `[][]string`**, stringly typed (`index . 0` in the help template). A `Flag{Name, Desc}` struct is clearer.
-6. **No alias-collision check** in `newCmd`: a duplicate alias silently overwrites.
-7. **Config gaps:** no directory creation, no `TMXU_CONFIG_DIR` or `--config-dir`, a relative `$XDG_CONFIG_HOME` is accepted (the XDG spec requires absolute), no tests (`t.Setenv` makes the env branches easy), and `New`, `Config`, `DirPath` have no doc comments. The darwin branch only runs on macOS.
-8. **Doc comments were dropped** from the `cmd` types and constructors in the interface simplification, and `internal/cli` has no package comment.
-9. **`internal/cli` has no tests** (help output, command lookup, `ErrUnknownCommand`).
-10. **`tmux.AttachToSession` is a stub** that returns `nil`; its two sentinels are unused.
+1. **`save-sessions` does nothing useful.** It confirms, calls `tmux.GetTmuxData`, discards the result and writes nothing. Its description and a TODO comment still mention the literal `~/.config/tmxu` and `cfg.Path` (the field is now `DirPath`).
+2. **`utils.Confirm`** builds a new `bufio.Reader` per call, ignores the read error, and silently returns false on EOF (REVIEW 1.9). The writer param is named `err`; rename to `out`.
+3. **Commands call package functions directly** (`tmux.ListSessions`, `tmux.GetTmuxData`, `tmux.AttachToSession`), so they cannot be tested without a real tmux server. Inject a small interface.
+4. **`Info.Flags` is `[][]string`**, stringly typed (`index . 0` in the help template). A `Flag{Name, Desc}` struct is clearer.
+5. **No alias-collision check** in `newCmd`: a duplicate alias silently overwrites.
+6. **Config gaps:** no directory creation, no `TMXU_CONFIG_DIR` or `--config-dir`, a relative `$XDG_CONFIG_HOME` is accepted (the XDG spec requires absolute), no tests (`t.Setenv` makes the env branches easy), and `New`, `Config`, `DirPath` have no doc comments. The darwin branch only runs on macOS.
+7. **Doc comments were dropped** from the `cmd` types and constructors in the interface simplification, and `internal/cli` has no package comment.
+8. **`internal/cli` has no tests** (help output, command lookup, `ErrUnknownCommand`, `-h` handling).
+9. **`attach-session` is not finished.** It uses `tmux attach -t name` (prefix match, fails inside tmux where `$TMUX` is set, so `switch-client` is needed). `-menu` is parsed but never read, and its example has a typo (`tmux` for `tmxu`). `AttachToSession` writes to `os.*` directly instead of the injected `IOs`, and its error format lacks a colon after the first `%w`.
+10. **Small:** `wantsHelp` is a method that ignores its receiver; the `cfg` field is unused in three commands.
 11. **Old package still present.** The top-level `cli/` (full old implementation) sits next to `internal/cli`; two packages named `cli` are confusing until parity.
 
 ### 8.3 Maps to the old TODO
