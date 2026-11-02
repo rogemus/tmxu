@@ -6,12 +6,12 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`. Restore, templates and the menu are not ported. `save` writes nothing yet.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`. Restore, templates and the menu are not ported. `save` writes nothing yet. Unit tests cover `cli` (100%), `utils` (100%), `cmd` (about 69%), `config` and `tmux` (about 60%); everything that shells out to tmux needs the runner seam.
 
 ## 1. Restore safety (fix first)
 
 - [ ] `HasSession` returns `(false, nil)` for an absent session (exit code 1 from `has-session`); typed error for real failures
-- [ ] Check `has-session` before creating; skip or refuse existing sessions
+- [ ] Check `has-session` before creating; skip or refuse existing sessions (today only `NewSession` detects a duplicate, from tmux's stderr; a duplicate in a `CreateSessions` chain stops the rest)
 - [ ] Never use `-k` on a session that was not created in this run
 - [ ] Explicit force path with a prompt that lists what will be killed; refuse to kill the current session (`$TMUX`, `display-message -p '#S'`)
 - [ ] Exact-match targets everywhere (`=name`, `'=name:idx'`); decide what to do with names containing `:` or `.` (target by session id, or reject)
@@ -24,7 +24,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Window layout: read `#{window_layout}`, store it, apply `select-layout` after the splits
 - [ ] Layout only for windows with more than one pane (`omitempty`); no `select-layout` for single-pane windows
 - [ ] Decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
-- [ ] Start directory guard (old `startDirArgs`), or verify tmux's fallback for a missing directory
+- [ ] Start directory guard (old `startDirArgs`): verified that tmux does not fail on a missing `-c` directory, it silently starts in `$HOME`; decide whether to warn
+- [x] `new-session` without `-c` starts in the client's current directory (verified), so no `os.Getwd` default is needed
 - [ ] Pane naming rule: derived name, `@name` pane option, or raw title; escape `#` if `-T` expands formats
 - [ ] Set pane titles without changing the active pane
 - [ ] Restore the original active pane and window
@@ -52,7 +53,9 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Sentinels `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message
 - [ ] "No server running" handled like `tmux ls`
 - [ ] `exec.LookPath("tmux")` and `tmux -V` check at startup with a clear message
-- [ ] Wrap the cause in `GetBaseIndex` with `%w`; fix `ErrCannotCreateSessions` text
+- [ ] Wrap the cause in `GetBaseIndex` with `%w`
+- [x] Fix `ErrCannotCreateSessions` text (now `ErrCannotCreateSession`)
+- [x] `NewSession` reports tmux's own message and returns `ErrSessionExists` for a duplicate (`newSessionError`)
 - [ ] `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist`
 - [ ] `errors.Join` to collect restore errors
 - [ ] Thread `ctx`; `signal.NotifyContext` in `main`; `exec.CommandContext` with a 5s timeout for non-interactive calls, none for `attach`
@@ -64,7 +67,10 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 - [ ] `save`: actually write the sessions file (one shared `snapshotSession` for sessions and templates)
 - [ ] `restore-sessions` (one shared `restoreSession` for restore and new-from-template)
-- [ ] `new-session` (empty name rejected; `-templ`; `errSessionExists` mapped to a message in one place)
+- [x] `new-session`: empty name and extra arguments rejected (`ErrSessionNameNotProvided`, `ErrUnexpectedArgument`), `-path` made absolute, duplicate returns `ErrSessionExists`
+- [ ] `new-session -templ` fails with "not supported yet" until templates are ported (today it is parsed and silently ignored)
+- [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
+- [ ] Map `ErrSessionExists` to a user message in one place
 - [ ] `save-template`, `list-templates`, `delete-template` (clear missing-file error, `-f`)
 - [ ] Template names validated: reject empty, `/`, `\`, `..`, leading `.`
 - [ ] Template list skips non-`.json` files and subdirectories; a bad file is reported without failing the list
@@ -85,10 +91,10 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] `-V` / `--version` globally
 - [ ] Help layout: Usage, Commands, Options, Environment, Exit status
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
-- [ ] Missing required argument prints usage and exits 2 (done for `attach`; apply everywhere)
+- [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] Unknown command: "did you mean"
 - [ ] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`; help derived from the `FlagSet` (`VisitAll`)
-- [ ] Detect alias collisions in `newCmd`
+- [ ] Detect alias collisions in `newCmd` (a test now catches a collision among registered commands; `newCmd` still overwrites silently)
 - [ ] `-y` / `--yes`, `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
 - [ ] `ls` / `list-templates`: plain output when piped, `--json`, `-0`
 - [ ] `save -o -`, `restore -f FILE`, `show-template NAME`, `attach -` (name from stdin)
@@ -98,6 +104,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] `//go:build !windows` or a clear unsupported-OS message
 - [ ] Decide what bare `tmxu` does (help + exit 0 today)
 - [ ] `wantsHelp` becomes a plain function; remove unused `cfg` fields in `AttachSession`, `ListSessions`, `Version`
+- [ ] `Cli.help(w, args)` passes `c.ios.Out` to `helpAll` instead of `w`
+- [ ] `attachSessionInfo` has no `Flags` for `-menu`, so `tmxu help attach` omits it; fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
 - [ ] Doc comments on exported identifiers; unexport what is not API; package doc for `internal/cli`
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set
 - [ ] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`; drop `GetName`/`GetTitle`/`GetPath` (call `utils.Quote` at the call site, or `Quoted*`)
@@ -107,14 +115,18 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 - [ ] `fakeRunner` recording args and returning canned output
 - [ ] Tests for `CreateSessions`, `CreateWindows`, `Snapshot`, `ListSessions` through the fake
-- [ ] Names with `'`, `"`, `\`, `$`, `#`, spaces, newline
+- [ ] Names with `'`, `"`, `\`, `$`, `#`, spaces, newline (quoting of pane and window values is covered; session names and the tmux output format are not)
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
-- [ ] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming); config store round trip, missing file, bad JSON, traversal name, non-`.json` file, delete missing, using `t.TempDir()`
-- [ ] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
-- [ ] Command-level tests with injected stdin/stdout/stderr
+- [x] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
+- [ ] Config store round trip, missing file, bad JSON, traversal name, non-`.json` file, delete missing, using `t.TempDir()` (store not written yet)
+- [x] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
+- [x] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
+- [ ] Command-level tests with injected stdin/stdout/stderr (done for `version`, usage errors of `new-session` and `attach`, declined `save`; the rest needs the runner)
+- [ ] Add a `Run` test for each command's success path once a fake runner exists
 - [ ] Golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
 - [ ] Optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux
-- [ ] Verify on a throwaway server: single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-c` with a missing directory, `-T` format expansion, order of `list-panes -a`
+- [ ] Verify on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
+  - Verified: duplicate `new-session` exits 1 with `duplicate session: NAME` and stops a chain; `new-session -A -d` on an existing session fails without a terminal; `-c` with a missing directory exits 0 and falls back to `$HOME`
 - [ ] Run tests with `-race`; use `t.Helper`, `t.Cleanup`, `t.Setenv`
 
 ## 8. Ship it (after the migration)
