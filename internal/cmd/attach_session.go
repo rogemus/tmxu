@@ -13,7 +13,6 @@ var _ Cmd = AttachSession{}
 
 var (
 	ErrCannotParseAttachCmdFlags = fmt.Errorf("%w: cannot parse attach cmd flags", ErrUsage)
-	ErrSessionNameNotProvided    = fmt.Errorf("%w: session name not provided", ErrUsage)
 )
 
 type AttachSession struct {
@@ -46,7 +45,6 @@ func (c AttachSession) Run(args []string) error {
 	var menuMode bool
 	fs := flag.NewFlagSet("attach-session", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-
 	fs.BoolVar(&menuMode, "menu", false, "Use interactive menu to select session")
 
 	err := fs.Parse(args)

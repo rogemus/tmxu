@@ -30,6 +30,31 @@ type Line struct {
 	PaneTitle   string `json:"pane_title"`
 }
 
+func (l Line) Session() Session {
+	return Session{
+		ID:   l.SessionID,
+		Name: l.SessionName,
+	}
+}
+
+func (l Line) Window() Window {
+	return Window{
+		ID:          l.WindowID,
+		Name:        l.WindowName,
+		Index:       l.WindowIndex,
+		SessionName: l.SessionName,
+	}
+}
+
+func (l Line) Pane() Pane {
+	return Pane{
+		ID:    l.PaneID,
+		Index: l.PaneIndex,
+		Title: l.PaneTitle,
+		Path:  l.PanePath,
+	}
+}
+
 type Data struct {
 	sessions map[string]Session
 	windows  map[string][]Window
@@ -98,20 +123,19 @@ func parseTmuxLines(lines []Line) Data {
 	panes := make(map[string][]Pane, 0)
 
 	for _, l := range lines {
-
-		s := NewSession(l)
+		s := l.Session()
 		if _, ok := sessions[l.SessionID]; ok {
 			s = sessions[l.SessionID]
 		} else {
 			sessions[s.ID] = s
 		}
 
-		w := NewWindow(l)
+		w := l.Window()
 		if !utils.Contain(windows[s.ID], w) {
 			windows[s.ID] = append(windows[s.ID], w)
 		}
 
-		p := NewPane(l)
+		p := l.Pane()
 		if !utils.Contain(panes[w.ID], p) {
 			panes[w.ID] = append(panes[w.ID], p)
 		}

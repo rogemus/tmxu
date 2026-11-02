@@ -13,15 +13,6 @@ type Pane struct {
 	Path  string `json:"path"`
 }
 
-func NewPane(l Line) Pane {
-	return Pane{
-		ID:    l.PaneID,
-		Index: l.PaneIndex,
-		Title: l.PaneTitle,
-		Path:  l.PanePath,
-	}
-}
-
 func (p Pane) GetTitle() string { return utils.Quote(p.Title) }
 
 func (p Pane) GetPath() string { return utils.Quote(p.Path) }

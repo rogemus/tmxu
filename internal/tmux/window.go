@@ -20,15 +20,6 @@ type Window struct {
 	SessionName string `json:"sessionName"`
 }
 
-func NewWindow(l Line) Window {
-	return Window{
-		ID:          l.WindowID,
-		Name:        l.WindowName,
-		Index:       l.WindowIndex,
-		SessionName: l.SessionName,
-	}
-}
-
 func (w Window) GetName() string { return utils.Quote(w.Name) }
 
 func (w Window) SessionIndex() string {

@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	ErrCannotCreateSessions   = errors.New("cannot create session")
-	ErrCannotListSessions     = errors.New("cannot list sessions")
-	ErrCannotAttachToSession  = errors.New("cannot attach to session")
+	ErrCannotCreateSession   = errors.New("cannot create session")
+	ErrCannotListSessions    = errors.New("cannot list sessions")
+	ErrCannotAttachToSession = errors.New("cannot attach to session")
+	ErrSessionExists         = errors.New("session already exists")
 )
 
 type Session struct {
@@ -23,19 +24,31 @@ type Session struct {
 	WindowsCount int    `json:"session_windows"`
 }
 
-func NewSession(l Line) Session {
-	return Session{
-		ID:           l.SessionID,
-		Name:         l.SessionName,
-		WindowsCount: 0,
-	}
-}
-
 func (s Session) GetName() string { return utils.Quote(s.Name) }
 
 func (s Session) Eq(c utils.Comperable) bool {
 	i, ok := c.(Session)
 	return ok && s.ID == i.ID
+}
+
+func NewSession(name string, dir string) error {
+	argv := []string{"new-session", "-d", "-s", name}
+
+	if dir != "" {
+		argv = append(argv, "-c", dir)
+	}
+
+	out, err := exec.Command("tmux", argv...).CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if strings.HasPrefix(msg, "duplicate session:") {
+			return fmt.Errorf("%w: %s", ErrSessionExists, name)
+		}
+
+		return fmt.Errorf("%w %s: %s: %w", ErrCannotCreateSession, name, msg, err)
+	}
+
+	return nil
 }
 
 func ListSessions() ([]Session, error) {
@@ -63,7 +76,7 @@ func ListSessions() ([]Session, error) {
 }
 
 func AttachToSession(name string) error {
-	cmd := exec.Command("tmux", "attach", "-t", name)
+	cmd := exec.Command("tmux", "attach", "-t", "="+name)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -83,7 +96,7 @@ func CreateSessions(sessions []Session) error {
 	cmd := buildNewSessionsCmd(sessions)
 	_, err := exec.Command("tmux", cmd).Output()
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotCreateSessions, err)
+		return fmt.Errorf("%w: %w", ErrCannotCreateSession, err)
 	}
 
 	return nil
