@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`, `dump`. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has no tests: the AI-generated ones were removed, and I write them by hand (see section 7). Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`, `dump`. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see section 7). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
 
 ## 1. Restore safety (fix first)
 
@@ -14,7 +14,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Check `has-session` before creating; skip or refuse existing sessions (today only `NewSession` detects a duplicate, from tmux's stderr; a duplicate in a `CreateSessions` chain stops the rest)
 - [ ] Never use `-k` on a session that was not created in this run
 - [ ] Explicit force path with a prompt that lists what will be killed; refuse to kill the current session (`$TMUX`, `display-message -p '#S'`)
-- [ ] Exact-match targets everywhere (`=name`, `'=name:idx'`); decide what to do with names containing `:` or `.` (target by session id, or reject)
+- [x] Exact-match targets in all builders (`Window.TargetIndex` returns `=name:idx`, quoted at the call site, not escaped: verified that `-t` is not format-expanded)
+- [ ] Decide what to do with session names containing `:` or `.` (target by session id, or reject)
 - [ ] Read the real `base-index` (use or delete `GetBaseIndex`); handle saved index != current base so no blank leftover window stays
 - [ ] Roll back sessions created in this run when a later step fails
 - [ ] Ctrl-C during restore: clean up or report the partial session
@@ -30,7 +31,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Start directory guard (old `startDirArgs`): verified that tmux does not fail on a missing `-c` directory, it silently starts in `$HOME`; decide whether to warn
 - [x] `new-session` without `-c` starts in the client's current directory (verified), so no `os.Getwd` default is needed
 - [ ] Pane naming rule: derived name, `@name` pane option, or raw title; escape `#` if `-T` expands formats
-- [ ] Set pane titles without changing the active pane
+- [ ] Set pane titles without changing the active pane (`select-pane -T`; verify it leaves the active pane alone)
+- [ ] Verify whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
 - [ ] Restore the original active pane and window
 - [ ] Preserve session order (`session_created` as `time.Time`; slice, not map; numeric sort of `$N`)
 - [ ] `attach` / `switch-client` when `$TMUX` is set; `=name` exact target
@@ -118,7 +120,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] `attachSessionInfo` has no `Flags` for `-menu`, so `tmxu help attach` omits it; fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
 - [ ] Doc comments on exported identifiers; unexport what is not API; package doc for `internal/cli`
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set
-- [ ] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`; drop `GetName`/`GetTitle`/`GetPath` (call `utils.Quote` at the call site, or `Quoted*`)
+- [x] Drop `GetName`/`GetTitle`/`GetPath` (`utils.Quote` is called at the call site)
+- [ ] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`
 - [ ] Rename `baseIndex.go` to `base_index.go`
 
 ## 7. Testing
@@ -127,7 +130,8 @@ All `internal/` tests were AI-generated and have been removed. I write every tes
 
 - [ ] `fakeRunner` recording args and returning canned output
 - [ ] Tests for `CreateSessions`, `CreateWindows`, `Snapshot`, `ListSessions` through the fake
-- [ ] Names with `'`, `"`, `\`, `$`, `#`, spaces, newline (quoting of pane and window values is covered; session names and the tmux output format are not)
+- [x] `utils.Quote`, `utils.Escape` and `Quote(Escape(x))` tables (`'`, `\`, `$`, `#`, spaces, newline, unicode)
+- [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
 - [ ] Config store round trip, missing file, bad JSON, traversal name, non-`.json` file, delete missing, using `t.TempDir()` (store not written yet)
@@ -139,6 +143,7 @@ All `internal/` tests were AI-generated and have been removed. I write every tes
 - [ ] Golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
 - [ ] Optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux
 - [ ] Verify on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
+  - Verified (default server, not a private socket): `new-session -s` is format-expanded (`-s 'a##b'` creates `a#b`); `-t` is not (`has-session -t '=a#b'` finds it, `'=a##b'` does not)
   - Verified: duplicate `new-session` exits 1 with `duplicate session: NAME` and stops a chain; `new-session -A -d` on an existing session fails without a terminal; `-c` with a missing directory exits 0 and falls back to `$HOME`
   - Verified: tmux 3.8 prints `#{window_layout}` as JSON; it can contain keys the structs do not model (`"l":0`), so the raw text is what gets sent back to `select-layout`
 - [ ] Run tests with `-race`; use `t.Helper`, `t.Cleanup`, `t.Setenv`
@@ -154,7 +159,8 @@ Do these last. Completion and the man page are generated from or written against
 - [ ] `tmxu completion zsh|bash|fish` (hand-written, `//go:embed` or generated from the registry); hidden `__complete` for session and template names; tests for it
 - [ ] Man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
 - [ ] README: fix Go "1.16+" (go.mod requires 1.26), document tmux 3.8+, install, completion setup, exit codes, JSON format, an fzf recipe, how it differs from tmux-resurrect, tmuxinator, sesh
-- [ ] `justfile`: `run` passes `{{ARGS}}`, consistent indentation, add `build`, `install`, `check`, groups; fix `lint`
+- [x] `justfile`: `run` passes `{{CMD}}`, consistent indentation, groups, `lint` fixed
+- [ ] `justfile`: add `build`, `install`, `check`; decide whether `run` takes several arguments (`*ARGS`)
 - [ ] `.gitignore`: anchor `/tmxu`; add `.DS_Store`, `dist/`, `*.test`, `coverage.out`
 - [ ] Fix stale `CLAUDE.md` (`gh.go`, `Formula/`, old `cli/` layout) or leave it untracked
 - [ ] `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
