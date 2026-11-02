@@ -7,6 +7,7 @@ import (
 )
 
 type dumpData struct {
+	Version  int           `json:"version"`
 	Sessions []dumpSession `json:"sessions"`
 }
 
@@ -28,7 +29,10 @@ type dumpPane struct {
 }
 
 func (d Data) JSON() ([]byte, error) {
-	out := dumpData{Sessions: make([]dumpSession, 0, len(d.sessions))}
+	out := dumpData{
+		Version:  2,
+		Sessions: make([]dumpSession, 0, len(d.sessions)),
+	}
 
 	for _, sid := range d.sessionIDs() {
 		s := dumpSession{
