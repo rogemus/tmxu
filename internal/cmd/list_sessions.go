@@ -66,12 +66,12 @@ func (c ListSessions) Run(args []string) error {
 			"sessions": sessions,
 		}
 
-		out, err := json.MarshalIndent(sDump, "", "  ")
+		out, err := json.Marshal(sDump)
 		if err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotParseListSessionCmdJson, err)
 		}
 
-		_, err = fmt.Fprintf(c.ios.Out, string(out))
+		_, err = fmt.Fprintln(c.ios.Out, string(out))
 		return err
 	}
 

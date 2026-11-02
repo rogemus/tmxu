@@ -66,7 +66,7 @@ func (d Data) JSON() ([]byte, error) {
 		out.Sessions = append(out.Sessions, s)
 	}
 
-	return json.MarshalIndent(out, "", "  ")
+	return json.Marshal(out)
 }
 
 func (d Data) String() string {
