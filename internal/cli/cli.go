@@ -164,6 +164,8 @@ func New(cfg config.Config, ios cmd.IOs) *Cli {
 	c.newCmd(lsCmd)
 	ssCmd := cmd.NewSaveSessions(cfg, ios)
 	c.newCmd(ssCmd)
+	dCmd := cmd.NewDump(cfg, ios)
+	c.newCmd(dCmd)
 	vCmd := cmd.NewVersion(cfg, ios)
 	c.newCmd(vCmd)
 

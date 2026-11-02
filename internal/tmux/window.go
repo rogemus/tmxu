@@ -1,6 +1,7 @@
 package tmux
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -11,13 +12,24 @@ import (
 
 var (
 	ErrCannotCreateWindows = errors.New("cannot create windows")
+	ErrCannotParseLayout   = errors.New("cannot parse window layout")
 )
 
 type Window struct {
-	ID          string `json:"id"`
-	Index       int    `json:"index"`
-	Name        string `json:"name"`
-	SessionName string `json:"sessionName"`
+	ID           string          `json:"window_id"`
+	Index        int             `json:"window_index"`
+	Name         string          `json:"window_name"`
+	SessionName  string          `json:"session_name"`
+	WindowLayout json.RawMessage `json:"window_layout"`
+}
+
+func (w Window) Layout() (LayoutNode, error) {
+	var wl WindowLayout
+	if err := json.Unmarshal(w.WindowLayout, &wl); err != nil {
+		return LayoutNode{}, fmt.Errorf("%w: %w", ErrCannotParseLayout, err)
+	}
+
+	return normalizeWindowLayout(wl), nil
 }
 
 func (w Window) GetName() string { return utils.Quote(w.Name) }
@@ -61,6 +73,10 @@ func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 
 		if len(restOfPanes) > 0 {
 			cmds = append(cmds, buildNewPanesCmd(w, restOfPanes))
+		}
+
+		if w.WindowLayout != nil {
+			cmds = append(cmds, buildSetLayoutCmd(w))
 		}
 	}
 

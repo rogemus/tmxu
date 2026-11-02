@@ -23,6 +23,7 @@ func allCmds(ios IOs) []Cmd {
 
 	return []Cmd{
 		NewAttachSession(cfg, ios),
+		NewDump(cfg, ios),
 		NewListSessions(cfg, ios),
 		NewNewSession(cfg, ios),
 		NewSaveSessions(cfg, ios),

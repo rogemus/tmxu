@@ -1,6 +1,8 @@
 package tmux
 
 import (
+	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -29,8 +31,26 @@ func TestLineConversions(t *testing.T) {
 
 	t.Run("Window carries its session name", func(t *testing.T) {
 		want := Window{ID: "@2", Index: 3, Name: "test-window", SessionName: "test-session"}
-		if got := l.Window(); got != want {
+		if got := l.Window(); !reflect.DeepEqual(got, want) {
 			t.Errorf("Window() = %+v, want %+v", got, want)
+		}
+	})
+
+	t.Run("Window keeps a split layout", func(t *testing.T) {
+		split := l
+		split.WindowLayout = json.RawMessage(`{"V":2,"L":{"t":"h","c":[{"t":"p"},{"t":"p"}]}}`)
+
+		if got := split.Window().WindowLayout; string(got) != string(split.WindowLayout) {
+			t.Errorf("Window().WindowLayout = %s, want %s", got, split.WindowLayout)
+		}
+	})
+
+	t.Run("Window drops a single-pane layout", func(t *testing.T) {
+		single := l
+		single.WindowLayout = json.RawMessage(`{"V":2,"L":{"t":"p","w":10,"h":10}}`)
+
+		if got := single.Window().WindowLayout; got != nil {
+			t.Errorf("Window().WindowLayout = %s, want none", got)
 		}
 	})
 

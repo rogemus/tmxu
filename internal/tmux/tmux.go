@@ -19,15 +19,16 @@ var (
 )
 
 type Line struct {
-	SessionID   string `json:"session_id"`
-	SessionName string `json:"session_name"`
-	WindowID    string `json:"window_id"`
-	WindowIndex int    `json:"window_index"`
-	WindowName  string `json:"window_name"`
-	PaneID      string `json:"pane_id"`
-	PaneIndex   int    `json:"pane_index"`
-	PanePath    string `json:"pane_path"`
-	PaneTitle   string `json:"pane_title"`
+	SessionID    string          `json:"session_id"`
+	SessionName  string          `json:"session_name"`
+	WindowID     string          `json:"window_id"`
+	WindowIndex  int             `json:"window_index"`
+	WindowName   string          `json:"window_name"`
+	WindowLayout json.RawMessage `json:"window_layout"`
+	PaneID       string          `json:"pane_id"`
+	PaneIndex    int             `json:"pane_index"`
+	PanePath     string          `json:"pane_path"`
+	PaneTitle    string          `json:"pane_title"`
 }
 
 func (l Line) Session() Session {
@@ -38,12 +39,19 @@ func (l Line) Session() Session {
 }
 
 func (l Line) Window() Window {
-	return Window{
+	w := Window{
 		ID:          l.WindowID,
 		Name:        l.WindowName,
 		Index:       l.WindowIndex,
 		SessionName: l.SessionName,
 	}
+
+	// A single pane fills the window, so only split windows keep a layout.
+	if isSplitLayout(l.WindowLayout) {
+		w.WindowLayout = l.WindowLayout
+	}
+
+	return w
 }
 
 func (l Line) Pane() Pane {
@@ -61,29 +69,14 @@ type Data struct {
 	panes    map[string][]Pane
 }
 
-func (d Data) String() string {
+func (d Data) sessionIDs() []string {
 	ids := make([]string, 0, len(d.sessions))
 	for id := range d.sessions {
 		ids = append(ids, id)
 	}
+
 	sort.Strings(ids)
-
-	var b strings.Builder
-	fmt.Fprintf(&b, "TmuxData: %d sessions\n", len(ids))
-
-	for _, sid := range ids {
-		fmt.Fprintf(&b, "%s %q\n", sid, d.sessions[sid].Name)
-
-		for _, w := range d.windows[sid] {
-			fmt.Fprintf(&b, "  %s [%d] %q\n", w.ID, w.Index, w.Name)
-
-			for _, p := range d.panes[w.ID] {
-				fmt.Fprintf(&b, "    %s [%d] %q %s\n", p.ID, p.Index, p.Title, p.Path)
-			}
-		}
-	}
-
-	return b.String()
+	return ids
 }
 
 func GetTmuxData() (Data, error) {
@@ -94,6 +87,7 @@ func GetTmuxData() (Data, error) {
 			`"window_id": "#{window_id}"`,
 			`"window_index": #{window_index}`,
 			`"window_name": "#{window_name}"`,
+			`"window_layout": #{window_layout}`,
 			`"pane_id": "#{pane_id}"`,
 			`"pane_index": #{pane_index}`,
 			`"pane_path": "#{pane_current_path}"`,

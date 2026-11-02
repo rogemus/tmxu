@@ -7,10 +7,10 @@ import (
 )
 
 type Pane struct {
-	ID    string `json:"id"`
-	Index int    `json:"index"`
-	Title string `json:"title"`
-	Path  string `json:"path"`
+	ID    string `json:"pane_id"`
+	Index int    `json:"pane_index"`
+	Title string `json:"pane_title"`
+	Path  string `json:"pane_path"`
 }
 
 func (p Pane) GetTitle() string { return utils.Quote(p.Title) }
