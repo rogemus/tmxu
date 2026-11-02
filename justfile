@@ -1,21 +1,23 @@
 _default:
   just --list
 
-# Run app
-[group: 'cli']
+# Run tmxu with a command, e.g. just run version
+[group: 'dev']
 run CMD:
-  go run ./ CMD
+  go run ./ {{CMD}}
 
-# Run all tests
-[group: 'tests']
+# Run all Go tests
+[group: 'test']
 test:
-	go test ./... -v
+  go test ./...
 
-# Format code
+# Format Go code with gofmt
+[group: 'quality']
 fmt:
-  go fmt ./... 
+  go fmt ./...
 
-# Lint
-lint: fmt 
+# Format, then run go vet and go fix -diff
+[group: 'quality']
+lint: fmt
   go vet ./...
   go fix -diff ./...

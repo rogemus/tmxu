@@ -17,7 +17,7 @@ Learning project. The user writes the code, Claude reviews and teaches.
 
 ```bash
 just run <command>      # go run ./ <command>
-just test               # go test ./... -v
+just test               # go test ./...
 just lint               # go fmt, go vet, go fix -diff
 go build -o tmxu .
 ```

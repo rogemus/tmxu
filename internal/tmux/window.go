@@ -32,10 +32,8 @@ func (w Window) Layout() (LayoutNode, error) {
 	return normalizeWindowLayout(wl), nil
 }
 
-func (w Window) GetName() string { return utils.Quote(w.Name) }
-
-func (w Window) SessionIndex() string {
-	return utils.Quote(fmt.Sprintf("=%s:%d", w.SessionName, w.Index))
+func (w Window) TargetIndex() string {
+	return fmt.Sprintf("=%s:%d", w.SessionName, w.Index)
 }
 
 func (w Window) Eq(c utils.Comperable) bool {
@@ -84,6 +82,9 @@ func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 }
 
 func buildNewWindowCmd(window Window, pane Pane) string {
-	cmd := []string{"new-window", "-k", "-d", "-t", window.SessionIndex(), "-n", window.GetName(), "-c", pane.GetPath()}
+	target := utils.Quote(window.TargetIndex())
+	name := utils.Quote(utils.Escape(window.Name))
+
+	cmd := []string{"new-window", "-k", "-d", "-t", target, "-n", name, "-c", utils.Quote(pane.Path)}
 	return strings.Join(cmd, " ")
 }
