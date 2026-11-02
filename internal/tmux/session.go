@@ -32,20 +32,9 @@ func (s Session) Eq(c utils.Comperable) bool {
 }
 
 func NewSession(name string, dir string) error {
-	argv := []string{"new-session", "-d", "-s", name}
-
-	if dir != "" {
-		argv = append(argv, "-c", dir)
-	}
-
-	out, err := exec.Command("tmux", argv...).CombinedOutput()
+	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()
 	if err != nil {
-		msg := strings.TrimSpace(string(out))
-		if strings.HasPrefix(msg, "duplicate session:") {
-			return fmt.Errorf("%w: %s", ErrSessionExists, name)
-		}
-
-		return fmt.Errorf("%w %s: %s: %w", ErrCannotCreateSession, name, msg, err)
+		return newSessionError(name, out, err)
 	}
 
 	return nil
@@ -111,4 +100,23 @@ func buildNewSessionsCmd(sessions []Session) string {
 	}
 
 	return strings.Join(cmds, " ; ")
+}
+
+func buildNewSessionCmd(name, dir string) []string {
+	argv := []string{"new-session", "-d", "-s", name}
+
+	if dir != "" {
+		argv = append(argv, "-c", dir)
+	}
+
+	return argv
+}
+
+func newSessionError(name string, out []byte, err error) error {
+	msg := strings.TrimSpace(string(out))
+	if strings.HasPrefix(msg, "duplicate session:") {
+		return fmt.Errorf("%w: %s", ErrSessionExists, name)
+	}
+
+	return fmt.Errorf("%w %s: %s: %w", ErrCannotCreateSession, name, msg, err)
 }
