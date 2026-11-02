@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`. Restore, templates and the menu are not ported. `save` writes nothing yet. Unit tests cover `cli` (100%), `utils` (100%), `cmd` (about 69%), `config` and `tmux` (about 60%); everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`, `dump`. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. Unit tests (285) cover `cli` (100%), `utils` (100%), `config` (75%), `tmux` (72%) and `cmd` (63%); everything that shells out to tmux needs the runner seam.
 
 ## 1. Restore safety (fix first)
 
@@ -21,8 +21,11 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 ## 2. Restore parity with the old `cli/`
 
-- [ ] Window layout: read `#{window_layout}`, store it, apply `select-layout` after the splits
-- [ ] Layout only for windows with more than one pane (`omitempty`); no `select-layout` for single-pane windows
+- [x] Window layout: read `#{window_layout}` (unquoted in the format, so it is nested JSON) and store it as `json.RawMessage`
+- [x] Apply `select-layout` after the splits (`buildSetLayoutCmd`, tested); verified that tmux accepts the JSON text, remaps the saved pane ids, and fails with `have N panes but need M` when the pane count differs
+- [ ] Verify `select-layout '<json>'` inside the single-string chain (the JSON is quoted with `utils.Quote`; only the separate-argv form was tried)
+- [x] Layout only for windows with more than one pane (`isSplitLayout` in `Line.Window`); no `select-layout` for single-pane windows
+- [ ] `Window.WindowLayout` needs `json:",omitempty"` (an absent layout is saved as `null`)
 - [ ] Decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
 - [ ] Start directory guard (old `startDirArgs`): verified that tmux does not fail on a missing `-c` directory, it silently starts in `$HOME`; decide whether to warn
 - [x] `new-session` without `-c` starts in the client's current directory (verified), so no `os.Getwd` default is needed
@@ -35,10 +38,13 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 ## 3. Parsing and data model
 
 - [ ] Stop building JSON inside the tmux format string (`GetTmuxData`, `ListSessions`): a `"`, `\` or newline in a name or title fails every row; use a safe delimiter or escaping
-- [ ] Add `session_created` and `window_layout` to the parsed line
-- [ ] Split DTO (tmux line) from domain and persisted types; consistent key names
+- [x] Add `window_layout` to the parsed line
+- [ ] Add `session_created` (`time.Time`) to the parsed line
+- [ ] Split DTO (tmux line) from domain and persisted types; consistent key names (started: `Data.JSON` uses its own output types; `Pane` and `Window` still carry tmux key names as JSON tags)
+- [x] Normalized window layout (`LayoutNode`: `split`, `size` in percent of the parent, `panes`; no ids or coordinates), used by `Data.String` and `Data.JSON`
 - [ ] Persisted shape drops runtime ids (`$3`, `@7`, `%9`), `Window.SessionName`, `order` and the redundant `pane.name`; targets are computed at restore time
-- [ ] `layout` stored as a real nested object (`json.RawMessage`), validated with `json.Valid` on save
+- [x] `layout` held as a real nested object (`json.RawMessage`), not an escaped string
+- [ ] Validate the layout with `json.Valid` when saving to the file
 - [ ] `"version"` field in the saved file
 - [ ] Templates are a `Session` without runtime fields; delete `TEMP_VALUE`
 - [ ] Return errors instead of `panic` for a window without panes; validate loaded data before building commands
@@ -65,6 +71,7 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 ## 5. Port the remaining commands into `internal/`
 
+- [x] `dump [-json]`: prints running sessions, windows and panes; `-json` is indented JSON without ids and with normalized layouts (`Data.JSON`)
 - [ ] `save`: actually write the sessions file (one shared `snapshotSession` for sessions and templates)
 - [ ] `restore-sessions` (one shared `restoreSession` for restore and new-from-template)
 - [x] `new-session`: empty name and extra arguments rejected (`ErrSessionNameNotProvided`, `ErrUnexpectedArgument`), `-path` made absolute, duplicate returns `ErrSessionExists`
@@ -105,6 +112,9 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Decide what bare `tmxu` does (help + exit 0 today)
 - [ ] `wantsHelp` becomes a plain function; remove unused `cfg` fields in `AttachSession`, `ListSessions`, `Version`
 - [ ] `Cli.help(w, args)` passes `c.ios.Out` to `helpAll` instead of `w`
+- [ ] `buildSetLayoutCmd`: use `string(window.WindowLayout)` instead of `json.Marshal` plus `panic` (the panic is reachable with a corrupt saved layout; marshaling also compacts the text); check `len(w.WindowLayout) > 0` instead of `!= nil` in `buildNewWindowsCmd`
+- [ ] `dump`: text output starts with `tmxu dump` on the same line as the data; `Data.String` sorts session ids as text
+- [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode` (see Decisions)
 - [ ] `attachSessionInfo` has no `Flags` for `-menu`, so `tmxu help attach` omits it; fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
 - [ ] Doc comments on exported identifiers; unexport what is not API; package doc for `internal/cli`
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set
@@ -121,12 +131,14 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Config store round trip, missing file, bad JSON, traversal name, non-`.json` file, delete missing, using `t.TempDir()` (store not written yet)
 - [x] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
 - [x] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
-- [ ] Command-level tests with injected stdin/stdout/stderr (done for `version`, usage errors of `new-session` and `attach`, declined `save`; the rest needs the runner)
+- [x] Window layout: normalization (`percent`, `normalizeSize`, nested splits, zero sizes), decoding real tmux text, `isSplitLayout`, `Window.Layout`, `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
+- [ ] Command-level tests with injected stdin/stdout/stderr (done for `version`, flag errors of `dump`, usage errors of `new-session` and `attach`, declined `save`; the rest needs the runner)
 - [ ] Add a `Run` test for each command's success path once a fake runner exists
 - [ ] Golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
 - [ ] Optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux
 - [ ] Verify on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
   - Verified: duplicate `new-session` exits 1 with `duplicate session: NAME` and stops a chain; `new-session -A -d` on an existing session fails without a terminal; `-c` with a missing directory exits 0 and falls back to `$HOME`
+  - Verified: tmux 3.8 prints `#{window_layout}` as JSON; it can contain keys the structs do not model (`"l":0`), so the raw text is what gets sent back to `select-layout`
 - [ ] Run tests with `-race`; use `t.Helper`, `t.Cleanup`, `t.Setenv`
 
 ## 8. Ship it (after the migration)
@@ -162,6 +174,7 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 - [ ] On-disk format: reuse the `internal/tmux` structs or a separate persisted shape (recommended: separate)
 - [ ] Existing sessions on restore: skip, refuse, or force
 - [ ] Panic or error for a window without panes (recommended: error)
+- [ ] Layout restore: apply the raw tmux JSON with `select-layout` (done; exact, needs the pane count to match first) or rebuild it from the normalized `LayoutNode` with recursive `split-window -l N%` (readable file, relative sizes, no `select-layout`; approximate, needs verifying on 3.8)
 - [ ] Wait for shells by default with `-no-wait`, or opt-in `-wait`
 
 ## Suggested order
