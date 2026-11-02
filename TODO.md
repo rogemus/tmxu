@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`, `dump`. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. Unit tests (285) cover `cli` (100%), `utils` (100%), `config` (75%), `tmux` (72%) and `cmd` (63%); everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`, `dump`. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has no tests: the AI-generated ones were removed, and I write them by hand (see section 7). Everything that shells out to tmux needs the runner seam.
 
 ## 1. Restore safety (fix first)
 
@@ -101,7 +101,7 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] Unknown command: "did you mean"
 - [ ] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`; help derived from the `FlagSet` (`VisitAll`)
-- [ ] Detect alias collisions in `newCmd` (a test now catches a collision among registered commands; `newCmd` still overwrites silently)
+- [ ] Detect alias collisions in `newCmd` (`newCmd` overwrites silently)
 - [ ] `-y` / `--yes`, `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
 - [ ] `ls` / `list-templates`: plain output when piped, `--json`, `-0`
 - [ ] `save -o -`, `restore -f FILE`, `show-template NAME`, `attach -` (name from stdin)
@@ -123,15 +123,17 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 ## 7. Testing
 
+All `internal/` tests were AI-generated and have been removed. I write every test myself, by hand, to learn how they work. Claude only reviews them. The unchecked items below include areas that used to be covered (`config.New`, `cli` help and lookup, `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`, window layout normalization and `buildSetLayoutCmd`).
+
 - [ ] `fakeRunner` recording args and returning canned output
 - [ ] Tests for `CreateSessions`, `CreateWindows`, `Snapshot`, `ListSessions` through the fake
 - [ ] Names with `'`, `"`, `\`, `$`, `#`, spaces, newline (quoting of pane and window values is covered; session names and the tmux output format are not)
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
-- [x] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
+- [ ] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
 - [ ] Config store round trip, missing file, bad JSON, traversal name, non-`.json` file, delete missing, using `t.TempDir()` (store not written yet)
-- [x] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
-- [x] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
-- [x] Window layout: normalization (`percent`, `normalizeSize`, nested splits, zero sizes), decoding real tmux text, `isSplitLayout`, `Window.Layout`, `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
+- [ ] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
+- [ ] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
+- [ ] Window layout: normalization (`percent`, `normalizeSize`, nested splits, zero sizes), decoding real tmux text, `isSplitLayout`, `Window.Layout`, `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
 - [ ] Command-level tests with injected stdin/stdout/stderr (done for `version`, flag errors of `dump`, usage errors of `new-session` and `attach`, declined `save`; the rest needs the runner)
 - [ ] Add a `Run` test for each command's success path once a fake runner exists
 - [ ] Golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
@@ -153,7 +155,7 @@ Do these last. Completion and the man page are generated from or written against
 - [ ] Man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
 - [ ] README: fix Go "1.16+" (go.mod requires 1.26), document tmux 3.8+, install, completion setup, exit codes, JSON format, an fzf recipe, how it differs from tmux-resurrect, tmuxinator, sesh
 - [ ] `justfile`: `run` passes `{{ARGS}}`, consistent indentation, add `build`, `install`, `check`, groups; fix `lint`
-- [ ] `.gitignore`: anchor `/tmxu`; add `.DS_Store`, `dist/`, `.claude/`, `*.test`, `coverage.out`
+- [ ] `.gitignore`: anchor `/tmxu`; add `.DS_Store`, `dist/`, `*.test`, `coverage.out`
 - [ ] Fix stale `CLAUDE.md` (`gh.go`, `Formula/`, old `cli/` layout) or leave it untracked
 - [ ] `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
 - [ ] Homebrew tap or formula, installing the man page and completions (or remove references)
