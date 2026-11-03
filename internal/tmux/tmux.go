@@ -18,6 +18,8 @@ var (
 	ErrCannotParseTmuxLines = errors.New("cannot parse tmux lines")
 )
 
+const SchemaVersion = 2
+
 type Line struct {
 	SessionID    string          `json:"session_id"`
 	SessionName  string          `json:"session_name"`
@@ -28,22 +30,26 @@ type Line struct {
 	PaneID       string          `json:"pane_id"`
 	PaneIndex    int             `json:"pane_index"`
 	PanePath     string          `json:"pane_path"`
-	PaneTitle    string          `json:"pane_title"`
 }
 
 func (l Line) Session() Session {
 	return Session{
 		ID:   l.SessionID,
+		Slug: utils.Slug(l.SessionName),
 		Name: l.SessionName,
 	}
 }
 
 func (l Line) Window() Window {
+	slug := utils.Slug(fmt.Sprintf("%s_%s_%d", l.SessionName, l.WindowName, l.WindowIndex))
+	target := fmt.Sprintf("=%s:%d", l.SessionName, l.WindowIndex)
+
 	w := Window{
 		ID:          l.WindowID,
+		Slug:        slug,
 		Name:        l.WindowName,
 		Index:       l.WindowIndex,
-		SessionName: l.SessionName,
+		TargetIndex: target,
 	}
 
 	// A single pane fills the window, so only split windows keep a layout.
@@ -58,20 +64,21 @@ func (l Line) Pane() Pane {
 	return Pane{
 		ID:    l.PaneID,
 		Index: l.PaneIndex,
-		Title: l.PaneTitle,
 		Path:  l.PanePath,
+		Title: fmt.Sprintf("%s_%d", l.WindowName, l.PaneIndex),
 	}
 }
 
 type Data struct {
-	sessions map[string]Session
-	windows  map[string][]Window
-	panes    map[string][]Pane
+	Version  int                 `json:"version"`
+	Sessions map[string]Session  `json:"sessions"`
+	Windows  map[string][]Window `json:"windows"`
+	Panes    map[string][]Pane   `json:"panes"`
 }
 
 func (d Data) sessionIDs() []string {
-	ids := make([]string, 0, len(d.sessions))
-	for id := range d.sessions {
+	ids := make([]string, 0, len(d.Sessions))
+	for id := range d.Sessions {
 		ids = append(ids, id)
 	}
 
@@ -80,29 +87,13 @@ func (d Data) sessionIDs() []string {
 }
 
 func GetTmuxData() (Data, error) {
-	format := "{" + strings.Join(
-		[]string{
-			`"session_id": "#{session_id}"`,
-			`"session_name": "#{session_name}"`,
-			`"window_id": "#{window_id}"`,
-			`"window_index": #{window_index}`,
-			`"window_name": "#{window_name}"`,
-			`"window_layout": #{window_layout}`,
-			`"pane_id": "#{pane_id}"`,
-			`"pane_index": #{pane_index}`,
-			`"pane_path": "#{pane_current_path}"`,
-			`"pane_title": "#{pane_title}"`,
-		}, ",",
-	) + "},"
-
-	o, err := exec.Command("tmux", "list-panes", "-a", "-F", format).Output()
+	o, err := exec.Command("tmux", "list-panes", "-a", "-F", buildListPanesFormat()).Output()
 	if err != nil {
 		return Data{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
 	}
 
-	doc := "[" + strings.TrimSuffix(strings.TrimSpace(string(o)), ",") + "]"
 	var l []Line
-	err = json.Unmarshal([]byte(doc), &l)
+	err = json.Unmarshal(normalizeListPanesOut(o), &l)
 	if err != nil {
 		return Data{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
 	}
@@ -118,22 +109,49 @@ func parseTmuxLines(lines []Line) Data {
 
 	for _, l := range lines {
 		s := l.Session()
-		if _, ok := sessions[l.SessionID]; ok {
-			s = sessions[l.SessionID]
+		if _, ok := sessions[s.Slug]; ok {
+			s = sessions[s.Slug]
 		} else {
-			sessions[s.ID] = s
+			sessions[s.Slug] = s
 		}
 
 		w := l.Window()
-		if !utils.Contain(windows[s.ID], w) {
-			windows[s.ID] = append(windows[s.ID], w)
+		if !utils.Contain(windows[s.Slug], w) {
+			windows[s.Slug] = append(windows[s.Slug], w)
 		}
 
 		p := l.Pane()
-		if !utils.Contain(panes[w.ID], p) {
-			panes[w.ID] = append(panes[w.ID], p)
-		}
+		panes[w.Slug] = append(panes[w.Slug], p)
 	}
 
-	return Data{sessions, windows, panes}
+	return Data{
+		Version:  SchemaVersion,
+		Sessions: sessions,
+		Windows:  windows,
+		Panes:    panes,
+	}
+}
+
+func buildListPanesFormat() string {
+	fields :=
+		[]string{
+			`"session_id": "#{session_id}"`,
+			`"session_name": "#{session_name}"`,
+			`"window_id": "#{window_id}"`,
+			`"window_index": #{window_index}`,
+			`"window_name": "#{window_name}"`,
+			`"window_layout": #{window_layout}`,
+			`"pane_id": "#{pane_id}"`,
+			`"pane_index": #{pane_index}`,
+			`"pane_path": "#{pane_current_path}"`,
+		}
+
+	return fmt.Sprintf("{%s},", strings.Join(fields, ","))
+}
+
+func normalizeListPanesOut(output []byte) []byte {
+	strOut := strings.TrimSpace(string(output))
+	cleaned := strings.TrimSuffix(strOut, ",")
+
+	return []byte(fmt.Sprintf("[%s]", cleaned))
 }

@@ -19,17 +19,13 @@ var (
 )
 
 type Session struct {
-	ID           string `json:"session_id"`
+	ID           string `json:"-"`
+	Slug         string `json:"-"`
 	Name         string `json:"session_name"`
 	WindowsCount int    `json:"session_windows"`
 }
 
 func (s Session) GetName() string { return utils.Quote(s.Name) }
-
-func (s Session) Eq(c utils.Comperable) bool {
-	i, ok := c.(Session)
-	return ok && s.ID == i.ID
-}
 
 func NewSession(name string, dir string) error {
 	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()

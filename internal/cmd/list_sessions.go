@@ -15,7 +15,7 @@ var _ Cmd = ListSessions{}
 
 var (
 	ErrCannotParseListSessionCmdFlags = fmt.Errorf("%w: cannot parse list sessions cmd flags", ErrUsage)
-	ErrCannotParseListSessionCmdJson  = fmt.Errorf("%w: cannot parse list sessions cmd json", ErrUsage)
+	ErrCannotParseListSessionCmdJSON  = fmt.Errorf("%w: cannot parse list sessions cmd json", ErrUsage)
 )
 
 type ListSessions struct {
@@ -68,7 +68,7 @@ func (c ListSessions) Run(args []string) error {
 
 		out, err := json.Marshal(sDump)
 		if err != nil {
-			return fmt.Errorf("%w: %w", ErrCannotParseListSessionCmdJson, err)
+			return fmt.Errorf("%w: %w", ErrCannotParseListSessionCmdJSON, err)
 		}
 
 		_, err = fmt.Fprintln(c.ios.Out, string(out))
@@ -76,8 +76,9 @@ func (c ListSessions) Run(args []string) error {
 	}
 
 	w := tabwriter.NewWriter(c.ios.Out, 2, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "Session Name\tWindows Count")
 	for _, s := range sessions {
-		fmt.Fprintf(w, "%s\t%s\t%d\n", s.ID, s.Name, s.WindowsCount)
+		fmt.Fprintf(w, "%s\t%d\n", s.Name, s.WindowsCount)
 	}
 
 	return w.Flush()

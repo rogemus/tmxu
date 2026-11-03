@@ -16,11 +16,12 @@ var (
 )
 
 type Window struct {
-	ID           string          `json:"window_id"`
+	ID           string          `json:"-"`
+	Slug         string          `json:"-"`
 	Index        int             `json:"window_index"`
 	Name         string          `json:"window_name"`
-	SessionName  string          `json:"session_name"`
-	WindowLayout json.RawMessage `json:"window_layout"`
+	WindowLayout json.RawMessage `json:"window_layout,omitempty"`
+	TargetIndex  string          `json:"window_target"`
 }
 
 func (w Window) Layout() (LayoutNode, error) {
@@ -30,10 +31,6 @@ func (w Window) Layout() (LayoutNode, error) {
 	}
 
 	return normalizeWindowLayout(wl), nil
-}
-
-func (w Window) TargetIndex() string {
-	return fmt.Sprintf("=%s:%d", w.SessionName, w.Index)
 }
 
 func (w Window) Eq(c utils.Comperable) bool {
@@ -82,7 +79,7 @@ func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 }
 
 func buildNewWindowCmd(window Window, pane Pane) string {
-	target := utils.Quote(window.TargetIndex())
+	target := utils.Quote(window.TargetIndex)
 	name := utils.Quote(utils.Escape(window.Name))
 
 	cmd := []string{"new-window", "-k", "-d", "-t", target, "-n", name, "-c", utils.Quote(pane.Path)}

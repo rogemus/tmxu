@@ -101,6 +101,6 @@ func buildSetLayoutCmd(window Window) string {
 		panic("invalid window layout")
 	}
 
-	target := utils.Quote(window.TargetIndex())
+	target := utils.Quote(window.TargetIndex)
 	return strings.Join([]string{"select-layout", "-t", target, utils.Quote(string(b))}, " ")
 }

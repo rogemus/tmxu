@@ -6,67 +6,8 @@ import (
 	"strings"
 )
 
-type dumpData struct {
-	Version  int           `json:"version"`
-	Sessions []dumpSession `json:"sessions"`
-}
-
-type dumpSession struct {
-	Name    string       `json:"name"`
-	Windows []dumpWindow `json:"windows"`
-}
-
-type dumpWindow struct {
-	Name   string      `json:"name"`
-	Index  int         `json:"index"`
-	Layout *LayoutNode `json:"layout,omitempty"` // split windows only
-	Panes  []dumpPane  `json:"panes"`
-}
-
-type dumpPane struct {
-	Title string `json:"title"`
-	Path  string `json:"path"`
-}
-
 func (d Data) JSON() ([]byte, error) {
-	out := dumpData{
-		Version:  2,
-		Sessions: make([]dumpSession, 0, len(d.sessions)),
-	}
-
-	for _, sid := range d.sessionIDs() {
-		s := dumpSession{
-			Name:    d.sessions[sid].Name,
-			Windows: make([]dumpWindow, 0, len(d.windows[sid])),
-		}
-
-		for _, w := range d.windows[sid] {
-			dw := dumpWindow{
-				Name:  w.Name,
-				Index: w.Index,
-				Panes: make([]dumpPane, 0, len(d.panes[w.ID])),
-			}
-
-			if len(w.WindowLayout) > 0 {
-				layout, err := w.Layout()
-				if err != nil {
-					return nil, fmt.Errorf("window %s: %w", w.ID, err)
-				}
-
-				dw.Layout = &layout
-			}
-
-			for _, p := range d.panes[w.ID] {
-				dw.Panes = append(dw.Panes, dumpPane{Title: p.Title, Path: p.Path})
-			}
-
-			s.Windows = append(s.Windows, dw)
-		}
-
-		out.Sessions = append(out.Sessions, s)
-	}
-
-	return json.Marshal(out)
+	return json.Marshal(d)
 }
 
 func (d Data) String() string {
@@ -76,9 +17,9 @@ func (d Data) String() string {
 	fmt.Fprintf(&b, "TmuxData: %d sessions\n", len(ids))
 
 	for _, sid := range ids {
-		fmt.Fprintf(&b, "%s %q\n", sid, d.sessions[sid].Name)
+		fmt.Fprintf(&b, "%s %q\n", sid, d.Sessions[sid].Name)
 
-		for _, w := range d.windows[sid] {
+		for _, w := range d.Windows[sid] {
 			fmt.Fprintf(&b, "  %s [%d] %q\n", w.ID, w.Index, w.Name)
 
 			if w.WindowLayout != nil {
@@ -92,7 +33,7 @@ func (d Data) String() string {
 				}
 			}
 
-			for _, p := range d.panes[w.ID] {
+			for _, p := range d.Panes[w.Slug] {
 				fmt.Fprintf(&b, "    %s [%d] %q %s\n", p.ID, p.Index, p.Title, p.Path)
 			}
 		}
