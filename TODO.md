@@ -26,11 +26,11 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [x] Apply `select-layout` after the splits (`buildSetLayoutCmd`, tested); verified that tmux accepts the JSON text, remaps the saved pane ids, and fails with `have N panes but need M` when the pane count differs
 - [ ] Verify `select-layout '<json>'` inside the single-string chain (the JSON is quoted with `utils.Quote`; only the separate-argv form was tried)
 - [x] Layout only for windows with more than one pane (`isSplitLayout` in `Line.Window`); no `select-layout` for single-pane windows
-- [ ] `Window.WindowLayout` needs `json:",omitempty"` (an absent layout is saved as `null`)
+- [x] `Window.WindowLayout` needs `json:",omitempty"` (an absent layout is saved as `null`)
 - [ ] Decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
 - [ ] Start directory guard (old `startDirArgs`): verified that tmux does not fail on a missing `-c` directory, it silently starts in `$HOME`; decide whether to warn
 - [x] `new-session` without `-c` starts in the client's current directory (verified), so no `os.Getwd` default is needed
-- [ ] Pane naming rule: derived name, `@name` pane option, or raw title; escape `#` if `-T` expands formats
+- [x] Pane naming rule: derived `<window name>_<pane index>` for every pane (`Line.Pane`); `#` is escaped with `utils.Escape` in `buildRenamePaneCmd`
 - [ ] Set pane titles without changing the active pane (`select-pane -T`; verify it leaves the active pane alone)
 - [ ] Verify whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
 - [ ] Restore the original active pane and window
@@ -42,15 +42,17 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Stop building JSON inside the tmux format string (`GetTmuxData`, `ListSessions`): a `"`, `\` or newline in a name or title fails every row; use a safe delimiter or escaping
 - [x] Add `window_layout` to the parsed line
 - [ ] Add `session_created` (`time.Time`) to the parsed line
-- [ ] Split DTO (tmux line) from domain and persisted types; consistent key names (started: `Data.JSON` uses its own output types; `Pane` and `Window` still carry tmux key names as JSON tags)
-- [x] Normalized window layout (`LayoutNode`: `split`, `size` in percent of the parent, `panes`; no ids or coordinates), used by `Data.String` and `Data.JSON`
-- [ ] Persisted shape drops runtime ids (`$3`, `@7`, `%9`), `Window.SessionName`, `order` and the redundant `pane.name`; targets are computed at restore time
+- [x] Split DTO (tmux line) from persisted types: `Line` is the tmux DTO; the domain structs (`Data`, `Session`, `Window`, `Pane`) are the persisted shape, saved to the file and restored from it; runtime-only fields are `json:"-"`
+- [x] Normalized window layout (`LayoutNode`: `split`, `size` in percent of the parent, `panes`; no ids or coordinates), used by `Data.String` (`Data.JSON` is now a plain `json.Marshal`, and the dump is debug-only and will be removed)
+- [x] Persisted shape drops runtime ids (`$3`, `@7`, `%9`), `Window.SessionName`, `order`, the redundant `pane.name` and the window target (`ID`, `Slug` and `TargetIndex` are `json:"-"`)
+- [ ] Rebuild the `json:"-"` fields after loading the file (`Window.Slug`, `Window.TargetIndex` from the session name, window name and index), in one `Data` method so the formula lives once
 - [x] `layout` held as a real nested object (`json.RawMessage`), not an escaped string
 - [ ] Validate the layout with `json.Valid` when saving to the file
-- [ ] `"version"` field in the saved file
+- [x] `"version"` field in the saved file (`Data.Version`, `SchemaVersion`)
 - [ ] Templates are a `Session` without runtime fields; delete `TEMP_VALUE`
 - [ ] Return errors instead of `panic` for a window without panes; validate loaded data before building commands
-- [ ] Exported accessors for `Data` (or return plain slices)
+- [x] Exported accessors for `Data` (the fields are exported: `Sessions`, `Windows`, `Panes`)
+- [x] `utils.Slug` (letters, digits and `-` kept, everything else `_`, 1:1) with table tests; used for the `Session.Slug` and `Window.Slug` map keys
 - [ ] Single map lookup in `parseTmuxLines`; drop `make(map, 0)` hints
 
 ## 4. Errors and execution
@@ -73,7 +75,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 ## 5. Port the remaining commands into `internal/`
 
-- [x] `dump [-json]`: prints running sessions, windows and panes; `-json` is indented JSON without ids and with normalized layouts (`Data.JSON`)
+- [x] `dump [-json]`: prints running sessions, windows and panes; `-json` is the persisted `Data` shape (`Data.JSON`, compact, raw layout). Debug-only, to be removed
+- [x] `ls`: header row (`Session Name`, `Windows Count`), ID column removed
 - [ ] `save`: actually write the sessions file (one shared `snapshotSession` for sessions and templates)
 - [ ] `restore-sessions` (one shared `restoreSession` for restore and new-from-template)
 - [x] `new-session`: empty name and extra arguments rejected (`ErrSessionNameNotProvided`, `ErrUnexpectedArgument`), `-path` made absolute, duplicate returns `ErrSessionExists`
@@ -118,8 +121,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] `dump`: text output starts with `tmxu dump` on the same line as the data; `Data.String` sorts session ids as text
 - [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode` (see Decisions)
 - [ ] `attachSessionInfo` has no `Flags` for `-menu`, so `tmxu help attach` omits it; fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
-- [ ] Doc comments on exported identifiers; unexport what is not API; package doc for `internal/cli`
-- [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set
+- [ ] Doc comments on exported identifiers (`utils.Slug` still has none); unexport what is not API; package doc for `internal/cli`
+- [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
 - [x] Drop `GetName`/`GetTitle`/`GetPath` (`utils.Quote` is called at the call site)
 - [ ] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`
 - [ ] Rename `baseIndex.go` to `base_index.go`
@@ -131,6 +134,7 @@ All `internal/` tests were AI-generated and have been removed. I write every tes
 - [ ] `fakeRunner` recording args and returning canned output
 - [ ] Tests for `CreateSessions`, `CreateWindows`, `Snapshot`, `ListSessions` through the fake
 - [x] `utils.Quote`, `utils.Escape` and `Quote(Escape(x))` tables (`'`, `\`, `$`, `#`, spaces, newline, unicode)
+- [x] `utils.Slug` table (empty, spaces, `#`, `.`/`:`, hyphen, underscore, accents, non-Latin, emoji)
 - [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
@@ -178,8 +182,8 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 ## 10. Decisions
 
 - [ ] One batched chain, separate calls, or `source-file -`
-- [ ] Pane names: derived, `@name`, or raw titles
-- [ ] On-disk format: reuse the `internal/tmux` structs or a separate persisted shape (recommended: separate)
+- [x] Pane names: derived `<window>_<index>`
+- [x] On-disk format: reuse the `internal/tmux` structs (`Data` is saved and restored as is; runtime fields are `json:"-"`)
 - [ ] Existing sessions on restore: skip, refuse, or force
 - [ ] Panic or error for a window without panes (recommended: error)
 - [ ] Layout restore: apply the raw tmux JSON with `select-layout` (done; exact, needs the pane count to match first) or rebuild it from the normalized `LayoutNode` with recursive `split-window -l N%` (readable file, relative sizes, no `select-layout`; approximate, needs verifying on 3.8)
