@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "main"
-      - "master"
     paths:
       - "version.txt"
 
@@ -12,15 +11,42 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write 
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
-      - run: |
+      - uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: |
+          go get .
+
+      - name: Vet
+        run: |
+          go vet ./...
+
+      - name: Format check
+        run: |
+          test -z "$(gofmt -l .)" || { echo "unformatted files:"; gofmt -l .; exit 1; }
+
+      - name: Build
+        run: |
+          go build .
+
+      - name: Tests
+        run: |
+          go test -race ./...
+
+      - name: Create git tag
+        run: |
           VERSION="$(cat version.txt)"
           git tag "$VERSION"
           git push origin tag "$VERSION"

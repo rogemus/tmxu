@@ -1,0 +1,42 @@
+name: Main branch check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: |
+          go get .
+
+      - name: Vet
+        run: |
+          go vet ./...
+
+      - name: Format check
+        run: |
+          test -z "$(gofmt -l .)" || { echo "unformatted files:"; gofmt -l .; exit 1; }
+
+      - name: Build
+        run: |
+          go build .
+
+      - name: Tests
+        run: |
+          go test -race ./...

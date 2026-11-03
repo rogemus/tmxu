@@ -1,6 +1,10 @@
 _default:
   just --list
 
+[group: 'build']
+build:
+  go build .
+
 # Run tmxu with a command, e.g. just run version
 [group: 'dev']
 run CMD:
