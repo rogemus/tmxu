@@ -21,7 +21,7 @@ type Window struct {
 	Index        int             `json:"window_index"`
 	Name         string          `json:"window_name"`
 	WindowLayout json.RawMessage `json:"window_layout,omitempty"`
-	TargetIndex  string          `json:"window_target"`
+	TargetIndex  string          `json:"-"`
 }
 
 func (w Window) Layout() (LayoutNode, error) {
