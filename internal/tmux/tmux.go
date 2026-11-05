@@ -69,14 +69,14 @@ func (l Line) Pane() Pane {
 	}
 }
 
-type Data struct {
+type SnapshotData struct {
 	Version  int                 `json:"version"`
 	Sessions map[string]Session  `json:"sessions"`
 	Windows  map[string][]Window `json:"windows"`
 	Panes    map[string][]Pane   `json:"panes"`
 }
 
-func (d Data) sessionIDs() []string {
+func (d SnapshotData) sessionIDs() []string {
 	ids := make([]string, 0, len(d.Sessions))
 	for id := range d.Sessions {
 		ids = append(ids, id)
@@ -86,23 +86,23 @@ func (d Data) sessionIDs() []string {
 	return ids
 }
 
-func GetTmuxData() (Data, error) {
+func Snapshot() (SnapshotData, error) {
 	o, err := exec.Command("tmux", "list-panes", "-a", "-F", buildListPanesFormat()).Output()
 	if err != nil {
-		return Data{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
+		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
 	}
 
 	var l []Line
 	err = json.Unmarshal(normalizeListPanesOut(o), &l)
 	if err != nil {
-		return Data{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
+		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
 	}
 
 	data := parseTmuxLines(l)
 	return data, nil
 }
 
-func parseTmuxLines(lines []Line) Data {
+func parseTmuxLines(lines []Line) SnapshotData {
 	sessions := make(map[string]Session, 0)
 	windows := make(map[string][]Window, 0)
 	panes := make(map[string][]Pane, 0)
@@ -124,7 +124,7 @@ func parseTmuxLines(lines []Line) Data {
 		panes[w.Slug] = append(panes[w.Slug], p)
 	}
 
-	return Data{
+	return SnapshotData{
 		Version:  SchemaVersion,
 		Sessions: sessions,
 		Windows:  windows,

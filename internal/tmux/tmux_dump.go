@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-func (d Data) JSON() ([]byte, error) {
+func (d SnapshotData) JSON() ([]byte, error) {
 	return json.Marshal(d)
 }
 
-func (d Data) String() string {
+func (d SnapshotData) String() string {
 	ids := d.sessionIDs()
 
 	var b strings.Builder

@@ -52,7 +52,7 @@ func (c Dump) Run(args []string) error {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)
 	}
 
-	d, err := tmux.GetTmuxData()
+	d, err := tmux.Snapshot()
 	if err != nil {
 		return err
 	}

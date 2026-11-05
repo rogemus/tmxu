@@ -11,7 +11,7 @@ var (
 	ErrCannotGetBaseIndex = errors.New("cannot get base index")
 )
 
-func GetBaseIndex() (int, error) {
+func BaseIndex() (int, error) {
 	o, err := exec.Command("tmux", "show-options", "-gv", "base-index").Output()
 	if err != nil {
 		return 0, ErrCannotGetBaseIndex

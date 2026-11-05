@@ -41,7 +41,7 @@ func (c SaveSessions) Run(args []string) error {
 		return nil
 	}
 
-	_, err := tmux.GetTmuxData()
+	_, err := tmux.Snapshot()
 	if err != nil {
 		return err
 	}
