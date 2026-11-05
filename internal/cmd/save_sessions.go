@@ -11,13 +11,13 @@ import (
 var _ Cmd = SaveSessions{}
 
 type SaveSessions struct {
-	cfg config.Config
 	ios IOs
+	cfg config.Config
 }
 
 // NewSaveSessions builds a SaveSessionsCmd from the app config.
-func NewSaveSessions(cfg config.Config, ios IOs) SaveSessions {
-	return SaveSessions{cfg, ios}
+func NewSaveSessions(ios IOs, cfg config.Config) SaveSessions {
+	return SaveSessions{ios, cfg}
 }
 
 var saveSessionsInfo = Info{

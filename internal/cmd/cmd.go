@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"errors"
+	"flag"
 	"io"
 )
 
@@ -17,8 +18,14 @@ type Info struct {
 	Arg       string
 	DescShort string
 	DescLong  string
-	Flags     [][]string
+	Flags     []Flag
 	Examples  []string
+	Flags2    *flag.FlagSet
+}
+
+type Flag struct {
+	Name string
+	Desc string
 }
 
 type IOs struct {

@@ -124,10 +124,10 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Doc comments on exported identifiers (`utils.Slug` still has none); unexport what is not API; package doc for `internal/cli`
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
 - [x] Drop `GetName`/`GetTitle`/`GetPath` (`utils.Quote` is called at the call site)
-- [ ] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`
-- [ ] Rename `baseIndex.go` to `base_index.go`
+- [x] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`
+- [x] Rename `baseIndex.go` to `base_index.go`
 
-## 7. Testing
+## 7. Testin
 
 All `internal/` tests were AI-generated and have been removed. I write every test myself, by hand, to learn how they work. Claude only reviews them. The unchecked items below include areas that used to be covered (`config.New`, `cli` help and lookup, `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`, window layout normalization and `buildSetLayoutCmd`).
 

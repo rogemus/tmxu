@@ -147,6 +147,12 @@ func (c *Cli) newCmd(command cmd.Cmd) {
 	c.cmdsOrder = append(c.cmdsOrder, info.Command)
 
 	for _, alias := range info.Aliases {
+		com, ok := c.cmds[alias]
+		if ok {
+			// NOTE: internal error, update cmds config
+			msg := fmt.Sprintf("alias already used by: %s\n", com.Info().Command)
+			panic(msg)
+		}
 		c.cmds[alias] = command
 	}
 }
@@ -158,15 +164,15 @@ func New(cfg config.Config, ios cmd.IOs) *Cli {
 		ios:       ios,
 	}
 
-	aCmd := cmd.NewAttachSession(cfg, ios)
+	aCmd := cmd.NewAttachSession(ios)
 	c.newCmd(aCmd)
-	lsCmd := cmd.NewListSessions(cfg, ios)
+	lsCmd := cmd.NewListSessions(ios)
 	c.newCmd(lsCmd)
-	ssCmd := cmd.NewSaveSessions(cfg, ios)
+	ssCmd := cmd.NewSaveSessions(ios, cfg)
 	c.newCmd(ssCmd)
-	dCmd := cmd.NewDump(cfg, ios)
+	dCmd := cmd.NewDump(ios)
 	c.newCmd(dCmd)
-	vCmd := cmd.NewVersion(cfg, ios)
+	vCmd := cmd.NewVersion(ios, cfg)
 	c.newCmd(vCmd)
 
 	// c.newCmd(newSessionCmd)

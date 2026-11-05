@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
@@ -16,12 +15,11 @@ var (
 )
 
 type AttachSession struct {
-	cfg config.Config
 	ios IOs
 }
 
-func NewAttachSession(cfg config.Config, ios IOs) AttachSession {
-	return AttachSession{cfg, ios}
+func NewAttachSession(ios IOs) AttachSession {
+	return AttachSession{ios}
 }
 
 var attachSessionInfo = Info{

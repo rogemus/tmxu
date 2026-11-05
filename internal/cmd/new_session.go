@@ -6,7 +6,6 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
@@ -19,12 +18,11 @@ var (
 )
 
 type NewSession struct {
-	cfg config.Config
 	ios IOs
 }
 
-func NewNewSession(cfg config.Config, io IOs) NewSession {
-	return NewSession{cfg, io}
+func NewNewSession(io IOs) NewSession {
+	return NewSession{io}
 }
 
 var newSessionInfo = Info{
@@ -33,7 +31,7 @@ var newSessionInfo = Info{
 	DescShort: "Create new session base on the template",
 	DescLong:  "Creates a new tmux session, optionally based on a saved template.",
 	Arg:       "[sessionName]",
-	Flags: [][]string{
+	Flags: []Flag{
 		{"path", "Initial path for all panes. Defaults to the current directory"},
 		{"templ", "Template to create new session based on"},
 	},

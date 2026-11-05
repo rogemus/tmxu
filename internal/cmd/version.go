@@ -9,12 +9,12 @@ import (
 var _ Cmd = Version{}
 
 type Version struct {
-	cfg config.Config
 	ios IOs
+	cfg config.Config
 }
 
-func NewVersion(cfg config.Config, io IOs) Version {
-	return Version{cfg, io}
+func NewVersion(io IOs, cfg config.Config) Version {
+	return Version{io, cfg}
 }
 
 var versionInfo = Info{

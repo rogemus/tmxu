@@ -7,7 +7,6 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
@@ -19,12 +18,11 @@ var (
 )
 
 type ListSessions struct {
-	cfg config.Config
 	ios IOs
 }
 
-func NewListSessions(cfg config.Config, ios IOs) ListSessions {
-	return ListSessions{cfg, ios}
+func NewListSessions(ios IOs) ListSessions {
+	return ListSessions{ios}
 }
 
 var listSessionsInfo = Info{
@@ -33,8 +31,8 @@ var listSessionsInfo = Info{
 	Arg:       "",
 	DescShort: "List all active sessions in tmux",
 	DescLong:  "Displays all currently running tmux sessions with their IDs and names.",
-	Flags: [][]string{
-		{"json", "Print JSON instead of text"},
+	Flags: []Flag{
+		{Name: "json", Desc: "Print JSON instead of text"},
 	},
 	Examples: []string{
 		"tmxu list-sessions",

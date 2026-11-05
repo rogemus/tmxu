@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
@@ -16,12 +15,11 @@ var (
 )
 
 type Dump struct {
-	cfg config.Config
 	ios IOs
 }
 
-func NewDump(cfg config.Config, io IOs) Dump {
-	return Dump{cfg, io}
+func NewDump(io IOs) Dump {
+	return Dump{io}
 }
 
 var dumpInfo = Info{
@@ -30,7 +28,7 @@ var dumpInfo = Info{
 	Arg:       "",
 	DescShort: "Print running tmux sessions, windows and panes",
 	DescLong:  "Reads the live tmux state and prints every session with its windows and panes. Windows with several panes include their layout as percentages. Nothing is saved. With -json the output is indented JSON without tmux ids.",
-	Flags: [][]string{
+	Flags: []Flag{
 		{"json", "Print JSON instead of text"},
 	},
 	Examples: []string{
