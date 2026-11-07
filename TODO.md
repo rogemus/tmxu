@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `new-session`, `dump`. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see section 7). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`. `new-session` is implemented but not registered in `cli.New` yet. Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore, templates and the menu are not ported. `save` writes nothing yet. Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see section 7). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
 
 ## 1. Restore safety (fix first)
 
@@ -23,7 +23,7 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 ## 2. Restore parity with the old `cli/`
 
 - [x] Window layout: read `#{window_layout}` (unquoted in the format, so it is nested JSON) and store it as `json.RawMessage`
-- [x] Apply `select-layout` after the splits (`buildSetLayoutCmd`, tested); verified that tmux accepts the JSON text, remaps the saved pane ids, and fails with `have N panes but need M` when the pane count differs
+- [x] Apply `select-layout` after the splits (`buildSetLayoutCmd`; no tests yet, see section 7); verified that tmux accepts the JSON text, remaps the saved pane ids, and fails with `have N panes but need M` when the pane count differs
 - [ ] Verify `select-layout '<json>'` inside the single-string chain (the JSON is quoted with `utils.Quote`; only the separate-argv form was tried)
 - [x] Layout only for windows with more than one pane (`isSplitLayout` in `Line.Window`); no `select-layout` for single-pane windows
 - [x] `Window.WindowLayout` needs `json:",omitempty"` (an absent layout is saved as `null`)
@@ -106,7 +106,8 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] Unknown command: "did you mean"
 - [x] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`; help derived from the `FlagSet` (`VisitAll`)
-- [ ] Detect alias collisions in `newCmd` (`newCmd` overwrites silently)
+- [x] Detect alias collisions in `newCmd` (panics with the owning command)
+- [ ] Detect a primary command name collision in `newCmd` (only aliases are checked)
 - [ ] `-y` / `--yes`, `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
 - [ ] `ls` / `list-templates`: plain output when piped, `--json`, `-0`
 - [ ] `save -o -`, `restore -f FILE`, `show-template NAME`, `attach -` (name from stdin)
@@ -115,19 +116,26 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Handle SIGPIPE / EPIPE on closed stdout (`tmxu ls | head -1`)
 - [ ] `//go:build !windows` or a clear unsupported-OS message
 - [ ] Decide what bare `tmxu` does (help + exit 0 today)
-- [ ] `wantsHelp` becomes a plain function; remove unused `cfg` fields in `AttachSession`, `ListSessions`, `Version`
+- [x] Remove unused `cfg` fields in `AttachSession`, `ListSessions` (`Version` keeps `cfg` for the version string)
+- [ ] `wantsHelp` becomes a plain function
 - [ ] `Cli.help(w, args)` passes `c.ios.Out` to `helpAll` instead of `w`
 - [ ] `buildSetLayoutCmd`: use `string(window.WindowLayout)` instead of `json.Marshal` plus `panic` (the panic is reachable with a corrupt saved layout; marshaling also compacts the text); check `len(w.WindowLayout) > 0` instead of `!= nil` in `buildNewWindowsCmd`
 - [ ] `dump`: text output starts with `tmxu dump` on the same line as the data; `Data.String` sorts session ids as text
 - [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode` (see Decisions)
-- [ ] `attachSessionInfo` has no `Flags` for `-menu`, so `tmxu help attach` omits it; fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
-- [x] Doc comments on exported identifiers (`utils.Slug` still has none); unexport what is not API; package doc for `internal/cli`
+- [x] `tmxu help attach` lists `-menu` (help is derived from the `FlagSet`)
+- [ ] Fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
+- [ ] `save` and `version` return a nil `Flags()`, so `save --bogus` is silently accepted; `dump`, `ls` and `version` ignore extra positional args
+- [ ] Tests that flags reach their fields (`-json`, `-path`, `-menu`): a value receiver or a nil `Flags()` broke this silently before
+- [ ] `list_sessions.go`: the JSON marshal error wraps `ErrUsage` (exit 2); it is not a usage error
+- [ ] `dump` `DescLong` says "indented JSON", but `Data.JSON` is compact
+- [ ] Doc comments on exported identifiers (most in `tmux`, `cmd`, `config` and `utils` have none, including `utils.Slug`); unexport what is not API; package doc for `internal/cli`
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
-- [x] Drop `GetName`/`GetTitle`/`GetPath` (`utils.Quote` is called at the call site)
+- [x] Drop `GetTitle`/`GetPath` (`utils.Quote` is called at the call site)
+- [ ] Drop `Session.GetName` (still used in `session.go`); note `-s` is format-expanded, so the name needs `utils.Escape` too
 - [x] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`
 - [x] Rename `baseIndex.go` to `base_index.go`
 
-## 7. Testin
+## 7. Testing
 
 All `internal/` tests were AI-generated and have been removed. I write every test myself, by hand, to learn how they work. Claude only reviews them. The unchecked items below include areas that used to be covered (`config.New`, `cli` help and lookup, `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`, window layout normalization and `buildSetLayoutCmd`).
 
