@@ -18,9 +18,7 @@ type Info struct {
 	Arg       string
 	DescShort string
 	DescLong  string
-	Flags     []Flag
 	Examples  []string
-	Flags2    *flag.FlagSet
 }
 
 type Flag struct {
@@ -36,5 +34,6 @@ type IOs struct {
 
 type Cmd interface {
 	Info() Info
+	Flags() *flag.FlagSet
 	Run(args []string) error
 }

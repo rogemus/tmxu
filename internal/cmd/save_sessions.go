@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/rogemus/tmxu/internal/config"
@@ -26,7 +27,6 @@ var saveSessionsInfo = Info{
 	Arg:       "",
 	DescShort: "Save tmux sessions",
 	DescLong:  "Captures all running tmux sessions including windows, panes, and layouts. Saves to ~/.config/tmxu/tmux-sessions.json.",
-	Flags:     nil,
 	Examples: []string{
 		"tmxu save-sessions",
 		"tmxu save",
@@ -34,7 +34,8 @@ var saveSessionsInfo = Info{
 	},
 }
 
-func (c SaveSessions) Info() Info { return saveSessionsInfo }
+func (c SaveSessions) Flags() *flag.FlagSet { return nil }
+func (c SaveSessions) Info() Info           { return saveSessionsInfo }
 func (c SaveSessions) Run(args []string) error {
 	if !utils.Confirm("Save all tmux sessions?", c.ios.In, c.ios.Err) {
 		fmt.Fprintln(c.ios.Err, "Aborted")

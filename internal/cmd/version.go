@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/rogemus/tmxu/internal/config"
@@ -23,14 +24,14 @@ var versionInfo = Info{
 	Arg:       "",
 	DescShort: "Display app version information",
 	DescLong:  "Shows the current tmxu version",
-	Flags:     nil,
 	Examples: []string{
 		"tmxu version",
 		"tmxu v",
 	},
 }
 
-func (c Version) Info() Info { return versionInfo }
+func (c Version) Flags() *flag.FlagSet { return nil }
+func (c Version) Info() Info           { return versionInfo }
 func (c Version) Run(args []string) error {
 	_, err := fmt.Fprintf(c.ios.Out, "Current tmxu version %s\n", c.cfg.Version)
 	return err

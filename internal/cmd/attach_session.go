@@ -36,7 +36,8 @@ var attachSessionInfo = Info{
 	},
 }
 
-func (c AttachSession) Info() Info { return attachSessionInfo }
+func (c AttachSession) Flags() *flag.FlagSet { return nil }
+func (c AttachSession) Info() Info           { return attachSessionInfo }
 func (c AttachSession) Run(args []string) error {
 
 	// TODO: implement fzf style menu

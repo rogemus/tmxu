@@ -19,10 +19,20 @@ var (
 
 type ListSessions struct {
 	ios IOs
+
+	fs   *flag.FlagSet
+	json bool
 }
 
 func NewListSessions(ios IOs) ListSessions {
-	return ListSessions{ios}
+	cmd := ListSessions{ios: ios}
+	cmd.json = false
+
+	cmd.fs = flag.NewFlagSet("dump", flag.ContinueOnError)
+	cmd.fs.SetOutput(io.Discard)
+	cmd.fs.BoolVar(&cmd.json, "json", false, "Print JSON instead of text")
+
+	return cmd
 }
 
 var listSessionsInfo = Info{
@@ -31,9 +41,6 @@ var listSessionsInfo = Info{
 	Arg:       "",
 	DescShort: "List all active sessions in tmux",
 	DescLong:  "Displays all currently running tmux sessions with their IDs and names.",
-	Flags: []Flag{
-		{Name: "json", Desc: "Print JSON instead of text"},
-	},
 	Examples: []string{
 		"tmxu list-sessions",
 		"tmxu list",
@@ -41,15 +48,10 @@ var listSessionsInfo = Info{
 	},
 }
 
-func (c ListSessions) Info() Info { return listSessionsInfo }
+func (c ListSessions) Info() Info           { return listSessionsInfo }
+func (c ListSessions) Flags() *flag.FlagSet { return c.fs }
 func (c ListSessions) Run(args []string) error {
-	var asJSON bool
-
-	fs := flag.NewFlagSet("dump", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	fs.BoolVar(&asJSON, "json", false, "Print JSON instead of text")
-	err := fs.Parse(args)
+	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)
 	}
@@ -59,7 +61,7 @@ func (c ListSessions) Run(args []string) error {
 		return err
 	}
 
-	if asJSON {
+	if c.json {
 		sDump := map[string][]tmux.Session{
 			"sessions": sessions,
 		}

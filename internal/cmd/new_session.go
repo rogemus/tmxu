@@ -19,10 +19,21 @@ var (
 
 type NewSession struct {
 	ios IOs
+
+	fs    *flag.FlagSet
+	path  string
+	templ string
 }
 
-func NewNewSession(io IOs) NewSession {
-	return NewSession{io}
+func NewNewSession(ios IOs) NewSession {
+	cmd := NewSession{ios: ios}
+	cmd.fs = flag.NewFlagSet("new-session", flag.ContinueOnError)
+	cmd.fs.SetOutput(io.Discard)
+	cmd.fs.StringVar(&cmd.path, "path", "", "Initial path for all panes. Defaults to the current directory")
+
+	// TODO: template support
+	cmd.fs.StringVar(&cmd.templ, "templ", "", "Template to create new session based on")
+	return cmd
 }
 
 var newSessionInfo = Info{
@@ -31,10 +42,6 @@ var newSessionInfo = Info{
 	DescShort: "Create new session base on the template",
 	DescLong:  "Creates a new tmux session, optionally based on a saved template.",
 	Arg:       "[sessionName]",
-	Flags: []Flag{
-		{"path", "Initial path for all panes. Defaults to the current directory"},
-		{"templ", "Template to create new session based on"},
-	},
 	Examples: []string{
 		"tmxu new sessionName",
 		"tmxu ns sessionName",
@@ -44,41 +51,30 @@ var newSessionInfo = Info{
 	},
 }
 
-func (c NewSession) Info() Info { return newSessionInfo }
+func (c NewSession) Flags() *flag.FlagSet { return c.fs }
+func (c NewSession) Info() Info           { return newSessionInfo }
 func (c NewSession) Run(args []string) error {
-	var (
-		path  string
-		templ string
-	)
-
-	fs := flag.NewFlagSet("new-session", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	fs.StringVar(&path, "path", "", "Initial path for all panes. Defaults to the current directory")
-	// TODO: template support
-	fs.StringVar(&templ, "templ", "", "Template to create new session based on")
-
-	err := fs.Parse(args)
+	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseNewSessionCmdFlags, err)
 	}
 
-	if path != "" {
-		path, err = filepath.Abs(path)
+	if c.path != "" {
+		c.path, err = filepath.Abs(c.path)
 		if err != nil {
 			return err
 		}
 	}
 
-	name := fs.Arg(0)
+	name := c.fs.Arg(0)
 	if name == "" {
 		return ErrSessionNameNotProvided
 	}
-	if fs.NArg() > 1 {
-		return fmt.Errorf("%w: %q", ErrUnexpectedArgument, fs.Args()[1:])
+	if c.fs.NArg() > 1 {
+		return fmt.Errorf("%w: %q", ErrUnexpectedArgument, c.fs.Args()[1:])
 	}
 
-	err = tmux.NewSession(name, path)
+	err = tmux.NewSession(name, c.path)
 	if err != nil {
 		return err
 	}

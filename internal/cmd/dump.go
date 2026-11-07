@@ -16,10 +16,19 @@ var (
 
 type Dump struct {
 	ios IOs
+
+	fs   *flag.FlagSet
+	json bool
 }
 
-func NewDump(io IOs) Dump {
-	return Dump{io}
+func NewDump(ios IOs) Dump {
+	cmd := Dump{ios: ios}
+
+	cmd.fs = flag.NewFlagSet("dump", flag.ContinueOnError)
+	cmd.fs.SetOutput(io.Discard)
+	cmd.fs.BoolVar(&cmd.json, "json", false, "Print JSON instead of text")
+
+	return cmd
 }
 
 var dumpInfo = Info{
@@ -28,24 +37,16 @@ var dumpInfo = Info{
 	Arg:       "",
 	DescShort: "Print running tmux sessions, windows and panes",
 	DescLong:  "Reads the live tmux state and prints every session with its windows and panes. Windows with several panes include their layout as percentages. Nothing is saved. With -json the output is indented JSON without tmux ids.",
-	Flags: []Flag{
-		{"json", "Print JSON instead of text"},
-	},
 	Examples: []string{
 		"tmxu dump",
 		"tmxu dump -json",
 	},
 }
 
-func (c Dump) Info() Info { return dumpInfo }
+func (c Dump) Flags() *flag.FlagSet { return c.fs }
+func (c Dump) Info() Info           { return dumpInfo }
 func (c Dump) Run(args []string) error {
-	var asJSON bool
-
-	fs := flag.NewFlagSet("dump", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	fs.BoolVar(&asJSON, "json", false, "Print JSON instead of text")
-	err := fs.Parse(args)
+	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)
 	}
@@ -55,7 +56,7 @@ func (c Dump) Run(args []string) error {
 		return err
 	}
 
-	if asJSON {
+	if c.json {
 		out, err := d.JSON()
 		if err != nil {
 			return err
