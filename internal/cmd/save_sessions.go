@@ -52,8 +52,7 @@ func (c *SaveSessions) Run(args []string) error {
 		return err
 	}
 
-	fPath := c.cfg.SessionsFileName()
-	err = c.cfg.SaveSessions(out)
+	fPath, err := c.cfg.SaveSessions(out)
 	if err != nil {
 		return err
 	}

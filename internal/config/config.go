@@ -17,6 +17,7 @@ var (
 )
 
 const configDirName = "tmxu"
+
 // TODO: temp name remove 2 once everything is working
 const sessionsFileName = "tmux-sessions2.json"
 
@@ -28,25 +29,21 @@ type Config struct {
 func New(version string) (Config, error) {
 	v := strings.TrimSpace(version)
 
-	dir, err := configDir()
+	cDir, err := configDir()
 	if err != nil {
 		return Config{}, err
 	}
 
 	return Config{
-		DirPath: dir,
+		DirPath: cDir,
 		Version: v,
 	}, nil
-}
-
-func (c Config) SessionsFileName() string {
-	return fmt.Sprintf("%s/%s", c.DirPath, sessionsFileName)
 }
 
 func configDir() (string, error) {
 	if runtime.GOOS == "darwin" {
 		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-			return filepath.Join(xdg, configDirName), nil
+			return xdg, nil
 		}
 
 		hDir, err := os.UserHomeDir()
@@ -54,12 +51,13 @@ func configDir() (string, error) {
 			return "", fmt.Errorf("%w: %w", ErrCannotReadHomeDir, err)
 		}
 
-		return filepath.Join(hDir, ".config", configDirName), nil
+		return filepath.Join(hDir, ".config"), nil
 	}
 
 	cDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrCannotReadConfigDir, err)
 	}
-	return filepath.Join(cDir, configDirName), nil
+
+	return cDir, nil
 }
