@@ -46,7 +46,7 @@ var attachSessionInfo = Info{
 	},
 }
 
-func (c *AttachSession) Flags() *flag.FlagSet { return nil }
+func (c *AttachSession) Flags() *flag.FlagSet { return c.fs }
 func (c *AttachSession) Info() Info           { return attachSessionInfo }
 func (c *AttachSession) Run(args []string) error {
 

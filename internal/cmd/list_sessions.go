@@ -27,7 +27,7 @@ type ListSessions struct {
 func NewListSessions(ios IOs) *ListSessions {
 	cmd := &ListSessions{
 		ios: ios,
-		fs:  flag.NewFlagSet("dump", flag.ContinueOnError),
+		fs:  flag.NewFlagSet("list-sessions", flag.ContinueOnError),
 	}
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.BoolVar(&cmd.json, "json", false, "Print JSON instead of text")
@@ -53,7 +53,7 @@ func (c *ListSessions) Flags() *flag.FlagSet { return c.fs }
 func (c *ListSessions) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)
+		return fmt.Errorf("%w: %w", ErrCannotParseListSessionCmdFlags, err)
 	}
 
 	sessions, err := tmux.ListSessions()

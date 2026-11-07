@@ -14,8 +14,8 @@ type Version struct {
 	cfg config.Config
 }
 
-func NewVersion(io IOs, cfg config.Config) *Version {
-	return &Version{io, cfg}
+func NewVersion(ios IOs, cfg config.Config) *Version {
+	return &Version{ios: ios, cfg: cfg}
 }
 
 var versionInfo = Info{

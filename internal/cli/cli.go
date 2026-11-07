@@ -65,7 +65,7 @@ USAGE:
 
 FLAGS:
 {{- range .Flags}}
-  -{{index .Name}}      {{index .Desc}}
+  -{{.Name}}      {{.Desc}}
 {{- end}}
 {{- end}}
 {{- if .Info.Examples}}

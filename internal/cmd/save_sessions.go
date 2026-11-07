@@ -18,7 +18,7 @@ type SaveSessions struct {
 
 // NewSaveSessions builds a SaveSessionsCmd from the app config.
 func NewSaveSessions(ios IOs, cfg config.Config) *SaveSessions {
-	return &SaveSessions{ios, cfg}
+	return &SaveSessions{ios: ios, cfg: cfg}
 }
 
 var saveSessionsInfo = Info{
