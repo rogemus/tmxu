@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -46,20 +47,20 @@ func (c *Cli) Run(args []string) error {
 var cmdHelpTmpl = template.Must(
 	template.New("cmdHelp").
 		Funcs(template.FuncMap{"join": strings.Join}).
-		Parse(`{{.Command}} - {{.DescShort}}
-{{- if .Aliases}}
+		Parse(`{{.Info.Command}} - {{.Info.DescShort}}
+{{- if .Info.Aliases}}
 
 ALIASES:
-  {{join .Aliases ", "}}
+  {{join .Info.Aliases ", "}}
 {{- end}}
-{{- if .DescLong}}
+{{- if .Info.DescLong}}
 
 DESCRIPTION:
-  {{.DescLong}}
+  {{.Info.DescLong}}
 {{- end}}
 
 USAGE:
-  tmxu {{.Command}}{{with .Arg}} {{.}}{{end}}{{if .Flags}} [flags]{{end}}
+  tmxu {{.Info.Command}}{{with .Info.Arg}} {{.}}{{end}}{{if .Flags}} [flags]{{end}}
 {{- if .Flags}}
 
 FLAGS:
@@ -67,10 +68,10 @@ FLAGS:
   -{{index . 0}}      {{index . 1}}
 {{- end}}
 {{- end}}
-{{- if .Examples}}
+{{- if .Info.Examples}}
 
 EXAMPLES:
-{{- range .Examples}}
+{{- range .Info.Examples}}
   {{.}}
 {{- end}}
 {{- end}}
@@ -90,7 +91,19 @@ func (c *Cli) help(w io.Writer, args []string) error {
 }
 
 func (c *Cli) helpCmd(w io.Writer, command cmd.Cmd) error {
-	return cmdHelpTmpl.Execute(w, command.Info())
+	var data = struct {
+		Info  cmd.Info
+		Flags [][]string
+	}{
+		Info:  command.Info(),
+		Flags: make([][]string, 0),
+	}
+
+	command.Flags().VisitAll(func(f *flag.Flag) {
+		data.Flags = append(data.Flags, []string{f.Name, f.Usage})
+	})
+
+	return cmdHelpTmpl.Execute(w, data)
 }
 
 func (c *Cli) helpAll(w io.Writer) error {
