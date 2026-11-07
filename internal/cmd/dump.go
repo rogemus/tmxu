@@ -8,7 +8,7 @@ import (
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
-var _ Cmd = Dump{}
+var _ Cmd = (*Dump)(nil)
 
 var (
 	ErrCannotParseDumpCmdFlags = fmt.Errorf("%w: cannot parse dump cmd flags", ErrUsage)
@@ -21,10 +21,12 @@ type Dump struct {
 	json bool
 }
 
-func NewDump(ios IOs) Dump {
-	cmd := Dump{ios: ios}
+func NewDump(ios IOs) *Dump {
+	cmd := &Dump{
+		ios: ios,
+		fs:  flag.NewFlagSet("dump", flag.ContinueOnError),
+	}
 
-	cmd.fs = flag.NewFlagSet("dump", flag.ContinueOnError)
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.BoolVar(&cmd.json, "json", false, "Print JSON instead of text")
 
@@ -43,9 +45,9 @@ var dumpInfo = Info{
 	},
 }
 
-func (c Dump) Flags() *flag.FlagSet { return c.fs }
-func (c Dump) Info() Info           { return dumpInfo }
-func (c Dump) Run(args []string) error {
+func (c *Dump) Flags() *flag.FlagSet { return c.fs }
+func (c *Dump) Info() Info           { return dumpInfo }
+func (c *Dump) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)

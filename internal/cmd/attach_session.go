@@ -8,7 +8,7 @@ import (
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
-var _ Cmd = AttachSession{}
+var _ Cmd = (*AttachSession)(nil)
 
 var (
 	ErrCannotParseAttachCmdFlags = fmt.Errorf("%w: cannot parse attach cmd flags", ErrUsage)
@@ -16,10 +16,20 @@ var (
 
 type AttachSession struct {
 	ios IOs
+
+	fs   *flag.FlagSet
+	menu bool
 }
 
-func NewAttachSession(ios IOs) AttachSession {
-	return AttachSession{ios}
+func NewAttachSession(ios IOs) *AttachSession {
+	cmd := &AttachSession{
+		ios: ios,
+		fs:  flag.NewFlagSet("attach-session", flag.ContinueOnError),
+	}
+
+	cmd.fs.SetOutput(io.Discard)
+	cmd.fs.BoolVar(&cmd.menu, "menu", false, "Use interactive menu to select session")
+	return cmd
 }
 
 var attachSessionInfo = Info{
@@ -36,24 +46,19 @@ var attachSessionInfo = Info{
 	},
 }
 
-func (c AttachSession) Flags() *flag.FlagSet { return nil }
-func (c AttachSession) Info() Info           { return attachSessionInfo }
-func (c AttachSession) Run(args []string) error {
+func (c *AttachSession) Flags() *flag.FlagSet { return nil }
+func (c *AttachSession) Info() Info           { return attachSessionInfo }
+func (c *AttachSession) Run(args []string) error {
 
 	// TODO: implement fzf style menu
-	var menuMode bool
-	fs := flag.NewFlagSet("attach-session", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	fs.BoolVar(&menuMode, "menu", false, "Use interactive menu to select session")
-
-	err := fs.Parse(args)
+	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseAttachCmdFlags, err)
 	}
 
-	if len(fs.Args()) == 0 {
+	if len(c.fs.Args()) == 0 {
 		return ErrSessionNameNotProvided
 	}
 
-	return tmux.AttachToSession(fs.Arg(0))
+	return tmux.AttachToSession(c.fs.Arg(0))
 }

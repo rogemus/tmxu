@@ -10,7 +10,7 @@ import (
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
-var _ Cmd = ListSessions{}
+var _ Cmd = (*ListSessions)(nil)
 
 var (
 	ErrCannotParseListSessionCmdFlags = fmt.Errorf("%w: cannot parse list sessions cmd flags", ErrUsage)
@@ -24,11 +24,11 @@ type ListSessions struct {
 	json bool
 }
 
-func NewListSessions(ios IOs) ListSessions {
-	cmd := ListSessions{ios: ios}
-	cmd.json = false
-
-	cmd.fs = flag.NewFlagSet("dump", flag.ContinueOnError)
+func NewListSessions(ios IOs) *ListSessions {
+	cmd := &ListSessions{
+		ios: ios,
+		fs:  flag.NewFlagSet("dump", flag.ContinueOnError),
+	}
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.BoolVar(&cmd.json, "json", false, "Print JSON instead of text")
 
@@ -48,9 +48,9 @@ var listSessionsInfo = Info{
 	},
 }
 
-func (c ListSessions) Info() Info           { return listSessionsInfo }
-func (c ListSessions) Flags() *flag.FlagSet { return c.fs }
-func (c ListSessions) Run(args []string) error {
+func (c *ListSessions) Info() Info           { return listSessionsInfo }
+func (c *ListSessions) Flags() *flag.FlagSet { return c.fs }
+func (c *ListSessions) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)

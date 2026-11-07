@@ -9,7 +9,7 @@ import (
 	"github.com/rogemus/tmxu/internal/tmux"
 )
 
-var _ Cmd = NewSession{}
+var _ Cmd = (*NewSession)(nil)
 
 var (
 	ErrCannotParseNewSessionCmdFlags = fmt.Errorf("%w: cannot parse new session cmd flags", ErrUsage)
@@ -25,9 +25,11 @@ type NewSession struct {
 	templ string
 }
 
-func NewNewSession(ios IOs) NewSession {
-	cmd := NewSession{ios: ios}
-	cmd.fs = flag.NewFlagSet("new-session", flag.ContinueOnError)
+func NewNewSession(ios IOs) *NewSession {
+	cmd := &NewSession{
+		ios: ios,
+		fs:  flag.NewFlagSet("new-session", flag.ContinueOnError),
+	}
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.StringVar(&cmd.path, "path", "", "Initial path for all panes. Defaults to the current directory")
 
@@ -51,9 +53,9 @@ var newSessionInfo = Info{
 	},
 }
 
-func (c NewSession) Flags() *flag.FlagSet { return c.fs }
-func (c NewSession) Info() Info           { return newSessionInfo }
-func (c NewSession) Run(args []string) error {
+func (c *NewSession) Flags() *flag.FlagSet { return c.fs }
+func (c *NewSession) Info() Info           { return newSessionInfo }
+func (c *NewSession) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotParseNewSessionCmdFlags, err)

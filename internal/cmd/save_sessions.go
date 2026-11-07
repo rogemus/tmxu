@@ -9,7 +9,7 @@ import (
 	"github.com/rogemus/tmxu/internal/utils"
 )
 
-var _ Cmd = SaveSessions{}
+var _ Cmd = (*SaveSessions)(nil)
 
 type SaveSessions struct {
 	ios IOs
@@ -17,8 +17,8 @@ type SaveSessions struct {
 }
 
 // NewSaveSessions builds a SaveSessionsCmd from the app config.
-func NewSaveSessions(ios IOs, cfg config.Config) SaveSessions {
-	return SaveSessions{ios, cfg}
+func NewSaveSessions(ios IOs, cfg config.Config) *SaveSessions {
+	return &SaveSessions{ios, cfg}
 }
 
 var saveSessionsInfo = Info{
@@ -34,9 +34,9 @@ var saveSessionsInfo = Info{
 	},
 }
 
-func (c SaveSessions) Flags() *flag.FlagSet { return nil }
-func (c SaveSessions) Info() Info           { return saveSessionsInfo }
-func (c SaveSessions) Run(args []string) error {
+func (c *SaveSessions) Flags() *flag.FlagSet { return nil }
+func (c *SaveSessions) Info() Info           { return saveSessionsInfo }
+func (c *SaveSessions) Run(args []string) error {
 	if !utils.Confirm("Save all tmux sessions?", c.ios.In, c.ios.Err) {
 		fmt.Fprintln(c.ios.Err, "Aborted")
 		return nil

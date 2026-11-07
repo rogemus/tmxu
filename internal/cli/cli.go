@@ -65,7 +65,7 @@ USAGE:
 
 FLAGS:
 {{- range .Flags}}
-  -{{index . 0}}      {{index . 1}}
+  -{{index .Name}}      {{index .Desc}}
 {{- end}}
 {{- end}}
 {{- if .Info.Examples}}
@@ -93,15 +93,18 @@ func (c *Cli) help(w io.Writer, args []string) error {
 func (c *Cli) helpCmd(w io.Writer, command cmd.Cmd) error {
 	var data = struct {
 		Info  cmd.Info
-		Flags [][]string
+		Flags []cmd.Flag
 	}{
 		Info:  command.Info(),
-		Flags: make([][]string, 0),
+		Flags: make([]cmd.Flag, 0),
 	}
 
-	command.Flags().VisitAll(func(f *flag.Flag) {
-		data.Flags = append(data.Flags, []string{f.Name, f.Usage})
-	})
+	fs := command.Flags()
+	if fs != nil {
+		fs.VisitAll(func(f *flag.Flag) {
+			data.Flags = append(data.Flags, cmd.Flag{Name: f.Name, Desc: f.Usage})
+		})
+	}
 
 	return cmdHelpTmpl.Execute(w, data)
 }
