@@ -105,7 +105,7 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
 - [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] Unknown command: "did you mean"
-- [ ] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`; help derived from the `FlagSet` (`VisitAll`)
+- [x] `Info.Flags` as `[]Flag{Name, Desc}` instead of `[][]string`; help derived from the `FlagSet` (`VisitAll`)
 - [ ] Detect alias collisions in `newCmd` (`newCmd` overwrites silently)
 - [ ] `-y` / `--yes`, `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
 - [ ] `ls` / `list-templates`: plain output when piped, `--json`, `-0`
@@ -121,7 +121,7 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 - [ ] `dump`: text output starts with `tmxu dump` on the same line as the data; `Data.String` sorts session ids as text
 - [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode` (see Decisions)
 - [ ] `attachSessionInfo` has no `Flags` for `-menu`, so `tmxu help attach` omits it; fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
-- [ ] Doc comments on exported identifiers (`utils.Slug` still has none); unexport what is not API; package doc for `internal/cli`
+- [x] Doc comments on exported identifiers (`utils.Slug` still has none); unexport what is not API; package doc for `internal/cli`
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
 - [x] Drop `GetName`/`GetTitle`/`GetPath` (`utils.Quote` is called at the call site)
 - [x] Rename `GetTmuxData` -> `Snapshot`, `GetBaseIndex` -> `BaseIndex`
