@@ -42,17 +42,22 @@ func (c *SaveSessions) Run(args []string) error {
 		return nil
 	}
 
-	_, err := tmux.Snapshot()
+	s, err := tmux.Snapshot()
 	if err != nil {
 		return err
 	}
 
-	// TODO: save to file, the path is in c.cfg.Path
-	// err = saveSessionsFile(tSessions)
-	// if err != nil {
-	// 	return fmt.Errorf("Unable to save tmux sessions to file in ~/.config/tmux \n")
-	// }
-	//
-	// fmt.Printf("Tmux sessions saved at ~%s%s \n", configDir, sessionFile)
+	out, err := s.JSON()
+	if err != nil {
+		return err
+	}
+
+	fPath := c.cfg.SessionsFileName()
+	err = c.cfg.SaveSessions(out)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.ios.Out, "Tmux sessions saved at %s\n", fPath)
 	return nil
 }

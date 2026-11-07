@@ -17,6 +17,8 @@ var (
 )
 
 const configDirName = "tmxu"
+// TODO: temp name remove 2 once everything is working
+const sessionsFileName = "tmux-sessions2.json"
 
 type Config struct {
 	DirPath string
@@ -35,6 +37,10 @@ func New(version string) (Config, error) {
 		DirPath: dir,
 		Version: v,
 	}, nil
+}
+
+func (c Config) SessionsFileName() string {
+	return fmt.Sprintf("%s/%s", c.DirPath, sessionsFileName)
 }
 
 func configDir() (string, error) {
