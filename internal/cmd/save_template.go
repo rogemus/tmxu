@@ -1,0 +1,48 @@
+package cmd
+
+import (
+	"flag"
+	"io"
+
+	"github.com/rogemus/tmxu/internal/config"
+)
+
+var _ Cmd = (*SaveTemplate)(nil)
+
+type SaveTemplate struct {
+	ios IOs
+	cfg config.Config
+
+	fs   *flag.FlagSet
+	name string
+}
+
+func NewSaveTemplate(ios IOs, cfg config.Config) *SaveTemplate {
+	cmd := &SaveTemplate{
+		ios: ios,
+		cfg: cfg,
+		fs:  flag.NewFlagSet("save-template", flag.ContinueOnError),
+	}
+	cmd.fs.SetOutput(io.Discard)
+	cmd.fs.StringVar(&cmd.name, "name", "", "Name of the template. Defaults to session name")
+	return cmd
+}
+
+var saveTemplateInfo = Info{
+	Command:   "save-template",
+	Aliases:   []string{"st"},
+	Arg:       "[sessionName]",
+	DescShort: "Save session as template",
+	DescLong:  "Saves a running tmux session as a reusable template. Templates are stored in ~/.config/tmxu/templates/.",
+	Examples: []string{
+		"tmxu st sessionName",
+		"tmxu save-template sessionName",
+		"tmxu save-template -name templateName sessionName",
+	},
+}
+
+func (c *SaveTemplate) Flags() *flag.FlagSet { return c.fs }
+func (c *SaveTemplate) Info() Info           { return saveTemplateInfo }
+func (c *SaveTemplate) Run(args []string) error {
+	return nil
+}
