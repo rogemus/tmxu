@@ -18,9 +18,6 @@ var (
 
 const configDirName = "tmxu"
 
-// TODO: temp name remove 2 once everything is working
-const sessionsFileName = "tmux-sessions2.json"
-
 type Config struct {
 	DirPath string
 	Version string
