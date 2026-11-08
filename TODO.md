@@ -107,6 +107,7 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 
 - [ ] `-V` / `--version` globally
 - [ ] Help layout: Usage, Commands, Options, Environment, Exit status
+- [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
 - [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] Unknown command: "did you mean"
