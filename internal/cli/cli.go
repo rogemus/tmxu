@@ -200,6 +200,8 @@ func New(cfg config.Config, ios cmd.IOs) *Cli {
 	c.newCmd(stCmd)
 	dtCmd := cmd.NewDeleteTemplate(ios, cfg)
 	c.newCmd(dtCmd)
+	shtCmd := cmd.NewShowTemplate(ios, cfg)
+	c.newCmd(shtCmd)
 
 	return &c
 }

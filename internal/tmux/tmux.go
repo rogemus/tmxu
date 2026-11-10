@@ -16,6 +16,7 @@ import (
 var (
 	ErrCannotGetTmuxData    = errors.New("cannot get tmux data")
 	ErrCannotParseTmuxLines = errors.New("cannot parse tmux lines")
+	ErrCannotLoadSnapshot   = errors.New("cannot load snapshot")
 )
 
 const SchemaVersion = 2
@@ -117,6 +118,17 @@ func Snapshot() (SnapshotData, error) {
 
 	data := parseTmuxLines(l)
 	return data, nil
+}
+
+func LoadSnapshot(data []byte) (SnapshotData, error) {
+	snapshot := SnapshotData{}
+
+	err := json.Unmarshal(data, &snapshot)
+	if err != nil {
+		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotLoadSnapshot, err)
+	}
+
+	return snapshot, nil
 }
 
 func SanitizeSnapshot(data SnapshotData, sessionName string) SnapshotData {

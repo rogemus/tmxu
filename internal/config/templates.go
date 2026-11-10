@@ -37,6 +37,21 @@ func (c Config) ListTemplates() ([]string, error) {
 	return readTemplatesName(entries), nil
 }
 
+func (c Config) ShowTemplate(templateName string) ([]byte, error) {
+	path, err := tmxuTemplatesDir(c.DirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	templateFile := templateFile(path, templateName)
+	out, err := readTemplateFile(templateFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
 	path, err := tmxuTemplatesDir(c.DirPath)
 	if err != nil {
@@ -72,6 +87,15 @@ func readTemplatesName(entries []os.DirEntry) []string {
 	return names
 }
 
+func readTemplateFile(path string) ([]byte, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("%w %s: %w", ErrCannotReadTemplateFile, path, err)
+	}
+
+	return file, nil
+}
+
 func readTemplateFiles(path string) ([]os.DirEntry, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -104,12 +128,17 @@ func tmxuTemplatesDirPath(path string) string {
 }
 
 func tmxuTemplatesDir(dirPath string) (string, error) {
-	if hasTemplatesDir(dirPath) {
-		path := tmxuTemplatesDirPath(dirPath)
+	configPath, err := tmxuConfigDir(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	if hasTemplatesDir(configPath) {
+		path := tmxuTemplatesDirPath(configPath)
 		return path, nil
 	}
 
-	path, err := createTmxuTemplatesDir(dirPath)
+	path, err := createTmxuTemplatesDir(configPath)
 	if err != nil {
 		return "", err
 	}
