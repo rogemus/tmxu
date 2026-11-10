@@ -37,12 +37,22 @@ func (c Config) ListTemplates() ([]string, error) {
 	return readTemplatesName(entries), nil
 }
 
-func (c Config) SaveTemplate() error {
-	return nil
+func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
+	path, err := tmxuTemplatesDir(c.DirPath)
+	if err != nil {
+		return "", err
+	}
+
+	templateFile := templateFile(path, templateName)
+	return saveToFile(templateFile, data)
 }
 
 func (c Config) DeleteTemplate() error {
 	return nil
+}
+
+func templateFile(path, name string) string {
+	return filepath.Join(path, name+".json")
 }
 
 func readTemplatesName(entries []os.DirEntry) []string {

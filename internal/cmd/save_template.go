@@ -70,7 +70,22 @@ func (c *SaveTemplate) Run(args []string) error {
 		return err
 	}
 
-	tmux.SanitizeSnapshot(snapshot, sessionName)
+	templateName := sessionName
+	if c.name != "" {
+		templateName = c.name
+	}
 
+	snapshot = tmux.SanitizeSnapshot(snapshot, sessionName)
+	out, err := snapshot.JSON()
+	if err != nil {
+		return err
+	}
+
+	path, err := c.cfg.SaveTemplate(out, templateName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.ios.Out, "Templates saved at: %s\n", path)
 	return nil
 }

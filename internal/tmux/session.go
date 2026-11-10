@@ -103,7 +103,6 @@ func HasSession(sessionName string) (bool, error) {
 	return false, ErrSessionNoExists
 }
 
-
 func buildNewSessionsCmd(sessions []Session) string {
 	cmds := make([]string, 0)
 
