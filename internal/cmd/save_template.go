@@ -2,12 +2,18 @@ package cmd
 
 import (
 	"flag"
+	"fmt"
 	"io"
 
 	"github.com/rogemus/tmxu/internal/config"
+	"github.com/rogemus/tmxu/internal/tmux"
 )
 
 var _ Cmd = (*SaveTemplate)(nil)
+
+var (
+	ErrCannotParseSaveTemplateCmdFlags = fmt.Errorf("%w: cannot parse save template cmd flags", ErrUsage)
+)
 
 type SaveTemplate struct {
 	ios IOs
@@ -44,5 +50,27 @@ var saveTemplateInfo = Info{
 func (c *SaveTemplate) Flags() *flag.FlagSet { return c.fs }
 func (c *SaveTemplate) Info() Info           { return saveTemplateInfo }
 func (c *SaveTemplate) Run(args []string) error {
+	err := c.fs.Parse(args)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotParseSaveTemplateCmdFlags, err)
+	}
+
+	sessionName := c.fs.Arg(0)
+	if sessionName == "" {
+		return ErrSessionNameNotProvided
+	}
+
+	_, err = tmux.HasSession(sessionName)
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := tmux.SessionSnapshot(sessionName)
+	if err != nil {
+		return err
+	}
+
+	tmux.SanitizeSnapshot(snapshot, sessionName)
+
 	return nil
 }

@@ -19,6 +19,7 @@ var (
 )
 
 const SchemaVersion = 2
+const PLACEHOLDER_TEMP_VALUE = "TEMP_VALUE"
 
 type Line struct {
 	SessionID    string          `json:"session_id"`
@@ -86,6 +87,22 @@ func (d SnapshotData) sessionIDs() []string {
 	return ids
 }
 
+func SessionSnapshot(sessionName string) (SnapshotData, error) {
+	o, err := exec.Command("tmux", "list-panes", "-F", buildListPanesFormat(), "-s", "-t", sessionName).Output()
+	if err != nil {
+		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
+	}
+
+	var l []Line
+	err = json.Unmarshal(normalizeListPanesOut(o), &l)
+	if err != nil {
+		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
+	}
+
+	data := parseTmuxLines(l)
+	return data, nil
+}
+
 func Snapshot() (SnapshotData, error) {
 	o, err := exec.Command("tmux", "list-panes", "-a", "-F", buildListPanesFormat()).Output()
 	if err != nil {
@@ -100,6 +117,47 @@ func Snapshot() (SnapshotData, error) {
 
 	data := parseTmuxLines(l)
 	return data, nil
+}
+
+func SanitizeSnapshot(data SnapshotData, sessionName string) SnapshotData {
+	session, _ := data.Sessions[sessionName]
+
+	oldSessionSlug := session.Slug
+	sessionSlug := utils.Slug(PLACEHOLDER_TEMP_VALUE)
+	session.Slug = sessionSlug
+	session.Name = PLACEHOLDER_TEMP_VALUE
+
+	data.Sessions[sessionSlug] = session
+	delete(data.Sessions, oldSessionSlug)
+
+	windows, _ := data.Windows[oldSessionSlug]
+	for i := range windows {
+		w := &windows[i]
+		windowSlug := utils.Slug(fmt.Sprintf("%s_%s_%d", PLACEHOLDER_TEMP_VALUE, w.Name, w.Index))
+		target := fmt.Sprintf("=%s:%d", PLACEHOLDER_TEMP_VALUE, w.Index)
+
+		oldWindowSlug := w.Slug
+		w.Slug = windowSlug
+		w.TargetIndex = target
+
+		panes, _ := data.Panes[oldWindowSlug]
+		for j := range panes {
+			p := &panes[j]
+			p.Path = ""
+		}
+
+		data.Panes[windowSlug] = panes
+		delete(data.Panes, oldWindowSlug)
+	}
+
+	data.Windows[sessionSlug] = windows
+	delete(data.Windows, oldSessionSlug)
+
+	return data
+}
+
+func DesanitizeSnapshot(data SnapshotData) SnapshotData {
+	return SnapshotData{}
 }
 
 func parseTmuxLines(lines []Line) SnapshotData {

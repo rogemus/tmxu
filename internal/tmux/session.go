@@ -16,6 +16,8 @@ var (
 	ErrCannotListSessions    = errors.New("cannot list sessions")
 	ErrCannotAttachToSession = errors.New("cannot attach to session")
 	ErrSessionExists         = errors.New("session already exists")
+	ErrSessionNoExists       = errors.New("session does not exists")
+	ErrCannotValidateSession = errors.New("cannot validate session")
 )
 
 type Session struct {
@@ -86,6 +88,21 @@ func CreateSessions(sessions []Session) error {
 
 	return nil
 }
+
+func HasSession(sessionName string) (bool, error) {
+	output, err := exec.Command("tmux", "has-session", "-t", sessionName).Output()
+
+	if err != nil {
+		return false, fmt.Errorf("%w %s: %w", ErrCannotValidateSession, sessionName, err)
+	}
+
+	if strings.TrimSpace(string(output)) == "" {
+		return true, nil
+	}
+
+	return false, ErrSessionNoExists
+}
+
 
 func buildNewSessionsCmd(sessions []Session) string {
 	cmds := make([]string, 0)
