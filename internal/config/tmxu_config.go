@@ -39,6 +39,15 @@ func saveToFile(path string, data []byte) (string, error) {
 	return path, nil
 }
 
+func deleteFile(path string) (string, error) {
+	err := os.Remove(path)
+	if err != nil {
+		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, path, err)
+	}
+
+	return path, nil
+}
+
 func hasTmxuConfigDir(path string) bool {
 	p := tmxuConfigDirPath(path)
 	if _, err := os.Stat(p); os.IsNotExist(err) {

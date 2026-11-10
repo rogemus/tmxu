@@ -2,19 +2,34 @@ package cmd
 
 import (
 	"flag"
+	"fmt"
+	"io"
 
 	"github.com/rogemus/tmxu/internal/config"
 )
 
 var _ Cmd = (*DeleteTemplate)(nil)
 
+var (
+	ErrCannotParseDeleteTemplateCmdFlags = fmt.Errorf("%w: cannot parse delete template cmd flags", ErrUsage)
+)
+
 type DeleteTemplate struct {
 	ios IOs
 	cfg config.Config
+
+	fs *flag.FlagSet
 }
 
 func NewDeleteTemplate(ios IOs, cfg config.Config) *DeleteTemplate {
-	return &DeleteTemplate{ios: ios, cfg: cfg}
+	cmd := &DeleteTemplate{
+		ios: ios,
+		cfg: cfg,
+		fs:  flag.NewFlagSet("delete-template", flag.ContinueOnError),
+	}
+	cmd.fs.SetOutput(io.Discard)
+
+	return cmd
 }
 
 var deleteTemplateInfo = Info{
@@ -32,5 +47,21 @@ var deleteTemplateInfo = Info{
 func (c *DeleteTemplate) Flags() *flag.FlagSet { return nil }
 func (c *DeleteTemplate) Info() Info           { return deleteTemplateInfo }
 func (c *DeleteTemplate) Run(args []string) error {
-	return nil
+	err := c.fs.Parse(args)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotParseSaveTemplateCmdFlags, err)
+	}
+
+	templateName := c.fs.Arg(0)
+	if templateName == "" {
+		return ErrSessionNameNotProvided
+	}
+
+	path, err := c.cfg.DeleteTemplate(templateName)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(c.ios.Out, "Template deleted: `%s`\n", path)
+	return err
 }

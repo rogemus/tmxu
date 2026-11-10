@@ -47,8 +47,14 @@ func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
 	return saveToFile(templateFile, data)
 }
 
-func (c Config) DeleteTemplate() error {
-	return nil
+func (c Config) DeleteTemplate(templateName string) (string, error) {
+	path, err := tmxuTemplatesDir(c.DirPath)
+	if err != nil {
+		return "", err
+	}
+
+	templateFile := templateFile(path, templateName)
+	return deleteFile(templateFile)
 }
 
 func templateFile(path, name string) string {
