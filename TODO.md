@@ -8,6 +8,25 @@ Target: tmux 3.8+ only (JSON `window_layout`).
 
 Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`. `new-session` is implemented but not registered in `cli.New` yet. Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore, templates and the menu are not ported. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, mode 0644). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see section 7). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
 
+## Goal: 0.8.0 release
+
+Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `attach -menu` is not ported: it was broken in the previous version, so the flag is dropped.
+
+- [x] `list-sessions` (`list`, `ls`)
+- [x] `save-sessions` (`save`, `s`)
+- [x] `version` (`v`)
+- [x] `attach-session` (`attach`, `a`)
+- [ ] `new-session` (`new`, `ns`)
+  - [x] `-path`
+  - [ ] `-templ`
+- [ ] `restore-sessions` (`restore`, `r`)
+  - [ ] `-force`
+- [ ] `list-templates` (`lt`)
+- [ ] `save-template` (`st`)
+  - [ ] `-name`
+- [ ] `delete-template` (`dt`)
+- [ ] Delete the old top-level `cli/` package
+
 ## 1. Restore safety (fix first)
 
 - [ ] `HasSession` returns `(false, nil)` for an absent session (exit code 1 from `has-session`); typed error for real failures
