@@ -10,6 +10,8 @@ import (
 var (
 	ErrCannotSaveFile            = errors.New("cannot save file")
 	ErrCannotCreateTmxuConfigDir = errors.New("cannot create tmxu config dir")
+	ErrCannotReadFile            = errors.New("cannot read file")
+	ErrCannotDeleteFile          = errors.New("cannot delete file")
 )
 
 func tmxuConfigDir(dirPath string) (string, error) {
@@ -30,22 +32,31 @@ func tmxuConfigDirPath(path string) string {
 	return filepath.Join(path, configDirName)
 }
 
-func saveToFile(path string, data []byte) (string, error) {
-	err := os.WriteFile(path, data, 0644)
+func readFile(root *os.Root, name string) ([]byte, error) {
+	file, err := root.ReadFile(name)
 	if err != nil {
-		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, path, err)
+		return nil, fmt.Errorf("%w %s: %w", ErrCannotReadFile, name, err)
 	}
 
-	return path, nil
+	return file, nil
 }
 
-func deleteFile(path string) (string, error) {
-	err := os.Remove(path)
+func saveToFile(root *os.Root, name string, data []byte) (string, error) {
+	err := root.WriteFile(name, data, 0644)
 	if err != nil {
-		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, path, err)
+		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, name, err)
 	}
 
-	return path, nil
+	return filepath.Join(root.Name(), name), nil
+}
+
+func deleteFile(root *os.Root, name string) (string, error) {
+	err := root.Remove(name)
+	if err != nil {
+		return "", fmt.Errorf("%w %s: %w", ErrCannotDeleteFile, name, err)
+	}
+
+	return filepath.Join(root.Name(), name), nil
 }
 
 func hasTmxuConfigDir(path string) bool {

@@ -44,7 +44,7 @@ var deleteTemplateInfo = Info{
 	},
 }
 
-func (c *DeleteTemplate) Flags() *flag.FlagSet { return nil }
+func (c *DeleteTemplate) Flags() *flag.FlagSet { return c.fs }
 func (c *DeleteTemplate) Info() Info           { return deleteTemplateInfo }
 func (c *DeleteTemplate) Run(args []string) error {
 	err := c.fs.Parse(args)

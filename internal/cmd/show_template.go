@@ -77,11 +77,11 @@ func (c *ShowTemplate) Run(args []string) error {
 			return err
 		}
 
-		_, err = fmt.Fprintf(c.ios.Out, string(out))
+		_, err = fmt.Fprintln(c.ios.Out, string(out))
 		return err
 
 	}
 
-	_, err = fmt.Fprintf(c.ios.Out, snapshot.String())
+	_, err = fmt.Fprintln(c.ios.Out, snapshot.String())
 	return err
 }

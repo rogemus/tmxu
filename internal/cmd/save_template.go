@@ -60,8 +60,8 @@ func (c *SaveTemplate) Run(args []string) error {
 		return ErrSessionNameNotProvided
 	}
 
-	_, err = tmux.HasSession(sessionName)
-	if err != nil {
+	hasSession, err := tmux.HasSession(sessionName)
+	if err != nil || !hasSession {
 		return err
 	}
 

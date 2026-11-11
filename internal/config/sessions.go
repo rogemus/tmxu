@@ -1,6 +1,8 @@
 package config
 
-import "path/filepath"
+import (
+	"os"
+)
 
 // TODO: temp name remove 2 once everything is working
 const sessionsFileName = "tmux-sessions2.json"
@@ -11,10 +13,11 @@ func (c Config) SaveSessions(data []byte) (string, error) {
 		return "", err
 	}
 
-	sessionsFile := sessionFile(path)
-	return saveToFile(sessionsFile, data)
-}
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
 
-func sessionFile(path string) string {
-	return filepath.Join(path, sessionsFileName)
+	return saveToFile(root, sessionsFileName, data)
 }

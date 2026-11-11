@@ -10,7 +10,6 @@ import (
 
 var (
 	ErrCannotReadTemplatesDir       = errors.New("cannot read templates dir")
-	ErrCannotReadTemplateFile       = errors.New("cannot read template file")
 	ErrCannotSaveTemplate           = errors.New("cannot save template")
 	ErrCannotDeleteTemplate         = errors.New("cannot delete template")
 	ErrCannotCreateTmxuTemplatesDir = errors.New("cannot create tmxu templates dir")
@@ -43,13 +42,13 @@ func (c Config) ShowTemplate(templateName string) ([]byte, error) {
 		return nil, err
 	}
 
-	templateFile := templateFile(path, templateName)
-	out, err := readTemplateFile(templateFile)
+	root, err := os.OpenRoot(path)
 	if err != nil {
 		return nil, err
 	}
+	defer root.Close()
 
-	return out, nil
+	return readFile(root, templateName+".json")
 }
 
 func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
@@ -58,8 +57,13 @@ func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
 		return "", err
 	}
 
-	templateFile := templateFile(path, templateName)
-	return saveToFile(templateFile, data)
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
+
+	return saveToFile(root, templateName+".json", data)
 }
 
 func (c Config) DeleteTemplate(templateName string) (string, error) {
@@ -68,12 +72,13 @@ func (c Config) DeleteTemplate(templateName string) (string, error) {
 		return "", err
 	}
 
-	templateFile := templateFile(path, templateName)
-	return deleteFile(templateFile)
-}
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
 
-func templateFile(path, name string) string {
-	return filepath.Join(path, name+".json")
+	return deleteFile(root, templateName+".json")
 }
 
 func readTemplatesName(entries []os.DirEntry) []string {
@@ -85,15 +90,6 @@ func readTemplatesName(entries []os.DirEntry) []string {
 	}
 
 	return names
-}
-
-func readTemplateFile(path string) ([]byte, error) {
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("%w %s: %w", ErrCannotReadTemplateFile, path, err)
-	}
-
-	return file, nil
 }
 
 func readTemplateFiles(path string) ([]os.DirEntry, error) {

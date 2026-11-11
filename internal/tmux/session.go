@@ -16,7 +16,6 @@ var (
 	ErrCannotListSessions    = errors.New("cannot list sessions")
 	ErrCannotAttachToSession = errors.New("cannot attach to session")
 	ErrSessionExists         = errors.New("session already exists")
-	ErrSessionNoExists       = errors.New("session does not exists")
 	ErrCannotValidateSession = errors.New("cannot validate session")
 )
 
@@ -91,7 +90,6 @@ func CreateSessions(sessions []Session) error {
 
 func HasSession(sessionName string) (bool, error) {
 	output, err := exec.Command("tmux", "has-session", "-t", sessionName).Output()
-
 	if err != nil {
 		return false, fmt.Errorf("%w %s: %w", ErrCannotValidateSession, sessionName, err)
 	}
@@ -100,7 +98,7 @@ func HasSession(sessionName string) (bool, error) {
 		return true, nil
 	}
 
-	return false, ErrSessionNoExists
+	return false, nil
 }
 
 func buildNewSessionsCmd(sessions []Session) string {

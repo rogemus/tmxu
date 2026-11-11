@@ -89,7 +89,7 @@ func (d SnapshotData) sessionIDs() []string {
 }
 
 func SessionSnapshot(sessionName string) (SnapshotData, error) {
-	o, err := exec.Command("tmux", "list-panes", "-F", buildListPanesFormat(), "-s", "-t", sessionName).Output()
+	o, err := exec.Command("tmux", "list-panes", "-F", buildListPanesFormat(), "-s", "-t", "="+sessionName).Output()
 	if err != nil {
 		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
 	}
@@ -166,10 +166,6 @@ func SanitizeSnapshot(data SnapshotData, sessionName string) SnapshotData {
 	delete(data.Windows, oldSessionSlug)
 
 	return data
-}
-
-func DesanitizeSnapshot(data SnapshotData) SnapshotData {
-	return SnapshotData{}
 }
 
 func parseTmuxLines(lines []Line) SnapshotData {
