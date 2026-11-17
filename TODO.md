@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore, `new-session -templ` and the menu are not ported. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, mode 0644). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see section 7). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see section 5). `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, mode 0644). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see section 7). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
 
 ## Goal: 0.8.0 release
 
@@ -16,9 +16,9 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 - [x] `save-sessions` (`save`, `s`)
 - [x] `version` (`v`)
 - [x] `attach-session` (`attach`, `a`)
-- [ ] `new-session` (`new`, `ns`)
+- [x] `new-session` (`new`, `ns`)
   - [x] `-path`
-  - [ ] `-templ`
+  - [x] `-templ` (happy path; error paths are in section 5)
 - [ ] `restore-sessions` (`restore`, `r`)
   - [ ] `-force`
 - [x] `list-templates` (`lt`)
@@ -38,17 +38,17 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 - [ ] Check `has-session` before creating; skip or refuse existing sessions (today only `NewSession` detects a duplicate, from tmux's stderr; a duplicate in a `CreateSessions` chain stops the rest)
 - [ ] Never use `-k` on a session that was not created in this run
 - [ ] Explicit force path with a prompt that lists what will be killed; refuse to kill the current session (`$TMUX`, `display-message -p '#S'`)
-- [x] Exact-match targets in all builders (`Window.TargetIndex` returns `=name:idx`, quoted at the call site, not escaped: verified that `-t` is not format-expanded)
+- [x] Exact-match targets in all builders (`windowTarget` returns `=name:idx`, passed raw as an argv element, not escaped: verified that `-t` is not format-expanded)
 - [ ] Decide what to do with session names containing `:` or `.` (target by session id, or reject)
 - [ ] Read the real `base-index` (use or delete `GetBaseIndex`); handle saved index != current base so no blank leftover window stays
-- [ ] Roll back sessions created in this run when a later step fails
+- [ ] Roll back sessions created in this run when a later step fails (also `new-session -templ`: a failed window step leaves a half-built session that blocks the retry with `duplicate session`)
 - [ ] Ctrl-C during restore: clean up or report the partial session
 
 ## 2. Restore parity with the old `cli/`
 
 - [x] Window layout: read `#{window_layout}` (unquoted in the format, so it is nested JSON) and store it as `json.RawMessage`
 - [x] Apply `select-layout` after the splits (`buildSetLayoutCmd`; no tests yet, see section 7); verified that tmux accepts the JSON text, remaps the saved pane ids, and fails with `have N panes but need M` when the pane count differs
-- [ ] Verify `select-layout '<json>'` inside the single-string chain (the JSON is quoted with `utils.Quote`; only the separate-argv form was tried)
+- [ ] Verify `select-layout` in the argv chain on a multi-pane template (the layout is passed raw as one argv element; the `ble` template has no layout, so this is untried; tmux needs the pane count to match)
 - [x] Layout only for windows with more than one pane (`isSplitLayout` in `Line.Window`); no `select-layout` for single-pane windows
 - [x] `Window.WindowLayout` needs `json:",omitempty"` (an absent layout is saved as `null`)
 - [ ] Decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
@@ -57,6 +57,7 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 - [x] Pane naming rule: derived `<window name>_<pane index>` for every pane (`Line.Pane`); `#` is escaped with `utils.Escape` in `buildRenamePaneCmd`
 - [ ] Set pane titles without changing the active pane (`select-pane -T`; verify it leaves the active pane alone)
 - [ ] Verify whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
+- [ ] Verify a window name or pane title ending in `;`: tmux treats a trailing `;` on an argv word as a command separator, so it may need `\;` even in argv form
 - [ ] Restore the original active pane and window
 - [ ] Preserve session order (`session_created` as `time.Time`; slice, not map; numeric sort of `$N`)
 - [ ] `attach` / `switch-client` when `$TMUX` is set; `=name` exact target
@@ -69,14 +70,15 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 - [x] Split DTO (tmux line) from persisted types: `Line` is the tmux DTO; the domain structs (`Data`, `Session`, `Window`, `Pane`) are the persisted shape, saved to the file and restored from it; runtime-only fields are `json:"-"`
 - [x] Normalized window layout (`LayoutNode`: `split`, `size` in percent of the parent, `panes`; no ids or coordinates), used by `Data.String` (`Data.JSON` is now a plain `json.Marshal`, and the dump is debug-only and will be removed)
 - [x] Persisted shape drops runtime ids (`$3`, `@7`, `%9`), `Window.SessionName`, `order`, the redundant `pane.name` and the window target (`ID`, `Slug` and `TargetIndex` are `json:"-"`)
-- [ ] Rebuild the `json:"-"` fields after loading the file (`Window.Slug`, `Window.TargetIndex` from the session name, window name and index), in one `Data` method so the formula lives once
+- [ ] Rebuild the `json:"-"` fields after loading the file (`Window.Slug`, `Window.TargetIndex` from the session name, window name and index), in one `Data` method so the formula lives once (the formulas now live in `sessionSlug`, `windowSlug` and `windowTarget`, but `SanitizeSnapshot` and `DesanitizeTemplSnapshot` still rebuild the keys by hand)
 - [x] `layout` held as a real nested object (`json.RawMessage`), not an escaped string
 - [ ] Validate the layout with `json.Valid` when saving to the file
 - [x] `"version"` field in the saved file (`Data.Version`, `SchemaVersion`)
 - [ ] Templates are a `Session` without runtime fields; delete `TEMP_VALUE` (`PLACEHOLDER_TEMP_VALUE`, `SanitizeSnapshot`)
 - [ ] `SanitizeSnapshot`: `Sessions` is keyed by slug but looked up by `sessionName`, so a name like `my.sess` misses silently (zero `Session`); look up by `utils.Slug(name)`, use `v, ok :=` and return an error on a miss
-- [ ] `dump -session` runs `SanitizeSnapshot`, so its output shows `TEMP_VALUE`; decide whether to sanitize there (see Decisions)
-- [ ] `new-session -templ` needs a "desanitize" step (template placeholder to the real session name); the stub was removed, write it with `-templ`
+- [x] `dump -session` no longer sanitizes; `save-template` owns `SanitizeSnapshot` (`save_template.go`)
+- [x] `new-session -templ` desanitize step (`DesanitizeTemplSnapshot`: placeholder to the real session name)
+- [ ] `DesanitizeTemplSnapshot`: `v, ok :=` on the three map reads (`Sessions`, `Windows`, `Panes`) and return an error on a miss; today a missing key inserts a zero value or `nil` panes, which reaches the `panic` in `buildNewWindowsCmd`
 - [ ] Return errors instead of `panic` for a window without panes; validate loaded data before building commands
 - [x] Exported accessors for `Data` (the fields are exported: `Sessions`, `Windows`, `Panes`)
 - [x] `utils.Slug` (letters, digits and `-` kept, everything else `_`, 1:1) with table tests; used for the `Session.Slug` and `Window.Slug` map keys
@@ -85,15 +87,17 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 ## 4. Errors and execution
 
 - [ ] One `run()` helper or a `Runner` interface (`Run`, `Attach`) with an `execRunner`; no direct `exec.Command` elsewhere
-- [ ] Pass `[]string` argv with `";"` elements, or run a script through `source-file -`, instead of one joined string
+- [x] `CreateWindows` passes `[]string` argv with `";"` elements (`appendCmd`); the builders return `[]string` and no longer quote (`utils.Escape` stays for `#` in `-n` and `-T`)
+- [ ] `CreateSessions` (`session.go`) still passes one joined string to `exec.Command`; move it to argv too, or confirm why it works
+- [ ] `utils.Quote` has no callers on the argv path; check for remaining callers and delete it if none
 - [ ] Typed `*TmuxError{Args, Stderr, Err}`; include stderr in messages
-- [ ] Sentinels `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message
+- [ ] Sentinels `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message; `new-session -templ` with a missing template returns `ErrNoTemplate` with the name (replaces the misspelled `ErrInvalidTemplName`)
 - [ ] "No server running" handled like `tmux ls`
 - [ ] `exec.LookPath("tmux")` and `tmux -V` check at startup with a clear message
 - [ ] Wrap the cause in `GetBaseIndex` with `%w`
 - [x] Fix `ErrCannotCreateSessions` text (now `ErrCannotCreateSession`)
 - [x] `NewSession` reports tmux's own message and returns `ErrSessionExists` for a duplicate (`newSessionError`)
-- [ ] `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist`
+- [ ] `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist` (done in `hasFile`; check the rest)
 - [ ] `errors.Join` to collect restore errors
 - [ ] Thread `ctx`; `signal.NotifyContext` in `main`; `exec.CommandContext` with a 5s timeout for non-interactive calls, none for `attach`
 - [ ] Errors to stderr, data to stdout (already true for `ls` and `version`; hold the line for new commands)
@@ -111,7 +115,9 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 - [ ] Final sessions file name (drop the `2` in `tmux-sessions2.json` once the old file is gone)
 - [ ] `restore-sessions` (one shared `restoreSession` for restore and new-from-template)
 - [x] `new-session`: empty name and extra arguments rejected (`ErrSessionNameNotProvided`, `ErrUnexpectedArgument`), `-path` made absolute, duplicate returns `ErrSessionExists`
-- [ ] `new-session -templ` fails with "not supported yet" until templates are ported (today it is parsed and silently ignored)
+- [ ] `new-session -templ`: `newSessionFromTempl` wraps a nil `err` when the template is missing (`%!w(<nil>)`); return `err` for I/O failures and a named not-found error (with `c.templ`) for `!hasTemplate`
+- [ ] `new-session -templ`: `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
+- [ ] `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
 - [ ] Map `ErrSessionExists` to a user message in one place
 - [x] `save-template`, `list-templates`, `delete-template`, `show-template` (basic versions, wired in `cli.New`)
@@ -119,6 +125,7 @@ Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `a
 - [ ] Template names validated for clear errors: reject empty, `/`, `\`, `..`, leading `.` (the config layer accepts `""` and writes `.json`); path traversal itself is already blocked by `os.Root`
 - [ ] Template list skips non-`.json` files and subdirectories (`readTemplatesName` only trims the suffix); a bad file is reported without failing the list
 - [ ] `list-templates` `DescLong` says "with their windows and panes", but it lists names only; fix the text or extend the command
+- [ ] `list-templates` registers `-json`, but `Run` ignores it; wire it up or remove the flag
 - [ ] Template commands: `delete-template` and `show-template` wrap `ErrCannotParseSaveTemplateCmdFlags` (copy-paste, use own sentinels); return `ErrTemplateNameNotProvided` (defined, unused) instead of `ErrSessionNameNotProvided`; `show-template` `Arg` shows `[templateName]` but the name is required
 - [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (4 places) into one helper; `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate` and `SaveSessions` also each call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`)
 - [ ] `dump -session NAME` exists (debug-only, same as `dump`); `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
@@ -183,6 +190,8 @@ All `internal/` tests were AI-generated and have been removed. I write every tes
 - [x] `utils.Quote`, `utils.Escape` and `Quote(Escape(x))` tables (`'`, `\`, `$`, `#`, spaces, newline, unicode)
 - [x] `utils.Slug` table (empty, spaces, `#`, `.`/`:`, hyphen, underscore, accents, non-Latin, emoji)
 - [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
+- [ ] Round trip: `DesanitizeTemplSnapshot(SanitizeSnapshot(x, n), n)` restores the keys and names for slug-safe and unsafe names (`my proj`, `a.b`)
+- [ ] `buildNewWindowsCmd` argv table: `";"` between commands and none at the ends, `-c` omitted for an empty path, a window name with `#`, a missing panes key returns an error (once the `panic` is gone); `appendCmd`
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
 - [ ] `Config.SaveSessions` with `t.TempDir()`: two consecutive calls (dir missing, then dir exists), read the file back
@@ -229,7 +238,7 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 
 ## 10. Decisions
 
-- [ ] One batched chain, separate calls, or `source-file -`
+- [x] One batched chain as argv with `";"` elements (`appendCmd`); `source-file -` rejected for now
 - [x] Pane names: derived `<window>_<index>`
 - [x] On-disk format: reuse the `internal/tmux` structs (`Data` is saved and restored as is; runtime fields are `json:"-"`)
 - [ ] Existing sessions on restore: skip, refuse, or force
@@ -237,8 +246,8 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 - [ ] Layout restore: apply the raw tmux JSON with `select-layout` (done; exact, needs the pane count to match first) or rebuild it from the normalized `LayoutNode` with recursive `split-window -l N%` (readable file, relative sizes, no `select-layout`; approximate, needs verifying on 3.8)
 - [ ] Wait for shells by default with `-no-wait`, or opt-in `-wait`
 - [ ] `save-template` when the template exists: refuse, overwrite, or require `-f`
-- [ ] `dump -session`: keep sanitizing (output shows `TEMP_VALUE`) or print the real data; or drop `-session` with the rest of `dump`
-- [ ] Template start directories: `SanitizeSnapshot` clears every `Pane.Path`; keep that, or keep paths in templates
+- [x] `dump -session` prints the real data; sanitizing lives in `save-template`
+- [ ] Template start directories: `SanitizeSnapshot` clears every `Pane.Path`, so `new-session -templ` windows start in tmux's default directory and `-path` is ignored for them; keep that, apply `-path` to every window and pane, or keep paths in templates
 
 ## Suggested order
 
