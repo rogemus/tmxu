@@ -131,39 +131,71 @@ func LoadSnapshot(data []byte) (SnapshotData, error) {
 	return snapshot, nil
 }
 
+func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) SnapshotData {
+	oldSSlug := sessionSlug(PLACEHOLDER_TEMP_VALUE)
+	session, _ := data.Sessions[oldSSlug]
+
+	sSlug := sessionSlug(sessionName)
+	session.Slug = sSlug
+	session.Name = sessionName
+
+	data.Sessions[sSlug] = session
+	delete(data.Sessions, oldSSlug)
+
+	windows, _ := data.Windows[oldSSlug]
+	for i := range windows {
+		w := &windows[i]
+		wSlug := windowSlug(*w, sSlug)
+		oldWSlug := windowSlug(*w, PLACEHOLDER_TEMP_VALUE)
+		target := windowTarget(*w, sessionName)
+
+		w.Slug = wSlug
+		w.TargetIndex = target
+
+		panes, _ := data.Panes[oldWSlug]
+		data.Panes[wSlug] = panes
+		delete(data.Panes, oldWSlug)
+	}
+
+	data.Windows[sSlug] = windows
+	delete(data.Windows, oldSSlug)
+
+	return data
+}
+
 func SanitizeSnapshot(data SnapshotData, sessionName string) SnapshotData {
 	session, _ := data.Sessions[sessionName]
 
-	oldSessionSlug := session.Slug
-	sessionSlug := utils.Slug(PLACEHOLDER_TEMP_VALUE)
-	session.Slug = sessionSlug
+	oldSSlug := session.Slug
+	sSlug := sessionSlug(PLACEHOLDER_TEMP_VALUE)
+	session.Slug = sSlug
 	session.Name = PLACEHOLDER_TEMP_VALUE
 
-	data.Sessions[sessionSlug] = session
-	delete(data.Sessions, oldSessionSlug)
+	data.Sessions[sSlug] = session
+	delete(data.Sessions, oldSSlug)
 
-	windows, _ := data.Windows[oldSessionSlug]
+	windows, _ := data.Windows[oldSSlug]
 	for i := range windows {
 		w := &windows[i]
-		windowSlug := utils.Slug(fmt.Sprintf("%s_%s_%d", PLACEHOLDER_TEMP_VALUE, w.Name, w.Index))
-		target := fmt.Sprintf("=%s:%d", PLACEHOLDER_TEMP_VALUE, w.Index)
+		wSlug := windowSlug(*w, PLACEHOLDER_TEMP_VALUE)
+		target := windowTarget(*w, PLACEHOLDER_TEMP_VALUE)
 
-		oldWindowSlug := w.Slug
-		w.Slug = windowSlug
+		oldWSlug := w.Slug
+		w.Slug = wSlug
 		w.TargetIndex = target
 
-		panes, _ := data.Panes[oldWindowSlug]
+		panes, _ := data.Panes[oldWSlug]
 		for j := range panes {
 			p := &panes[j]
 			p.Path = ""
 		}
 
-		data.Panes[windowSlug] = panes
-		delete(data.Panes, oldWindowSlug)
+		data.Panes[wSlug] = panes
+		delete(data.Panes, oldWSlug)
 	}
 
-	data.Windows[sessionSlug] = windows
-	delete(data.Windows, oldSessionSlug)
+	data.Windows[sSlug] = windows
+	delete(data.Windows, oldSSlug)
 
 	return data
 }

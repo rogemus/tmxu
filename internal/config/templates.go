@@ -81,6 +81,21 @@ func (c Config) DeleteTemplate(templateName string) (string, error) {
 	return deleteFile(root, templateName+".json")
 }
 
+func (c Config) HasTemplate(templateName string) (bool, error) {
+	path, err := tmxuTemplatesDir(c.DirPath)
+	if err != nil {
+		return false, err
+	}
+
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return false, err
+	}
+	defer root.Close()
+
+	return hasFile(root, templateName+".json")
+}
+
 func readTemplatesName(entries []os.DirEntry) []string {
 	names := make([]string, 0, len(entries))
 

@@ -26,7 +26,12 @@ func buildNewPanesCmd(window Window, panes []Pane) string {
 
 func buildSplitPaneCmd(window Window, pane Pane) string {
 	target := utils.Quote(window.TargetIndex)
-	cmd := []string{"split-window", "-h", "-t", target, "-c", utils.Quote(pane.Path)}
+	cmd := []string{"split-window", "-h", "-t", target}
+
+	if pane.Path != "" {
+		cmd = append(cmd, "-c", utils.Quote(pane.Path))
+	}
+
 	return strings.Join(cmd, " ")
 }
 

@@ -188,7 +188,7 @@ func New(cfg config.Config, ios cmd.IOs) *Cli {
 	c.newCmd(ssCmd)
 	rsCmd := cmd.NewRestoreSessions(ios, cfg)
 	c.newCmd(rsCmd)
-	nsCmd := cmd.NewNewSession(ios)
+	nsCmd := cmd.NewNewSession(ios, cfg)
 	c.newCmd(nsCmd)
 	dCmd := cmd.NewDump(ios)
 	c.newCmd(dCmd)

@@ -37,6 +37,17 @@ func NewSession(name string, dir string) error {
 	return nil
 }
 
+func NewSessionFromTempl(name string, snapshot SnapshotData, dir string) error {
+	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()
+	if err != nil {
+		return newSessionError(name, out, err)
+	}
+
+	sSlug := sessionSlug(name)
+	windows, _ := snapshot.Windows[sSlug]
+	return CreateWindows(name, windows, snapshot.Panes)
+}
+
 func ListSessions() ([]Session, error) {
 	format := "{" + strings.Join(
 		[]string{
@@ -99,6 +110,10 @@ func HasSession(sessionName string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func sessionSlug(sessionName string) string {
+	return utils.Slug(sessionName)
 }
 
 func buildNewSessionsCmd(sessions []Session) string {

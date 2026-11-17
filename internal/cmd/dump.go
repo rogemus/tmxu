@@ -62,8 +62,7 @@ func (c *Dump) Run(args []string) error {
 			return err
 		}
 
-		d = tmux.SanitizeSnapshot(d, c.session)
-		return c.dumpData(d)
+		return dumpSnapshot(c.json, d, c.ios.Out)
 	}
 
 	d, err := tmux.Snapshot()
@@ -71,28 +70,28 @@ func (c *Dump) Run(args []string) error {
 		return err
 	}
 
-	return c.dumpData(d)
+	return dumpSnapshot(c.json, d, c.ios.Out)
 }
 
-func (c *Dump) dumpData(data tmux.SnapshotData) error {
-	if c.json {
-		return c.dumpAsJSON(data)
+func dumpSnapshot(json bool, data tmux.SnapshotData, w io.Writer) error {
+	if json {
+		return dumpAsJSON(data, w)
 	}
 
-	return c.dumpAsString(data)
+	return dumpAsString(data, w)
 }
 
-func (c *Dump) dumpAsString(data tmux.SnapshotData) error {
-	_, err := fmt.Fprintf(c.ios.Out, "tmxu dump %s\n", data.String())
+func dumpAsString(data tmux.SnapshotData, out io.Writer) error {
+	_, err := fmt.Fprintf(out, "tmxu dump %s\n", data.String())
 	return err
 }
 
-func (c *Dump) dumpAsJSON(data tmux.SnapshotData) error {
+func dumpAsJSON(data tmux.SnapshotData, w io.Writer) error {
 	out, err := data.JSON()
 	if err != nil {
 		return err
 	}
 
-	_, err = fmt.Fprintf(c.ios.Out, "%s\n", out)
+	_, err = fmt.Fprintf(w, "%s\n", out)
 	return err
 }

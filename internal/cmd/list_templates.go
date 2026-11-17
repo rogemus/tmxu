@@ -3,6 +3,7 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"io"
 	"text/tabwriter"
 
 	"github.com/rogemus/tmxu/internal/config"
@@ -13,10 +14,20 @@ var _ Cmd = (*ListTemplates)(nil)
 type ListTemplates struct {
 	ios IOs
 	cfg config.Config
+
+	fs   *flag.FlagSet
+	json bool
 }
 
 func NewListTemplates(ios IOs, cfg config.Config) *ListTemplates {
-	return &ListTemplates{ios: ios, cfg: cfg}
+	cmd := &ListTemplates{
+		ios: ios,
+		cfg: cfg,
+		fs:  flag.NewFlagSet("list-templates", flag.ContinueOnError),
+	}
+	cmd.fs.SetOutput(io.Discard)
+	cmd.fs.BoolVar(&cmd.json, "json", false, "Print JSON instead of text")
+	return cmd
 }
 
 var listTemplatesInfo = Info{
@@ -30,7 +41,7 @@ var listTemplatesInfo = Info{
 	},
 }
 
-func (c *ListTemplates) Flags() *flag.FlagSet { return nil }
+func (c *ListTemplates) Flags() *flag.FlagSet { return c.fs }
 func (c *ListTemplates) Info() Info           { return listTemplatesInfo }
 func (c *ListTemplates) Run(args []string) error {
 	templates, err := c.cfg.ListTemplates()

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -12,6 +13,7 @@ var (
 	ErrCannotCreateTmxuConfigDir = errors.New("cannot create tmxu config dir")
 	ErrCannotReadFile            = errors.New("cannot read file")
 	ErrCannotDeleteFile          = errors.New("cannot delete file")
+	ErrCannotCheckFile           = errors.New("cannot check file")
 )
 
 func tmxuConfigDir(dirPath string) (string, error) {
@@ -39,6 +41,19 @@ func readFile(root *os.Root, name string) ([]byte, error) {
 	}
 
 	return file, nil
+}
+
+func hasFile(root *os.Root, name string) (bool, error) {
+	_, err := root.Stat(name)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("%w %s: %w", ErrCannotCheckFile, name, err)
+	}
+
+	return true, nil
 }
 
 func saveToFile(root *os.Root, name string, data []byte) (string, error) {

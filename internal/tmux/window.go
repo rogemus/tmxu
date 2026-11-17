@@ -38,25 +38,34 @@ func (w Window) Eq(c utils.Comperable) bool {
 	return ok && i.ID == w.ID
 }
 
-func CreateWindows(windows []Window, panes map[string][]Pane) error {
+func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane) error {
 	if len(windows) == 0 {
 		return nil
 	}
 
-	cmd := buildNewWindowsCmd(windows, panes)
-	_, err := exec.Command("tmux", cmd).Output()
+	cmd := buildNewWindowsCmd(sessionName, windows, panes)
+	out, err := exec.Command("tmux", cmd).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotCreateWindows, err)
+		return fmt.Errorf("%w: %s %w", ErrCannotCreateWindows, strings.TrimSpace(string(out)), err)
 	}
 
 	return nil
 }
 
-func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
+func windowSlug(window Window, sessionName string) string {
+	return utils.Slug(fmt.Sprintf("%s_%s_%d", sessionName, window.Name, window.Index))
+}
+
+func windowTarget(window Window, sessionName string) string {
+	return fmt.Sprintf("=%s:%d", sessionName, window.Index)
+}
+
+func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[string][]Pane) string {
 	cmds := make([]string, 0)
 
 	for _, w := range windows {
-		panes, ok := panesMap[w.ID]
+		slug := windowSlug(w, sessionName)
+		panes, ok := panesMap[slug]
 		if !ok {
 			panic("windows need to always have at least 1 pane")
 		}
@@ -81,7 +90,11 @@ func buildNewWindowsCmd(windows []Window, panesMap map[string][]Pane) string {
 func buildNewWindowCmd(window Window, pane Pane) string {
 	target := utils.Quote(window.TargetIndex)
 	name := utils.Quote(utils.Escape(window.Name))
+	cmd := []string{"new-window", "-k", "-d", "-t", target, "-n", name}
 
-	cmd := []string{"new-window", "-k", "-d", "-t", target, "-n", name, "-c", utils.Quote(pane.Path)}
+	if pane.Path != "" {
+		cmd = append(cmd, "-c", utils.Quote(pane.Path))
+	}
+
 	return strings.Join(cmd, " ")
 }
