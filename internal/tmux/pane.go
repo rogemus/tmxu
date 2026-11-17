@@ -2,7 +2,6 @@ package tmux
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/rogemus/tmxu/internal/utils"
 )
@@ -14,32 +13,29 @@ type Pane struct {
 	Path  string `json:"pane_path"`
 }
 
-func buildNewPanesCmd(window Window, panes []Pane) string {
-	cmds := make([]string, 0)
+func buildNewPanesCmd(window Window, panes []Pane) []string {
+	argv := make([]string, 0)
 	for _, p := range panes {
-		cmds = append(cmds, buildSplitPaneCmd(window, p))
-		cmds = append(cmds, buildRenamePaneCmd(window, p))
+		argv = appendCmd(argv, buildSplitPaneCmd(window, p))
+		argv = appendCmd(argv, buildRenamePaneCmd(window, p))
 	}
 
-	return strings.Join(cmds, " ; ")
+	return argv
 }
 
-func buildSplitPaneCmd(window Window, pane Pane) string {
-	target := utils.Quote(window.TargetIndex)
-	cmd := []string{"split-window", "-h", "-t", target}
+func buildSplitPaneCmd(window Window, pane Pane) []string {
+	cmd := []string{"split-window", "-h", "-t", window.TargetIndex}
 
 	if pane.Path != "" {
-		cmd = append(cmd, "-c", utils.Quote(pane.Path))
+		cmd = append(cmd, "-c", pane.Path)
 	}
 
-	return strings.Join(cmd, " ")
+	return cmd
 }
 
-func buildRenamePaneCmd(window Window, pane Pane) string {
-	target := window.TargetIndex
-	paneTarget := fmt.Sprintf("%s.%d", target, pane.Index)
-	title := utils.Quote(utils.Escape(pane.Title))
+func buildRenamePaneCmd(window Window, pane Pane) []string {
+	paneTarget := fmt.Sprintf("%s.%d", window.TargetIndex, pane.Index)
+	title := utils.Escape(pane.Title)
 
-	cmd := []string{"select-pane", "-t", utils.Quote(paneTarget), "-T", title}
-	return strings.Join(cmd, " ")
+	return []string{"select-pane", "-t", paneTarget, "-T", title}
 }

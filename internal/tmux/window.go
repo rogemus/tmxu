@@ -43,8 +43,8 @@ func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane
 		return nil
 	}
 
-	cmd := buildNewWindowsCmd(sessionName, windows, panes)
-	out, err := exec.Command("tmux", cmd).CombinedOutput()
+	argv := buildNewWindowsCmd(sessionName, windows, panes)
+	out, err := exec.Command("tmux", argv...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%w: %s %w", ErrCannotCreateWindows, strings.TrimSpace(string(out)), err)
 	}
@@ -60,8 +60,17 @@ func windowTarget(window Window, sessionName string) string {
 	return fmt.Sprintf("=%s:%d", sessionName, window.Index)
 }
 
-func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[string][]Pane) string {
-	cmds := make([]string, 0)
+// appendCmd adds cmd to argv, joined by the ";" argument tmux treats as a command separator.
+func appendCmd(argv []string, cmd []string) []string {
+	if len(argv) > 0 {
+		argv = append(argv, ";")
+	}
+
+	return append(argv, cmd...)
+}
+
+func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[string][]Pane) []string {
+	argv := make([]string, 0)
 
 	for _, w := range windows {
 		slug := windowSlug(w, sessionName)
@@ -72,29 +81,28 @@ func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[strin
 
 		firstPane := panes[0]
 		restOfPanes := panes[1:]
-		cmds = append(cmds, buildNewWindowCmd(w, firstPane))
-		cmds = append(cmds, buildRenamePaneCmd(w, firstPane))
+		argv = appendCmd(argv, buildNewWindowCmd(w, firstPane))
+		argv = appendCmd(argv, buildRenamePaneCmd(w, firstPane))
 
 		if len(restOfPanes) > 0 {
-			cmds = append(cmds, buildNewPanesCmd(w, restOfPanes))
+			argv = appendCmd(argv, buildNewPanesCmd(w, restOfPanes))
 		}
 
 		if w.WindowLayout != nil {
-			cmds = append(cmds, buildSetLayoutCmd(w))
+			argv = appendCmd(argv, buildSetLayoutCmd(w))
 		}
 	}
 
-	return strings.Join(cmds, " ; ")
+	return argv
 }
 
-func buildNewWindowCmd(window Window, pane Pane) string {
-	target := utils.Quote(window.TargetIndex)
-	name := utils.Quote(utils.Escape(window.Name))
-	cmd := []string{"new-window", "-k", "-d", "-t", target, "-n", name}
+func buildNewWindowCmd(window Window, pane Pane) []string {
+	name := utils.Escape(window.Name)
+	cmd := []string{"new-window", "-k", "-d", "-t", window.TargetIndex, "-n", name}
 
 	if pane.Path != "" {
-		cmd = append(cmd, "-c", utils.Quote(pane.Path))
+		cmd = append(cmd, "-c", pane.Path)
 	}
 
-	return strings.Join(cmd, " ")
+	return cmd
 }

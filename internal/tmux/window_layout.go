@@ -2,9 +2,6 @@ package tmux
 
 import (
 	"encoding/json"
-	"strings"
-
-	"github.com/rogemus/tmxu/internal/utils"
 )
 
 type WindowLayout struct {
@@ -94,13 +91,12 @@ func percent(part, whole int) int {
 	return (part*100 + whole/2) / whole
 }
 
-func buildSetLayoutCmd(window Window) string {
+func buildSetLayoutCmd(window Window) []string {
 	b, err := json.Marshal(window.WindowLayout) // []byte
 	if err != nil {
 		// NOTE: not user facing issue. This should never happen
 		panic("invalid window layout")
 	}
 
-	target := utils.Quote(window.TargetIndex)
-	return strings.Join([]string{"select-layout", "-t", target, utils.Quote(string(b))}, " ")
+	return []string{"select-layout", "-t", window.TargetIndex, string(b)}
 }
