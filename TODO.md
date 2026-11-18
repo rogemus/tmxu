@@ -22,7 +22,8 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
 - [ ] Return errors instead of `panic` for a window without panes; validate loaded data before building commands
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
-- [ ] Template names validated for clear errors: reject empty, `/`, `\`, `..`, leading `.` (the config layer accepts `""` and writes `.json`); path traversal itself is already blocked by `os.Root`
+- [ ] Template names: commands now slug the name (`utils.Slug`) and reject a name that slugs to `""`, but they return `ErrTemplateNameNotProvided` for a name that was given and is unusable (`!!!`); add `ErrInvalidTemplateName` with the name in the message. The config layer still accepts `""` and writes `.json`; path traversal itself is already blocked by `os.Root`
+- [ ] Move `utils.Slug` into `config` (`ShowTemplate`, `SaveTemplate`, `DeleteTemplate`, `HasTemplate`) so callers pass the user's name; today it lives in four command files and one miss (`HasTemplate` in `new_session.go`) already broke `new-session -templ "my proj"` once
 - [ ] Template list: non-`.json` files and subdirectories are skipped now (`readTemplateFiles`); still open: a bad (unparseable) file is reported without failing the list
 - [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`)
 
@@ -74,7 +75,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 ### Duplication and dead code
 
-- [ ] `utils.Quote` has no callers on the argv path; only `Session.GetName` (dead with `buildNewSessionsCmd`) and `printError` in `main.go` use it; delete it once both go
+- [ ] `utils.Quote` has no callers on the argv path; only `buildNewSessionsCmd` (dead, `GetName` is gone) and `printError` in `main.go` use it; delete it once both go. Note `new-session -s` is format-expanded, so a rewrite on argv needs `utils.Escape` for the name
 - [ ] Unused: `BaseIndex` (`base_index.go`), `ErrCannotSaveTemplate`, `ErrCannotDeleteTemplate`
 - [ ] `save`: one shared `snapshotSession` for sessions and templates
 - [ ] `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
@@ -85,8 +86,6 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] Generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
 - [ ] `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
 - [ ] Single map lookup in `parseTmuxLines`; drop `make(map, 0)` hints
-- [ ] Remove the dead `"session_windows": #{session_windows}` key from the tmux format (`session.go:55`); the field is no longer parsed
-- [ ] Drop `Session.GetName` (still used in `session.go`); note `-s` is format-expanded, so the name needs `utils.Escape` too
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
 - [ ] `wantsHelp` becomes a plain function
 - [ ] Detect a primary command name collision in `newCmd` (only aliases are checked)
@@ -178,6 +177,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
 - [ ] `buildNewWindowsCmd` argv table: `";"` between commands and none at the ends, `-c` omitted for an empty path, a window name with `#`, a missing panes key returns an error (once the `panic` is gone); `appendCmd`
 - [ ] Round trip: `DesanitizeTemplSnapshot(SanitizeSnapshot(x, n), n)` restores the keys and names for slug-safe and unsafe names (`my proj`, `a.b`)
+- [ ] Template names through the commands: `new-session -templ "my proj"` finds `my-proj.json` (`HasTemplate` and `ShowTemplate` agree), `save-template` and `delete-template` use the same file, a name that slugs to `""` is rejected
 - [ ] Error paths: `SanitizeSnapshot` with an unknown session name; `DesanitizeTemplSnapshot` with a missing `Sessions`, `Windows` or `Panes` key; check `errors.Is` with the sentinel
 - [ ] `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index, a loaded snapshot (empty `Window.Slug`) still lists its panes
 - [ ] `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`
@@ -252,6 +252,7 @@ Settled so far: one argv chain with `";"` elements (no `source-file`), derived p
 - [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode`
 - [ ] Wait for shells by default with `-no-wait`, or opt-in `-wait`
 - [ ] `save-template` when the template exists: refuse, overwrite, or require `-f`
+- [ ] Template identity is the slug on disk: `My Proj` and `my-proj` are the same file (silent overwrite), and `list-templates` shows slugs, not the names the user typed; accept that, or store the display name inside the file
 - [ ] Template start directories: `SanitizeSnapshot` clears every `Pane.Path`, so `new-session -templ` windows start in tmux's default directory and `-path` is ignored for them; keep that, apply `-path` to every window and pane, or keep paths in templates
 
 ## Suggested order
