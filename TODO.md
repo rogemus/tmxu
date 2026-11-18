@@ -20,15 +20,11 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 
 - [ ] No rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session` (also applies to restore, see Features)
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
-- [ ] Return errors instead of `panic` for a window without panes; validate loaded data before building commands
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
-- [ ] Template list: non-`.json` files and subdirectories are skipped now (`readTemplateFiles`); still open: a bad (unparseable) file is reported without failing the list
 - [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`)
 
 ### Layout and tmux commands
 
-- [ ] `buildSetLayoutCmd`: use `string(window.WindowLayout)` instead of `json.Marshal` plus `panic` (the panic is reachable with a corrupt saved layout; marshaling also compacts the text); check `len(w.WindowLayout) > 0` instead of `!= nil` in `buildNewWindowsCmd`
-- [ ] Validate the layout with `json.Valid` when saving to the file
 - [ ] `CreateSessions` and `buildNewSessionsCmd` (`session.go`) have no callers and still pass one joined string to `exec.Command`; delete them, or rewrite on argv when restore needs them
 - [ ] Stop building JSON inside the tmux format string (`GetTmuxData`, `ListSessions`): a `"`, `\` or newline in a name or title fails every row; use a safe delimiter or escaping
 - [ ] Decide what to do with session names containing `:` or `.` (target by session id, or reject)
@@ -49,7 +45,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] `dump`, `ls`, `version` and `save` ignore extra positional args
 - [ ] `Cli.help(w, args)` passes `c.ios.Out` to `helpAll` instead of `w`
 - [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
-- [ ] `internal/cmd/list_sessions.go` is not gofmt'd (`s.Name )`); `just lint` flags it
 
 ## Cosmetic changes
 
@@ -173,7 +168,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 ### Builders and data model
 
 - [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
-- [ ] `buildNewWindowsCmd` argv table: `";"` between commands and none at the ends, `-c` omitted for an empty path, a window name with `#`, a missing panes key returns an error (once the `panic` is gone); `appendCmd`
+- [ ] `buildNewWindowsCmd` argv table: `";"` between commands and none at the ends, `-c` omitted for an empty path, a window name with `#`, a missing panes key and an empty panes slice both return `ErrWindowWithoutPanes`; `buildSetLayoutCmd` passes the raw layout text unchanged; a window with no layout gets no `select-layout`; `appendCmd`
 - [ ] Round trip: `DesanitizeTemplSnapshot(SanitizeSnapshot(x, n), n)` restores the keys and names for slug-safe and unsafe names (`my proj`, `a.b`)
 - [ ] Template names through the commands: `new-session -templ "my proj"` finds `my-proj.json` (`HasTemplate` and `ShowTemplate` agree), `save-template` and `delete-template` use the same file, a name that slugs to `""` is rejected
 - [ ] Error paths: `SanitizeSnapshot` with an unknown session name; `DesanitizeTemplSnapshot` with a missing `Sessions`, `Windows` or `Panes` key; check `errors.Is` with the sentinel
@@ -242,10 +237,9 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 
 ## Decisions
 
-Settled so far: one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
+Settled so far: a window without panes is an error (`ErrWindowWithoutPanes`, no `panic`), one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
 
 - [ ] Existing sessions on restore: skip, refuse, or force
-- [ ] Panic or error for a window without panes (recommended: error)
 - [ ] Layout restore: apply the raw tmux JSON with `select-layout` (done; exact, needs the pane count to match first) or rebuild it from the normalized `LayoutNode` with recursive `split-window -l N%` (readable file, relative sizes, no `select-layout`; approximate, needs verifying on 3.8)
 - [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode`
 - [ ] Wait for shells by default with `-no-wait`, or opt-in `-wait`
@@ -255,7 +249,7 @@ Settled so far: one argv chain with `";"` elements (no `source-file`), derived p
 
 ## Suggested order
 
-1. Bugs in the template path (rollback, `panic`), since `new-session -templ` is the newest code
+1. Bugs in the template path (rollback, `--path`), since `new-session -templ` is the newest code
 2. Runner seam, `TmuxError`, typed parsing (Cosmetic > Structure, Bugs > Sessions), with the first tests on the fake
 3. Restore safety and parity (Features), with tests on the fake
 4. Persisted shape, config store, atomic writes

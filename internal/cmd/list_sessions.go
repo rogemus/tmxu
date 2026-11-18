@@ -67,7 +67,7 @@ func (c *ListSessions) Run(args []string) error {
 	w := tabwriter.NewWriter(c.ios.Out, 2, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "Session Name")
 	for _, s := range sessions {
-		fmt.Fprintf(w, "%s\n", s.Name )
+		fmt.Fprintf(w, "%s\n", s.Name)
 	}
 
 	return w.Flush()
