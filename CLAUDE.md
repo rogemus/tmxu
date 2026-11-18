@@ -31,11 +31,9 @@ just lint               # go fmt, go vet, go fix -diff
 - `internal/cmd`: one file per command
 - `internal/tmux`: tmux calls and the session/window/pane model
 - `internal/config`: config directory resolution
-- `internal/utils`: small helpers (quoting, confirm, contains)
-- `cli/`: old package, removed once the port to `internal/` is done
+- `internal/utils`: small helpers (quoting, slug, confirm)
 
 ## Where things are tracked
 
-- `TODO.md`: remaining work, decisions, suggested order
-- `AI-REVIEW.md`: reasoning behind each TODO item
+- `TODO.md`: remaining work and decisions (the only tracking file)
 - `internal/` has no tests. The user writes them by hand (`TODO.md`, Tests section).
