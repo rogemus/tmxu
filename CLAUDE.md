@@ -36,4 +36,4 @@ go build -o tmxu .
 
 - `TODO.md`: remaining work, decisions, suggested order
 - `AI-REVIEW.md`: reasoning behind each TODO item
-- `internal/` has no tests. The user writes them by hand (`TODO.md` section 7).
+- `internal/` has no tests. The user writes them by hand (`TODO.md`, Tests section).

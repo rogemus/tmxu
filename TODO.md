@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, mode 0644). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see Tests). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, mode 0644). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` has few tests: the AI-generated ones were removed, and I write them by hand (see Tests). Written so far: `utils` (`Quote`, `Escape`, composed), with the `internal/expect` helper. Everything that shells out to tmux needs the runner seam.
 
 Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Migrate every command from the old `cli/` to `internal/`, then delete `cli/`. `attach -menu` is not ported: it was broken in the previous version, so the flag is dropped.
 
@@ -18,6 +18,7 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 
 ### Templates and `new-session -templ`
 
+- [ ] `show-template` prints the placeholder `TEMP_VALUE` as the session name; print the template name instead
 - [ ] No rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session` (also applies to restore, see Features)
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
 - [ ] `SanitizeSnapshot`: `Sessions` is keyed by slug but looked up by `sessionName`, so a name like `my.sess` misses silently (zero `Session`); look up by `utils.Slug(name)`, use `v, ok :=` and return an error on a miss
@@ -60,12 +61,8 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 - [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
 - [ ] `Config.DirPath` is now the parent (`~/.config`), not the app dir; rename it or make `New` return the app dir (`tmxu paths` and messages need the app dir)
-- [ ] Final sessions file name (drop the `2` in `tmux-sessions2.json` once the old file is gone)
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
-- [ ] Map `ErrSessionExists` to a user message in one place
 - [ ] Doc comments on exported identifiers (most in `tmux`, `cmd`, `config` and `utils` have none, including `utils.Slug`); unexport what is not API; package doc for `internal/cli`
-- [ ] Fix stale `CLAUDE.md` (`gh.go`, `Formula/`, old `cli/` layout) or leave it untracked
-- [ ] `.gitignore`: anchor `/tmxu`; add `.DS_Store`, `dist/`, `*.test`, `coverage.out`
 
 ### Duplication and dead code
 
@@ -88,7 +85,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 ### Structure and refactors
 
-- [ ] Rebuild the `json:"-"` fields after loading the file (`Window.Slug`, `Window.TargetIndex` from the session name, window name and index), in one `Data` method so the formula lives once (the formulas now live in `sessionSlug`, `windowSlug` and `windowTarget`, but `SanitizeSnapshot` and `DesanitizeTemplSnapshot` still rebuild the keys by hand)
+- [ ] Rebuild the `json:"-"` fields after loading the file (`Window.Slug`, `Window.TargetIndex` from the session name, window name and index), in one `Data` method so the formula lives once (the formulas now live in `sessionSlug`, `windowSlug` and `windowTarget`, but `SanitizeSnapshot` and `DesanitizeTemplSnapshot` still rebuild the keys by hand; a loaded snapshot has an empty `Window.Slug`, which `SnapshotData.String` works around with `windowSlug`, so any other reader of `w.Slug` after `LoadSnapshot` still finds nothing)
 - [ ] Templates are a `Session` without runtime fields; delete `TEMP_VALUE` (`PLACEHOLDER_TEMP_VALUE`, `SanitizeSnapshot`)
 - [ ] One `run()` helper or a `Runner` interface (`Run`, `Attach`) with an `execRunner`; no direct `exec.Command` elsewhere
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
@@ -172,7 +169,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
 - [ ] `buildNewWindowsCmd` argv table: `";"` between commands and none at the ends, `-c` omitted for an empty path, a window name with `#`, a missing panes key returns an error (once the `panic` is gone); `appendCmd`
 - [ ] Round trip: `DesanitizeTemplSnapshot(SanitizeSnapshot(x, n), n)` restores the keys and names for slug-safe and unsafe names (`my proj`, `a.b`)
-- [ ] `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index
+- [ ] `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index, a loaded snapshot (empty `Window.Slug`) still lists its panes
 - [ ] `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
@@ -237,7 +234,7 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 
 ## Decisions
 
-Settled so far: one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`).
+Settled so far: one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
 
 - [ ] Existing sessions on restore: skip, refuse, or force
 - [ ] Panic or error for a window without panes (recommended: error)
