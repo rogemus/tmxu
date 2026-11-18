@@ -14,16 +14,18 @@ import (
 )
 
 var (
-	ErrCannotGetTmuxData         = errors.New("cannot get tmux data")
-	ErrCannotParseTmuxLines      = errors.New("cannot parse tmux lines")
-	ErrCannotLoadSnapshot        = errors.New("cannot load snapshot")
-	ErrCannotLoadSessionSnapshot = errors.New("cannot load session snapshot")
-	ErrCannotSanitizeSnapshot    = errors.New("cannot sanitize snapshot")
-	ErrCannotDesanitizeSnapshot  = errors.New("cannot desanitize snapshot")
+	ErrCannotGetTmuxData        = errors.New("cannot get tmux data")
+	ErrCannotParseTmuxLines     = errors.New("cannot parse tmux lines")
+	ErrCannotLoadSnapshot       = errors.New("cannot load snapshot")
+	ErrCannotSanitizeSnapshot   = errors.New("cannot sanitize snapshot")
+	ErrCannotDesanitizeSnapshot = errors.New("cannot desanitize snapshot")
 )
 
 const SchemaVersion = 2
-const PLACEHOLDER_TEMP_VALUE = "TEMP_VALUE"
+
+// templateSessionName is the session name stored in a template, which has no
+// session of its own until a new one is created from it.
+const templateSessionName = ""
 
 type Line struct {
 	SessionID    string          `json:"session_id"`
@@ -135,7 +137,7 @@ func LoadSnapshot(data []byte) (SnapshotData, error) {
 }
 
 func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) (SnapshotData, error) {
-	oldSSlug := sessionSlug(PLACEHOLDER_TEMP_VALUE)
+	oldSSlug := sessionSlug(templateSessionName)
 	session, ok := data.Sessions[oldSSlug]
 	if !ok {
 		return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotDesanitizeSnapshot, sessionName)
@@ -156,7 +158,7 @@ func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) (SnapshotDat
 	for i := range windows {
 		w := &windows[i]
 		wSlug := windowSlug(*w, sSlug)
-		oldWSlug := windowSlug(*w, PLACEHOLDER_TEMP_VALUE)
+		oldWSlug := windowSlug(*w, templateSessionName)
 		target := windowTarget(*w, sessionName)
 
 		w.Slug = wSlug
@@ -181,27 +183,35 @@ func SanitizeSnapshot(data SnapshotData, sessionName string) (SnapshotData, erro
 	oldSSlug := sessionSlug(sessionName)
 	session, ok := data.Sessions[oldSSlug]
 	if !ok {
-		return SnapshotData{}, fmt.Errorf("%w %q", ErrCannotLoadSessionSnapshot, sessionName)
+		return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotSanitizeSnapshot, sessionName)
 	}
 
-	sSlug := sessionSlug(PLACEHOLDER_TEMP_VALUE)
+	sSlug := sessionSlug(templateSessionName)
 	session.Slug = sSlug
-	session.Name = PLACEHOLDER_TEMP_VALUE
+	session.Name = templateSessionName
 
 	data.Sessions[sSlug] = session
 	delete(data.Sessions, oldSSlug)
 
-	windows, _ := data.Windows[oldSSlug]
+	windows, ok := data.Windows[oldSSlug]
+	if !ok {
+		return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotSanitizeSnapshot, sessionName)
+	}
+
 	for i := range windows {
 		w := &windows[i]
-		wSlug := windowSlug(*w, PLACEHOLDER_TEMP_VALUE)
-		target := windowTarget(*w, PLACEHOLDER_TEMP_VALUE)
+		wSlug := windowSlug(*w, templateSessionName)
+		target := windowTarget(*w, templateSessionName)
 
 		oldWSlug := w.Slug
 		w.Slug = wSlug
 		w.TargetIndex = target
 
-		panes, _ := data.Panes[oldWSlug]
+		panes, ok := data.Panes[oldWSlug]
+		if !ok {
+			return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotSanitizeSnapshot, sessionName)
+		}
+
 		for j := range panes {
 			p := &panes[j]
 			p.Path = ""

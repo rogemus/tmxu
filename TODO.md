@@ -43,7 +43,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
 - [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] `dump`, `ls`, `version` and `save` ignore extra positional args
-- [ ] `Cli.help(w, args)` passes `c.ios.Out` to `helpAll` instead of `w`
 - [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
 
 ## Cosmetic changes
@@ -54,13 +53,11 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 - [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
 - [ ] `ls` still uses `tabwriter` for a single column; print plainly, or keep it for a future column
-- [ ] Sanitize errors: `SanitizeSnapshot` uses `"%w %q"` and `ErrCannotLoadSessionSnapshot`, `DesanitizeTemplSnapshot` uses `"%w: %q"`; pick one format, use `ErrCannotSanitizeSnapshot` for the sanitize miss, and drop unused sentinels
 - [ ] `Config.DirPath` is now the parent (`~/.config`), not the app dir; rename it or make `New` return the app dir (`tmxu paths` and messages need the app dir)
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
-- [ ] Doc comments on exported identifiers (package docs exist except `internal/cli`; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API; package doc for `internal/cli`
-- [ ] `PLACEHOLDER_TEMP_VALUE` (`tmux.go:23`) is an exported constant with a non-Go name (goes away with the `TEMP_VALUE` item below)
+- [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
 - [ ] Stale text: `save` and `restore` `DescLong` say `tmux-sessions.json` (code writes `tmux-sessions2.json`); restore claims "skips existing, `-force` replaces", not implemented
-- [ ] Stale comments: `// TODO: template support` (`new_session.go:40`), fzf menu `// TODO` and blank first line in `AttachSession.Run`
+- [ ] Stale comments: fzf menu `// TODO` and blank first line in `AttachSession.Run`
 - [ ] Unchecked `Fprint*` errors (`save_template.go:89`, `save_sessions.go:52,71`, `list_sessions.go:57,59`, `list_templates.go:65,67`); `list-templates` prints "no templates" to stdout
 - [ ] `CreateWindows` error format drops a separator (`%w: %s %w`); `NewSession` and `NewSessionFromTempl` duplicate the create call and error handling
 - [ ] `ErrSessionNameNotProvided` (`new_session.go`) and `ErrTemplateNameNotProvided` (`show_template.go`) are shared but live in one command's file; move to `cmd.go`
@@ -88,7 +85,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 ### Structure and refactors
 
 - [ ] Rebuild the `json:"-"` fields after loading the file (`Window.Slug`, `Window.TargetIndex` from the session name, window name and index), in one `Data` method so the formula lives once (the formulas now live in `sessionSlug`, `windowSlug` and `windowTarget`, but `SanitizeSnapshot` and `DesanitizeTemplSnapshot` still rebuild the keys by hand; a loaded snapshot has an empty `Window.Slug`, which `SnapshotData.String` works around with `windowSlug`, so any other reader of `w.Slug` after `LoadSnapshot` still finds nothing)
-- [ ] Templates are a `Session` without runtime fields; delete `TEMP_VALUE` (`PLACEHOLDER_TEMP_VALUE`, `SanitizeSnapshot`)
+- [ ] Templates are a `Session` without runtime fields; the `TEMP_VALUE` placeholder is now the empty session name (`templateSessionName`), but `SanitizeSnapshot` and `DesanitizeTemplSnapshot` still re-key every map; remove them, and the constant, with the persisted-shape work
 - [ ] One `run()` helper or a `Runner` interface (`Run`, `Attach`) with an `execRunner`; no direct `exec.Command` elsewhere
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
 - [ ] Typed `*TmuxError{Args, Stderr, Err}`; include stderr in messages

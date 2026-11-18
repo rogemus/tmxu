@@ -37,8 +37,6 @@ func NewNewSession(ios IOs, cfg config.Config) *NewSession {
 	}
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.StringVar(&cmd.path, "path", "", "Initial path for all panes. Defaults to the current directory")
-
-	// TODO: template support
 	cmd.fs.StringVar(&cmd.templ, "templ", "", "Template name to create new session based on")
 	return cmd
 }

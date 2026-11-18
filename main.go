@@ -1,3 +1,5 @@
+// Command tmxu saves and restores tmux sessions (windows, panes and layouts)
+// and creates new sessions from templates.
 package main
 
 import (

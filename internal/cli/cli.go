@@ -1,3 +1,5 @@
+// Package cli holds the command registry. It looks up a command by name or
+// alias, dispatches it with the remaining arguments, and prints help.
 package cli
 
 import (
@@ -79,7 +81,7 @@ EXAMPLES:
 
 func (c *Cli) help(w io.Writer, args []string) error {
 	if len(args) == 0 {
-		return c.helpAll(c.ios.Out)
+		return c.helpAll(w)
 	}
 
 	command, ok := c.cmds[args[0]]
