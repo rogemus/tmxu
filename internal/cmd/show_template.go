@@ -72,5 +72,6 @@ func (c *ShowTemplate) Run(args []string) error {
 		return err
 	}
 
+	snapshot = tmux.DesanitizeTemplSnapshot(snapshot, templateName)
 	return dumpSnapshot(c.json, snapshot, c.ios.Out)
 }
