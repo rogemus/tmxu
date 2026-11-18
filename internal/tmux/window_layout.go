@@ -92,11 +92,5 @@ func percent(part, whole int) int {
 }
 
 func buildSetLayoutCmd(window Window) []string {
-	b, err := json.Marshal(window.WindowLayout) // []byte
-	if err != nil {
-		// NOTE: not user facing issue. This should never happen
-		panic("invalid window layout")
-	}
-
-	return []string{"select-layout", "-t", window.TargetIndex, string(b)}
+	return []string{"select-layout", "-t", window.TargetIndex, string(window.WindowLayout)}
 }

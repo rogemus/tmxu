@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrCannotCreateWindows = errors.New("cannot create windows")
+	ErrWindowWithoutPanes  = errors.New("window has no panes")
 	ErrCannotParseLayout   = errors.New("cannot parse window layout")
 )
 
@@ -43,7 +44,11 @@ func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane
 		return nil
 	}
 
-	argv := buildNewWindowsCmd(sessionName, windows, panes)
+	argv, err := buildNewWindowsCmd(sessionName, windows, panes)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotCreateWindows, err)
+	}
+
 	out, err := exec.Command("tmux", argv...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%w: %s %w", ErrCannotCreateWindows, strings.TrimSpace(string(out)), err)
@@ -69,14 +74,14 @@ func appendCmd(argv []string, cmd []string) []string {
 	return append(argv, cmd...)
 }
 
-func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[string][]Pane) []string {
+func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[string][]Pane) ([]string, error) {
 	argv := make([]string, 0)
 
 	for _, w := range windows {
 		slug := windowSlug(w, sessionName)
 		panes, ok := panesMap[slug]
-		if !ok {
-			panic("windows need to always have at least 1 pane")
+		if !ok || len(panes) == 0 {
+			return nil, fmt.Errorf("%w: %s", ErrWindowWithoutPanes, slug)
 		}
 
 		firstPane := panes[0]
@@ -88,12 +93,12 @@ func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[strin
 			argv = appendCmd(argv, buildNewPanesCmd(w, restOfPanes))
 		}
 
-		if w.WindowLayout != nil {
+		if len(w.WindowLayout) > 0 {
 			argv = appendCmd(argv, buildSetLayoutCmd(w))
 		}
 	}
 
-	return argv
+	return argv, nil
 }
 
 func buildNewWindowCmd(window Window, pane Pane) []string {
