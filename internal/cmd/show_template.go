@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -14,7 +13,7 @@ var _ Cmd = (*ShowTemplate)(nil)
 
 var (
 	ErrCannotParseShowTemplateCmdFlags = fmt.Errorf("%w: cannot parse show template cmd flags", ErrUsage)
-	ErrTemplateNameNotProvided         = errors.New("template name not provided")
+	ErrTemplateNameNotProvided         = fmt.Errorf("%w: template name not provided", ErrUsage)
 )
 
 type ShowTemplate struct {
@@ -53,12 +52,12 @@ func (c *ShowTemplate) Info() Info           { return showTemplateInfo }
 func (c *ShowTemplate) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotParseSaveTemplateCmdFlags, err)
+		return fmt.Errorf("%w: %w", ErrCannotParseShowTemplateCmdFlags, err)
 	}
 
 	templateName := c.fs.Arg(0)
 	if templateName == "" {
-		return ErrSessionNameNotProvided
+		return ErrTemplateNameNotProvided
 	}
 
 	data, err := c.cfg.ShowTemplate(templateName)

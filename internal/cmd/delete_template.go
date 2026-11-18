@@ -49,12 +49,12 @@ func (c *DeleteTemplate) Info() Info           { return deleteTemplateInfo }
 func (c *DeleteTemplate) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotParseSaveTemplateCmdFlags, err)
+		return fmt.Errorf("%w: %w", ErrCannotParseDeleteTemplateCmdFlags, err)
 	}
 
 	templateName := c.fs.Arg(0)
 	if templateName == "" {
-		return ErrSessionNameNotProvided
+		return ErrTemplateNameNotProvided
 	}
 
 	path, err := c.cfg.DeleteTemplate(templateName)

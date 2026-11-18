@@ -16,7 +16,7 @@ var (
 	ErrCannotParseNewSessionCmdFlags = fmt.Errorf("%w: cannot parse new session cmd flags", ErrUsage)
 	ErrSessionNameNotProvided        = fmt.Errorf("%w: session name not provided", ErrUsage)
 	ErrUnexpectedArgument            = fmt.Errorf("%w: unexpected argument, flags go before the session name", ErrUsage)
-	ErrInvalidTemplName              = fmt.Errorf("%w: invalid template name", ErrUsage)
+	ErrNoTemplate                    = fmt.Errorf("%w: template not found", ErrUsage)
 )
 
 type NewSession struct {
@@ -103,7 +103,7 @@ func (c *NewSession) newSessionFromTempl(name string) error {
 		return err
 	}
 	if !hasTemplate {
-		return fmt.Errorf("%w: %w", ErrInvalidTemplName, err)
+		return fmt.Errorf("%w: %q", ErrNoTemplate, c.templ)
 	}
 
 	data, err := c.cfg.ShowTemplate(c.templ)
