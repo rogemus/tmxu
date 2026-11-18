@@ -13,7 +13,6 @@ import (
 var (
 	ErrCannotCreateWindows = errors.New("cannot create windows")
 	ErrWindowWithoutPanes  = errors.New("window has no panes")
-	ErrCannotParseLayout   = errors.New("cannot parse window layout")
 )
 
 type Window struct {
@@ -23,15 +22,6 @@ type Window struct {
 	Name         string          `json:"window_name"`
 	WindowLayout json.RawMessage `json:"window_layout,omitempty"`
 	TargetIndex  string          `json:"-"`
-}
-
-func (w Window) Layout() (LayoutNode, error) {
-	var wl WindowLayout
-	if err := json.Unmarshal(w.WindowLayout, &wl); err != nil {
-		return LayoutNode{}, fmt.Errorf("%w: %w", ErrCannotParseLayout, err)
-	}
-
-	return normalizeWindowLayout(wl), nil
 }
 
 func (w Window) Eq(c utils.Comperable) bool {

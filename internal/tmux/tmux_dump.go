@@ -75,16 +75,3 @@ func writePane(b *strings.Builder, prefix string, p Pane, nameWidth int) {
 
 	fmt.Fprintf(b, "%s%-*s  %s\n", prefix, nameWidth, p.Title, p.Path)
 }
-
-func writeLayoutNode(b *strings.Builder, n LayoutNode, depth int) {
-	kind := "pane"
-	if n.Split != "" {
-		kind = n.Split // "horizontal" or "vertical"
-	}
-
-	fmt.Fprintf(b, "%s%s %d%%\n", strings.Repeat("  ", depth), kind, n.Size)
-
-	for _, p := range n.Panes {
-		writeLayoutNode(b, p, depth+1)
-	}
-}

@@ -64,7 +64,6 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] Unused: `ErrCannotSaveTemplate`, `ErrCannotDeleteTemplate`
 - [ ] `save`: one shared `snapshotSession` for sessions and templates
 - [ ] `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
-- [ ] `writeLayoutNode`, `Window.Layout` and `normalizeWindowLayout` are no longer used by `Data.String` (the tree shows names and paths only); keep them for a future flag, or delete them with their tests
 - [ ] `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
 - [ ] `tmxuConfigDir` / `tmxuTemplatesDir`: `hasTmxuConfigDir` and `hasTemplatesDir` treat any `Stat` error but "not exist" as "exists"; replace both with one `MkdirAll` (`Root.MkdirAll` exists on the toolchain)
 - [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (4 places) into one helper
@@ -164,7 +163,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
-- [ ] Window layout: normalization (`percent`, `normalizeSize`, nested splits, zero sizes), decoding real tmux text, `isSplitLayout`, `Window.Layout`, `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
+- [ ] Window layout: decoding real tmux text, `isSplitLayout` (single pane, split, empty, invalid), `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
 
 ### Config and CLI
 
@@ -226,11 +225,9 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 
 ## Decisions
 
-Settled so far: errors, prompts and diagnostics go to stderr, data and success messages to stdout, a window without panes is an error (`ErrWindowWithoutPanes`, no `panic`), one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
+Settled so far: window layouts are stored as raw tmux JSON and applied with `select-layout` after the splits (the normalized `LayoutNode` code is deleted), errors, prompts and diagnostics go to stderr, data and success messages to stdout, a window without panes is an error (`ErrWindowWithoutPanes`, no `panic`), one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
 
 - [ ] Existing sessions on restore: skip, refuse, or force
-- [ ] Layout restore: apply the raw tmux JSON with `select-layout` (done; exact, needs the pane count to match first) or rebuild it from the normalized `LayoutNode` with recursive `split-window -l N%` (readable file, relative sizes, no `select-layout`; approximate, needs verifying on 3.8)
-- [ ] Decide whether the saved file stores raw tmux layout JSON or the normalized `LayoutNode`
 - [ ] Wait for shells by default with `-no-wait`, or opt-in `-wait`
 - [ ] `save-template` when the template exists: refuse, overwrite, or require `-f`
 - [ ] Template identity is the slug on disk: `My Proj` and `my-proj` are the same file (silent overwrite), and `list-templates` shows slugs, not the names the user typed; accept that, or store the display name inside the file
