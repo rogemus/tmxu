@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/rogemus/tmxu/internal/config"
-	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*DeleteTemplate)(nil)
@@ -54,12 +54,11 @@ func (c *DeleteTemplate) Run(args []string) error {
 	}
 
 	templateName := c.fs.Arg(0)
-	slug := utils.Slug(templateName)
-	if slug == "" {
+	if strings.TrimSpace(templateName) == "" {
 		return ErrTemplateNameNotProvided
 	}
 
-	path, err := c.cfg.DeleteTemplate(slug)
+	path, err := c.cfg.DeleteTemplate(templateName)
 	if err != nil {
 		return err
 	}

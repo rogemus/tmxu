@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
-	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*NewSession)(nil)
@@ -83,6 +83,10 @@ func (c *NewSession) Run(args []string) error {
 	}
 
 	if c.templ != "" {
+		if strings.TrimSpace(c.templ) == "" {
+			return ErrTemplateNameNotProvided
+		}
+
 		return c.newSessionFromTempl(name)
 	}
 
@@ -100,8 +104,7 @@ func (c *NewSession) newSession(name string) error {
 }
 
 func (c *NewSession) newSessionFromTempl(name string) error {
-	templSlug := utils.Slug(c.templ)
-	hasTemplate, err := c.cfg.HasTemplate(templSlug)
+	hasTemplate, err := c.cfg.HasTemplate(c.templ)
 	if err != nil {
 		return err
 	}
@@ -109,7 +112,7 @@ func (c *NewSession) newSessionFromTempl(name string) error {
 		return fmt.Errorf("%w: %q", ErrNoTemplate, c.templ)
 	}
 
-	data, err := c.cfg.ShowTemplate(templSlug)
+	data, err := c.cfg.ShowTemplate(c.templ)
 	if err != nil {
 		return err
 	}

@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
-	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*ShowTemplate)(nil)
@@ -59,12 +59,11 @@ func (c *ShowTemplate) Run(args []string) error {
 	}
 
 	templateName := c.fs.Arg(0)
-	slug := utils.Slug(templateName)
-	if slug == "" {
+	if strings.TrimSpace(templateName) == "" {
 		return ErrTemplateNameNotProvided
 	}
 
-	data, err := c.cfg.ShowTemplate(slug)
+	data, err := c.cfg.ShowTemplate(templateName)
 	if err != nil {
 		return err
 	}

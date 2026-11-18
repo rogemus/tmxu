@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
-	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*SaveTemplate)(nil)
@@ -61,6 +61,14 @@ func (c *SaveTemplate) Run(args []string) error {
 		return ErrSessionNameNotProvided
 	}
 
+	templateName := sessionName
+	if c.name != "" {
+		templateName = c.name
+	}
+	if strings.TrimSpace(templateName) == "" {
+		return ErrTemplateNameNotProvided
+	}
+
 	hasSession, err := tmux.HasSession(sessionName)
 	if err != nil || !hasSession {
 		return err
@@ -69,16 +77,6 @@ func (c *SaveTemplate) Run(args []string) error {
 	snapshot, err := tmux.SessionSnapshot(sessionName)
 	if err != nil {
 		return err
-	}
-
-	templateName := sessionName
-	if c.name != "" {
-		templateName = c.name
-	}
-
-	templSlug := utils.Slug(templateName)
-	if templSlug == "" {
-		return ErrTemplateNameNotProvided
 	}
 
 	snapshot, err = tmux.SanitizeSnapshot(snapshot, sessionName)
@@ -91,7 +89,7 @@ func (c *SaveTemplate) Run(args []string) error {
 		return err
 	}
 
-	path, err := c.cfg.SaveTemplate(out, templSlug)
+	path, err := c.cfg.SaveTemplate(out, templateName)
 	if err != nil {
 		return err
 	}

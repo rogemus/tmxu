@@ -6,9 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var (
+	ErrInvalidTemplateName          = errors.New("invalid template name")
 	ErrCannotReadTemplatesDir       = errors.New("cannot read templates dir")
 	ErrCannotSaveTemplate           = errors.New("cannot save template")
 	ErrCannotDeleteTemplate         = errors.New("cannot delete template")
@@ -32,6 +35,11 @@ func (c Config) ListTemplates() ([]string, error) {
 }
 
 func (c Config) ShowTemplate(templateName string) ([]byte, error) {
+	fileName, err := templateFileName(templateName)
+	if err != nil {
+		return nil, err
+	}
+
 	path, err := tmxuTemplatesDir(c.DirPath)
 	if err != nil {
 		return nil, err
@@ -43,10 +51,15 @@ func (c Config) ShowTemplate(templateName string) ([]byte, error) {
 	}
 	defer root.Close()
 
-	return readFile(root, templateName+".json")
+	return readFile(root, fileName)
 }
 
 func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
+	fileName, err := templateFileName(templateName)
+	if err != nil {
+		return "", err
+	}
+
 	path, err := tmxuTemplatesDir(c.DirPath)
 	if err != nil {
 		return "", err
@@ -58,10 +71,15 @@ func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
 	}
 	defer root.Close()
 
-	return saveToFile(root, templateName+".json", data)
+	return saveToFile(root, fileName, data)
 }
 
 func (c Config) DeleteTemplate(templateName string) (string, error) {
+	fileName, err := templateFileName(templateName)
+	if err != nil {
+		return "", err
+	}
+
 	path, err := tmxuTemplatesDir(c.DirPath)
 	if err != nil {
 		return "", err
@@ -73,10 +91,15 @@ func (c Config) DeleteTemplate(templateName string) (string, error) {
 	}
 	defer root.Close()
 
-	return deleteFile(root, templateName+".json")
+	return deleteFile(root, fileName)
 }
 
 func (c Config) HasTemplate(templateName string) (bool, error) {
+	fileName, err := templateFileName(templateName)
+	if err != nil {
+		return false, err
+	}
+
 	path, err := tmxuTemplatesDir(c.DirPath)
 	if err != nil {
 		return false, err
@@ -88,7 +111,16 @@ func (c Config) HasTemplate(templateName string) (bool, error) {
 	}
 	defer root.Close()
 
-	return hasFile(root, templateName+".json")
+	return hasFile(root, fileName)
+}
+
+func templateFileName(name string) (string, error) {
+	trimmed := strings.ToLower(strings.TrimSpace(name))
+	if trimmed == "" {
+		return "", fmt.Errorf("%w: %q", ErrInvalidTemplateName, name)
+	}
+
+	return utils.Slug(trimmed) + ".json", nil
 }
 
 func readTemplatesName(entries []os.DirEntry) []string {

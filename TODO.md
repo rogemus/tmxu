@@ -22,8 +22,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
 - [ ] Return errors instead of `panic` for a window without panes; validate loaded data before building commands
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
-- [ ] Template names: commands now slug the name (`utils.Slug`) and reject a name that slugs to `""`, but they return `ErrTemplateNameNotProvided` for a name that was given and is unusable (`!!!`); add `ErrInvalidTemplateName` with the name in the message. The config layer still accepts `""` and writes `.json`; path traversal itself is already blocked by `os.Root`
-- [ ] Move `utils.Slug` into `config` (`ShowTemplate`, `SaveTemplate`, `DeleteTemplate`, `HasTemplate`) so callers pass the user's name; today it lives in four command files and one miss (`HasTemplate` in `new_session.go`) already broke `new-session -templ "my proj"` once
 - [ ] Template list: non-`.json` files and subdirectories are skipped now (`readTemplateFiles`); still open: a bad (unparseable) file is reported without failing the list
 - [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`)
 
