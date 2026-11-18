@@ -20,10 +20,9 @@ var (
 )
 
 type Session struct {
-	ID           string `json:"-"`
-	Slug         string `json:"-"`
-	Name         string `json:"session_name"`
-	WindowsCount int    `json:"session_windows"`
+	ID   string `json:"-"`
+	Slug string `json:"-"`
+	Name string `json:"session_name"`
 }
 
 func (s Session) GetName() string { return utils.Quote(s.Name) }
