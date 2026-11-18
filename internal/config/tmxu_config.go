@@ -17,14 +17,10 @@ var (
 )
 
 func tmxuConfigDir(dirPath string) (string, error) {
-	if hasTmxuConfigDir(dirPath) {
-		path := tmxuConfigDirPath(dirPath)
-		return path, nil
-	}
-
-	path, err := createTmxuConfigDir(dirPath)
+	path := tmxuConfigDirPath(dirPath)
+	err := os.MkdirAll(path, 0700)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %w", ErrCannotCreateTmxuConfigDir, err)
 	}
 
 	return path, nil
@@ -57,7 +53,7 @@ func hasFile(root *os.Root, name string) (bool, error) {
 }
 
 func saveToFile(root *os.Root, name string, data []byte) (string, error) {
-	err := root.WriteFile(name, data, 0644)
+	err := root.WriteFile(name, data, 0600)
 	if err != nil {
 		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, name, err)
 	}
@@ -72,23 +68,4 @@ func deleteFile(root *os.Root, name string) (string, error) {
 	}
 
 	return filepath.Join(root.Name(), name), nil
-}
-
-func hasTmxuConfigDir(path string) bool {
-	p := tmxuConfigDirPath(path)
-	if _, err := os.Stat(p); os.IsNotExist(err) {
-		return false
-	}
-
-	return true
-}
-
-func createTmxuConfigDir(path string) (string, error) {
-	p := tmxuConfigDirPath(path)
-	err := os.MkdirAll(p, 0755)
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrCannotCreateTmxuConfigDir, err)
-	}
-
-	return p, nil
 }

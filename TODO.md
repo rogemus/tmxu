@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, mode 0644). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` tests: only `utils` (`Quote`, `Escape`, `Slug`) plus the `internal/expect` helper, all written by hand (see Tests). Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, files 0600, dirs 0700). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` tests: only `utils` (`Quote`, `Escape`, `Slug`) plus the `internal/expect` helper, all written by hand (see Tests). Everything that shells out to tmux needs the runner seam.
 
 Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Port `restore` to `internal/` (the old `cli/` package is already deleted). `attach -menu` is not ported: it was broken in the previous version, so the flag is dropped.
 
@@ -61,11 +61,9 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 ### Duplication and dead code
 
 - [ ] `utils.Quote` has no callers on the argv path; only `buildNewSessionsCmd` (dead, `GetName` is gone) uses it (`printError` is gone); delete it with `CreateSessions` and `buildNewSessionsCmd`. Note `new-session -s` is format-expanded, so a rewrite on argv needs `utils.Escape` for the name
-- [ ] Unused: `ErrCannotSaveTemplate`, `ErrCannotDeleteTemplate`
 - [ ] `save`: one shared `snapshotSession` for sessions and templates
 - [ ] `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
 - [ ] `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
-- [ ] `tmxuConfigDir` / `tmxuTemplatesDir`: `hasTmxuConfigDir` and `hasTemplatesDir` treat any `Stat` error but "not exist" as "exists"; replace both with one `MkdirAll` (`Root.MkdirAll` exists on the toolchain)
 - [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (4 places) into one helper
 - [ ] Generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
 - [ ] `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
@@ -121,8 +119,7 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 ### Templates and config
 
 - [ ] Templates: clear missing-file error for `show-template` / `delete-template`, `-f` for `delete-template`, and an overwrite policy for `save-template` (it truncates silently, see Decisions)
-- [ ] Config store with files `0600`, dirs `0700`, `writeFileAtomic` (temp file, `Sync`, `Rename`), keep a `.bak`
-- [ ] Config: `TMXU_CONFIG_DIR` env and `--config-dir`; ignore a relative `XDG_CONFIG_HOME`; doc comments on `Config`, `DirPath`, `New`
+- [ ] Config store: `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`- [ ] Config: `TMXU_CONFIG_DIR` env and `--config-dir`; ignore a relative `XDG_CONFIG_HOME`; doc comments on `Config`, `DirPath`, `New`
 
 ### CLI surface
 

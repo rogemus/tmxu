@@ -13,8 +13,6 @@ import (
 var (
 	ErrInvalidTemplateName          = errors.New("invalid template name")
 	ErrCannotReadTemplatesDir       = errors.New("cannot read templates dir")
-	ErrCannotSaveTemplate           = errors.New("cannot save template")
-	ErrCannotDeleteTemplate         = errors.New("cannot delete template")
 	ErrCannotCreateTmxuTemplatesDir = errors.New("cannot create tmxu templates dir")
 )
 
@@ -152,45 +150,16 @@ func readTemplateFiles(path string) ([]os.DirEntry, error) {
 	return filtered, nil
 }
 
-func hasTemplatesDir(dirPath string) bool {
-	path := tmxuTemplatesDirPath(dirPath)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
-
-	return true
-}
-
 func tmxuTemplatesDirPath(path string) string {
 	return filepath.Join(path, templatesDirName)
 }
 
 func tmxuTemplatesDir(dirPath string) (string, error) {
-	configPath, err := tmxuConfigDir(dirPath)
-	if err != nil {
-		return "", err
-	}
-
-	if hasTemplatesDir(configPath) {
-		path := tmxuTemplatesDirPath(configPath)
-		return path, nil
-	}
-
-	path, err := createTmxuTemplatesDir(configPath)
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
-}
-
-func createTmxuTemplatesDir(dirPath string) (string, error) {
-	path := tmxuTemplatesDirPath(dirPath)
-	err := os.MkdirAll(path, 0755)
+	path := tmxuTemplatesDirPath(tmxuConfigDirPath(dirPath))
+	err := os.MkdirAll(path, 0700)
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrCannotCreateTmxuTemplatesDir, err)
 	}
 
 	return path, nil
-
 }
