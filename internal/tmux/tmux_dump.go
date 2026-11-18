@@ -1,45 +1,74 @@
 package tmux
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
+	"unicode/utf8"
 )
 
 func (d SnapshotData) JSON() ([]byte, error) {
 	return json.Marshal(d)
 }
 
+// String renders the snapshot as a tree of sessions, windows and panes.
+// Panes show their name and start directory; ids, indexes and layouts are
+// only part of the JSON output.
 func (d SnapshotData) String() string {
-	ids := d.sessionIDs()
-
 	var b strings.Builder
-	fmt.Fprintf(&b, "TmuxData: %d sessions\n", len(ids))
 
-	for _, sid := range ids {
-		fmt.Fprintf(&b, "%s %q\n", sid, d.Sessions[sid].Name)
+	for i, sid := range d.sessionIDs() {
+		if i > 0 {
+			b.WriteString("\n")
+		}
 
-		for _, w := range d.Windows[sid] {
-			fmt.Fprintf(&b, "  %s [%d] %q\n", w.ID, w.Index, w.Name)
+		fmt.Fprintln(&b, d.Sessions[sid].Name)
+		d.writeWindows(&b, sid)
+	}
 
-			if w.WindowLayout != nil {
-				b.WriteString("    layout\n")
+	return strings.TrimRight(b.String(), "\n")
+}
 
-				layout, err := w.Layout()
-				if err != nil {
-					fmt.Fprintf(&b, "      <%v>\n", err)
-				} else {
-					writeLayoutNode(&b, layout, 3)
-				}
-			}
+func (d SnapshotData) writeWindows(b *strings.Builder, sid string) {
+	windows := slices.Clone(d.Windows[sid])
+	slices.SortFunc(windows, func(x, y Window) int { return cmp.Compare(x.Index, y.Index) })
 
-			for _, p := range d.Panes[w.Slug] {
-				fmt.Fprintf(&b, "    %s [%d] %q %s\n", p.ID, p.Index, p.Title, p.Path)
-			}
+	nameWidth := 0
+	for _, w := range windows {
+		for _, p := range d.Panes[w.Slug] {
+			nameWidth = max(nameWidth, utf8.RuneCountInString(p.Title))
 		}
 	}
 
-	return b.String()
+	for wi, w := range windows {
+		branch, rail := "├─ ", "│  "
+		if wi == len(windows)-1 {
+			branch, rail = "└─ ", "   "
+		}
+
+		fmt.Fprintf(b, "%s%s\n", branch, w.Name)
+
+		panes := d.Panes[w.Slug]
+		for pi, p := range panes {
+			paneBranch := "├─ "
+			if pi == len(panes)-1 {
+				paneBranch = "└─ "
+			}
+
+			writePane(b, rail+paneBranch, p, nameWidth)
+		}
+	}
+}
+
+func writePane(b *strings.Builder, prefix string, p Pane, nameWidth int) {
+	if p.Path == "" {
+		fmt.Fprintf(b, "%s%s\n", prefix, p.Title)
+		return
+	}
+
+	fmt.Fprintf(b, "%s%-*s  %s\n", prefix, nameWidth, p.Title, p.Path)
 }
 
 func writeLayoutNode(b *strings.Builder, n LayoutNode, depth int) {

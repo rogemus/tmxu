@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -14,7 +13,6 @@ var _ Cmd = (*ListSessions)(nil)
 
 var (
 	ErrCannotParseListSessionCmdFlags = fmt.Errorf("%w: cannot parse list sessions cmd flags", ErrUsage)
-	ErrCannotParseListSessionCmdJSON  = fmt.Errorf("%w: cannot parse list sessions cmd json", ErrUsage)
 )
 
 type ListSessions struct {
@@ -40,11 +38,12 @@ var listSessionsInfo = Info{
 	Aliases:   []string{"list", "ls"},
 	Arg:       "",
 	DescShort: "List all active sessions in tmux",
-	DescLong:  "Displays all currently running tmux sessions with their IDs and names.",
+	DescLong:  "Displays all currently running tmux sessions with their names and window counts. With -json prints {\"sessions\":[...]} on one line.",
 	Examples: []string{
 		"tmxu list-sessions",
 		"tmxu list",
 		"tmxu ls",
+		"tmxu ls -json",
 	},
 }
 
@@ -62,17 +61,7 @@ func (c *ListSessions) Run(args []string) error {
 	}
 
 	if c.json {
-		sDump := map[string][]tmux.Session{
-			"sessions": sessions,
-		}
-
-		out, err := json.Marshal(sDump)
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrCannotParseListSessionCmdJSON, err)
-		}
-
-		_, err = fmt.Fprintln(c.ios.Out, string(out))
-		return err
+		return printJSON(c.ios.Out, map[string][]tmux.Session{"sessions": sessions})
 	}
 
 	w := tabwriter.NewWriter(c.ios.Out, 2, 0, 2, ' ', 0)

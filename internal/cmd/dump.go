@@ -40,11 +40,12 @@ var dumpInfo = Info{
 	Aliases:   []string{"d"},
 	Arg:       "",
 	DescShort: "Print running tmux sessions, windows and panes",
-	DescLong:  "Reads the live tmux state and prints every session with its windows and panes. Windows with several panes include their layout as percentages. Nothing is saved. With -json the output is indented JSON without tmux ids.",
+	DescLong:  "Reads the live tmux state and prints it as a tree: each session with its windows, and each window with its panes (pane name and start directory). Nothing is saved. Use -session to dump a single session. With -json the output is the compact JSON that save-sessions writes, including window layouts.",
 	Examples: []string{
 		"tmxu dump",
-		"tmxu dump -session sessionName",
 		"tmxu dump -json",
+		"tmxu dump -session sessionName",
+		"tmxu dump -session sessionName -json",
 	},
 }
 
@@ -56,42 +57,16 @@ func (c *Dump) Run(args []string) error {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)
 	}
 
+	var d tmux.SnapshotData
 	if c.session != "" {
-		d, err := tmux.SessionSnapshot(c.session)
-		if err != nil {
-			return err
-		}
-
-		return dumpSnapshot(c.json, d, c.ios.Out)
+		d, err = tmux.SessionSnapshot(c.session)
+	} else {
+		d, err = tmux.Snapshot()
 	}
 
-	d, err := tmux.Snapshot()
 	if err != nil {
 		return err
 	}
 
 	return dumpSnapshot(c.json, d, c.ios.Out)
-}
-
-func dumpSnapshot(json bool, data tmux.SnapshotData, w io.Writer) error {
-	if json {
-		return dumpAsJSON(data, w)
-	}
-
-	return dumpAsString(data, w)
-}
-
-func dumpAsString(data tmux.SnapshotData, out io.Writer) error {
-	_, err := fmt.Fprintf(out, "tmxu dump %s\n", data.String())
-	return err
-}
-
-func dumpAsJSON(data tmux.SnapshotData, w io.Writer) error {
-	out, err := data.JSON()
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(w, "%s\n", out)
-	return err
 }

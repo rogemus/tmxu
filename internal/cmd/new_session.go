@@ -45,13 +45,14 @@ func NewNewSession(ios IOs, cfg config.Config) *NewSession {
 var newSessionInfo = Info{
 	Command:   "new-session",
 	Aliases:   []string{"new", "ns"},
-	DescShort: "Create new session base on the template",
-	DescLong:  "Creates a new tmux session, optionally based on a saved template.",
-	Arg:       "[sessionName]",
+	DescShort: "Create a new session, optionally from a template",
+	DescLong:  "Creates a new detached tmux session. With -templ the session gets the windows and panes of a saved template. -path sets the start directory (relative paths are made absolute); it defaults to the current directory. Flags go before the session name. Run `tmxu attach <sessionName>` to use the new session.",
+	Arg:       "<sessionName>",
 	Examples: []string{
 		"tmxu new sessionName",
 		"tmxu ns sessionName",
 		"tmxu new-session sessionName",
+		"tmxu new-session -path /tmp/app sessionName",
 		"tmxu new-session -templ templateName sessionName",
 		"tmxu new-session -path /tmp/app -templ templateName sessionName",
 	},

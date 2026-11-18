@@ -38,12 +38,14 @@ func NewShowTemplate(ios IOs, cfg config.Config) *ShowTemplate {
 var showTemplateInfo = Info{
 	Command:   "show-template",
 	Aliases:   []string{"show", "sht"},
-	Arg:       "[templateName]",
+	Arg:       "<templateName>",
 	DescShort: "Show template overview",
-	DescLong:  "Displays a brief overview of a saved template: its windows and the named panes in each. Templates are stored in ~/.config/tmxu/templates/.",
+	DescLong:  "Prints a saved template as a tree of its windows and the named panes in each. Templates are stored in ~/.config/tmxu/templates/. With -json prints the saved template JSON instead. Flags go before the template name.",
 	Examples: []string{
 		"tmxu show-template default",
+		"tmxu show default",
 		"tmxu sht default",
+		"tmxu show-template -json default",
 	},
 }
 
@@ -70,17 +72,5 @@ func (c *ShowTemplate) Run(args []string) error {
 		return err
 	}
 
-	if c.json {
-		out, err := snapshot.JSON()
-		if err != nil {
-			return err
-		}
-
-		_, err = fmt.Fprintln(c.ios.Out, string(out))
-		return err
-
-	}
-
-	_, err = fmt.Fprintln(c.ios.Out, snapshot.String())
-	return err
+	return dumpSnapshot(c.json, snapshot, c.ios.Out)
 }

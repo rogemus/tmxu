@@ -35,9 +35,9 @@ func NewDeleteTemplate(ios IOs, cfg config.Config) *DeleteTemplate {
 var deleteTemplateInfo = Info{
 	Command:   "delete-template",
 	Aliases:   []string{"dt"},
-	Arg:       "[templateName]",
+	Arg:       "<templateName>",
 	DescShort: "Delete saved template",
-	DescLong:  "Removes a template file from ~/.config/tmxu/templates/.",
+	DescLong:  "Removes the template file <templateName>.json from ~/.config/tmxu/templates/. Does not ask for confirmation.",
 	Examples: []string{
 		"tmxu delete-template templateName",
 		"tmxu dt templateName",

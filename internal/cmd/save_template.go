@@ -37,9 +37,9 @@ func NewSaveTemplate(ios IOs, cfg config.Config) *SaveTemplate {
 var saveTemplateInfo = Info{
 	Command:   "save-template",
 	Aliases:   []string{"st"},
-	Arg:       "[sessionName]",
+	Arg:       "<sessionName>",
 	DescShort: "Save session as template",
-	DescLong:  "Saves a running tmux session as a reusable template. Templates are stored in ~/.config/tmxu/templates/.",
+	DescLong:  "Saves a running tmux session as a reusable template in ~/.config/tmxu/templates/. The session name and every pane path are replaced with placeholders, so a template can be reused under any name. -name sets the template name; it defaults to the session name. An existing template with the same name is overwritten. Flags go before the session name.",
 	Examples: []string{
 		"tmxu st sessionName",
 		"tmxu save-template sessionName",

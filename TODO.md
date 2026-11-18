@@ -26,7 +26,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
 - [ ] Template names validated for clear errors: reject empty, `/`, `\`, `..`, leading `.` (the config layer accepts `""` and writes `.json`); path traversal itself is already blocked by `os.Root`
 - [ ] Template list skips non-`.json` files and subdirectories (`readTemplatesName` only trims the suffix); a bad file is reported without failing the list
-- [ ] `list-templates` registers `-json`, but `Run` ignores it; wire it up or remove the flag
 - [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`)
 
 ### Layout and tmux commands
@@ -49,10 +48,8 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
 - [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
-- [ ] `save` and `version` return a nil `Flags()`, so `save --bogus` is silently accepted; `dump`, `ls` and `version` ignore extra positional args
-- [ ] `list_sessions.go`: the JSON marshal error wraps `ErrUsage` (exit 2); it is not a usage error
+- [ ] `dump`, `ls`, `version` and `save` ignore extra positional args
 - [ ] `Cli.help(w, args)` passes `c.ios.Out` to `helpAll` instead of `w`
-- [ ] `dump`: text output starts with `tmxu dump` on the same line as the data; `Data.String` sorts session ids as text
 - [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
 
 ## Cosmetic changes
@@ -61,15 +58,11 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 ### Naming and text
 
-- [ ] `list-templates` `DescLong` says "with their windows and panes", but it lists names only; fix the text or extend the command
-- [ ] `dump` `DescLong` says "indented JSON", but `Data.JSON` is compact
-- [ ] Fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
 - [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
 - [ ] `Config.DirPath` is now the parent (`~/.config`), not the app dir; rename it or make `New` return the app dir (`tmxu paths` and messages need the app dir)
 - [ ] Final sessions file name (drop the `2` in `tmux-sessions2.json` once the old file is gone)
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
 - [ ] Map `ErrSessionExists` to a user message in one place
-- [ ] `show-template` `Arg` shows `[templateName]` but the name is required
 - [ ] Doc comments on exported identifiers (most in `tmux`, `cmd`, `config` and `utils` have none, including `utils.Slug`); unexport what is not API; package doc for `internal/cli`
 - [ ] Fix stale `CLAUDE.md` (`gh.go`, `Formula/`, old `cli/` layout) or leave it untracked
 - [ ] `.gitignore`: anchor `/tmxu`; add `.DS_Store`, `dist/`, `*.test`, `coverage.out`
@@ -78,7 +71,8 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 - [ ] `utils.Quote` has no callers on the argv path; check for remaining callers and delete it if none
 - [ ] `save`: one shared `snapshotSession` for sessions and templates
-- [ ] `dump -session NAME` exists (debug-only, same as `dump`); `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
+- [ ] `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
+- [ ] `writeLayoutNode`, `Window.Layout` and `normalizeWindowLayout` are no longer used by `Data.String` (the tree shows names and paths only); keep them for a future flag, or delete them with their tests
 - [ ] `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
 - [ ] `Config.SaveSessions`: one `MkdirAll` then one write instead of the two branches (drop `hasTmxuConfigDir`: any `Stat` error but "not exist" counts as "exists"; `Root.MkdirAll` exists on the toolchain)
 - [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (4 places) into one helper
@@ -149,7 +143,7 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 - [ ] `-V` / `--version` globally
 - [ ] Help layout: Usage, Commands, Options, Environment, Exit status
-- [ ] `-y` / `--yes`, `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
+- [ ] `-yes` for restore, new and delete-template (done for `save-sessions`), `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
 - [ ] `tmxu paths` prints the resolved directories
 - [ ] Decide what bare `tmxu` does (help + exit 0 today)
 
@@ -178,6 +172,8 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] Builder tests (`buildNewWindowCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`, `buildSetLayoutCmd`): session `a#b` keeps a single `#` in `-t`, title `#S` becomes `##S` after `-T`; session names and the tmux output format are not covered yet
 - [ ] `buildNewWindowsCmd` argv table: `";"` between commands and none at the ends, `-c` omitted for an empty path, a window name with `#`, a missing panes key returns an error (once the `panic` is gone); `appendCmd`
 - [ ] Round trip: `DesanitizeTemplSnapshot(SanitizeSnapshot(x, n), n)` restores the keys and names for slug-safe and unsafe names (`my proj`, `a.b`)
+- [ ] `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index
+- [ ] `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
 - [ ] Window layout: normalization (`percent`, `normalizeSize`, nested splits, zero sizes), decoding real tmux text, `isSplitLayout`, `Window.Layout`, `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
@@ -206,7 +202,7 @@ Not needed for 0.8.0. Pick up when the core is solid.
 ### CLI polish
 
 - [ ] Unknown command: "did you mean"
-- [ ] `ls` / `list-templates`: plain output when piped, `--json`, `-0`
+- [ ] `ls` / `list-templates`: plain output when piped, `-0` (`-json` is done)
 - [ ] `save -o -`, `restore -f FILE`, `show-template NAME`, `attach -` (name from stdin)
 - [ ] TTY detection; `NO_COLOR` and `TERM=dumb` respected if color is added
 - [ ] Handle SIGPIPE / EPIPE on closed stdout (`tmxu ls | head -1`)
@@ -214,7 +210,7 @@ Not needed for 0.8.0. Pick up when the core is solid.
 
 ### Menu (`attach -menu`)
 
-- [ ] `attach -menu`: implement or remove the flag and its example; fix the `tmux attach-session -menu` typo; drop the blank first line of `Run`
+- [ ] `attach -menu`: implement it, or remove the flag (help says "not implemented yet"); drop the blank first line of `Run`
 - [ ] Menu: `term.IsTerminal` check with a plain-list fallback; handle `MakeRaw` and read errors, EOF, Ctrl-C (byte 3), empty items, titles longer than the pad width; multibyte-safe padding
 - [ ] Menu: draw on stderr or `/dev/tty`; alternate screen; escapes as constants; restore the terminal on SIGTERM/SIGHUP through context cancellation
 

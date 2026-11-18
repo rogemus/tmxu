@@ -36,11 +36,10 @@ var attachSessionInfo = Info{
 	Command:   "attach-session",
 	Aliases:   []string{"attach", "a"},
 	DescShort: "Attach to running tmux session",
-	DescLong:  "Connects to an existing tmux session by name. The session must already be running.",
-	Arg:       "[sessionName]",
+	DescLong:  "Connects to an existing tmux session by name. The session must already be running. The -menu flag (interactive session picker) is not implemented yet.",
+	Arg:       "<sessionName>",
 	Examples: []string{
 		"tmxu attach-session mysession",
-		"tmux attach-session -menu",
 		"tmxu attach mysession",
 		"tmxu a mysession",
 	},
