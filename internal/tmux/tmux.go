@@ -14,9 +14,12 @@ import (
 )
 
 var (
-	ErrCannotGetTmuxData    = errors.New("cannot get tmux data")
-	ErrCannotParseTmuxLines = errors.New("cannot parse tmux lines")
-	ErrCannotLoadSnapshot   = errors.New("cannot load snapshot")
+	ErrCannotGetTmuxData         = errors.New("cannot get tmux data")
+	ErrCannotParseTmuxLines      = errors.New("cannot parse tmux lines")
+	ErrCannotLoadSnapshot        = errors.New("cannot load snapshot")
+	ErrCannotLoadSessionSnapshot = errors.New("cannot load session snapshot")
+	ErrCannotSanitizeSnapshot    = errors.New("cannot sanitize snapshot")
+	ErrCannotDesanitizeSnapshot  = errors.New("cannot desanitize snapshot")
 )
 
 const SchemaVersion = 2
@@ -131,9 +134,12 @@ func LoadSnapshot(data []byte) (SnapshotData, error) {
 	return snapshot, nil
 }
 
-func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) SnapshotData {
+func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) (SnapshotData, error) {
 	oldSSlug := sessionSlug(PLACEHOLDER_TEMP_VALUE)
-	session, _ := data.Sessions[oldSSlug]
+	session, ok := data.Sessions[oldSSlug]
+	if !ok {
+		return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotDesanitizeSnapshot, sessionName)
+	}
 
 	sSlug := sessionSlug(sessionName)
 	session.Slug = sSlug
@@ -142,7 +148,11 @@ func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) SnapshotData
 	data.Sessions[sSlug] = session
 	delete(data.Sessions, oldSSlug)
 
-	windows, _ := data.Windows[oldSSlug]
+	windows, ok := data.Windows[oldSSlug]
+	if !ok {
+		return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotDesanitizeSnapshot, sessionName)
+	}
+
 	for i := range windows {
 		w := &windows[i]
 		wSlug := windowSlug(*w, sSlug)
@@ -152,7 +162,11 @@ func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) SnapshotData
 		w.Slug = wSlug
 		w.TargetIndex = target
 
-		panes, _ := data.Panes[oldWSlug]
+		panes, ok := data.Panes[oldWSlug]
+		if !ok {
+			return SnapshotData{}, fmt.Errorf("%w: %q", ErrCannotDesanitizeSnapshot, sessionName)
+		}
+
 		data.Panes[wSlug] = panes
 		delete(data.Panes, oldWSlug)
 	}
@@ -160,13 +174,16 @@ func DesanitizeTemplSnapshot(data SnapshotData, sessionName string) SnapshotData
 	data.Windows[sSlug] = windows
 	delete(data.Windows, oldSSlug)
 
-	return data
+	return data, nil
 }
 
-func SanitizeSnapshot(data SnapshotData, sessionName string) SnapshotData {
-	session, _ := data.Sessions[sessionName]
+func SanitizeSnapshot(data SnapshotData, sessionName string) (SnapshotData, error) {
+	oldSSlug := sessionSlug(sessionName)
+	session, ok := data.Sessions[oldSSlug]
+	if !ok {
+		return SnapshotData{}, fmt.Errorf("%w %q", ErrCannotLoadSessionSnapshot, sessionName)
+	}
 
-	oldSSlug := session.Slug
 	sSlug := sessionSlug(PLACEHOLDER_TEMP_VALUE)
 	session.Slug = sSlug
 	session.Name = PLACEHOLDER_TEMP_VALUE
@@ -197,7 +214,7 @@ func SanitizeSnapshot(data SnapshotData, sessionName string) SnapshotData {
 	data.Windows[sSlug] = windows
 	delete(data.Windows, oldSSlug)
 
-	return data
+	return data, nil
 }
 
 func parseTmuxLines(lines []Line) SnapshotData {

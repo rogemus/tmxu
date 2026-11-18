@@ -75,7 +75,11 @@ func (c *SaveTemplate) Run(args []string) error {
 		templateName = c.name
 	}
 
-	snapshot = tmux.SanitizeSnapshot(snapshot, sessionName)
+	snapshot, err = tmux.SanitizeSnapshot(snapshot, sessionName)
+	if err != nil {
+		return err
+	}
+
 	out, err := snapshot.JSON()
 	if err != nil {
 		return err
