@@ -11,29 +11,28 @@ Claims about tmux behavior that were not run are marked **verify**.
 ## 0. Current shape
 
 ```
-Snapshot (GetTmuxData)  tmux list-panes -a -F '{json},'   -> []Line -> Data{sessions, windows, panes}
+Snapshot()/SessionSnapshot()  tmux list-panes -a -F '{json},'   -> []Line -> SnapshotData{sessions, windows, panes}
 ListSessions()          tmux list-sessions -F '{json},'   -> []Session
-CreateSessions()        tmux "new-session -d -s 'a' ; new-session -d -s 'b'"
-CreateWindows()         tmux "new-window -k -d -t '=S:1' -n 'w' -c 'dir' ; select-pane -t '=S:1' -T 'title' ; split-window -h ... ; select-pane ..."
-GetBaseIndex()          tmux show-options -gv base-index   (unused)
+CreateSessions()        tmux "new-session -d -s 'a' ; new-session -d -s 'b'"   (dead code, no callers)
+CreateWindows()         argv: new-window -k -d -t =S:1 -n w -c dir ";" select-pane -T title ";" split-window ... ";" select-layout RAW
 ```
 
-Pure command builders (`buildNewSessionsCmd`, `buildNewWindowsCmd`, `buildNewWindowCmd`, `buildNewPanesCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`) are separate from the functions that run them and are unit tested.
+Pure command builders (`buildNewSessionsCmd`, `buildNewWindowsCmd`, `buildNewWindowCmd`, `buildNewPanesCmd`, `buildSplitPaneCmd`, `buildRenamePaneCmd`) are separate from the functions that run them. None is unit tested yet, and `buildNewSessionsCmd` is dead code.
 
 ### Old vs new restore flow
 
 | Step                                                 | Old (`cli/`)                                        | New (`internal/tmux`)                                           |
 | ---------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------- |
 | Existing session                                     | `HasSession`; skip, or kill with `-force`           | none                                                            |
-| Create session                                       | `new-session -d -s NAME -c firstPanePath`           | `new-session -d -s 'NAME'`                                      |
+| Create session                                       | `new-session -d -s NAME -c firstPanePath`           | `new-session -d -s NAME` as argv, `-c dir` when a path is set   |
 | First window                                         | rename the window `new-session` created             | `new-window -k -d -t '=S:idx'` replaces it                      |
 | Other windows                                        | `new-window -c -t S:idx -n NAME`                    | same command, in one chain                                      |
 | Extra panes                                          | `split-window -d -c -t S:W`, rename via `S:W.order` | `split-window -h -t '=S:idx'`, `select-pane -T`                 |
 | Pane name                                            | derived from window name and order                  | raw `#{pane_title}`                                             |
-| Layout                                               | `select-layout` per window                          | none                                                            |
+| Layout                                               | `select-layout` per window                          | `select-layout` after the splits, raw tmux JSON                 |
 | Start dir guard                                      | `startDirArgs`                                      | always `-c`                                                     |
 | Parse tmux output                                    | tab split, index access                             | JSON built in the tmux format string                            |
-| Orchestration, load/save, templates, attach, prompts | `cmd.go`, `config.go`                               | `ls`, `save` (writes nothing), `version`, `attach`, `help` only |
+| Orchestration, load/save, templates, attach, prompts | `cmd.go`, `config.go`                               | everything except `restore` (registered, still a stub) |
 
 Already fixed by the rewrite (not in the TODO): typed parsing (no `parts[2]` panics, empty output is `[]`), one `list-panes -a` call, `Session`/`Window`/`Pane` names with `int` indexes, no `os.Args` or global `Cmd`/`version`, per-command files, XDG path resolution, `%w` wrapping with per-file sentinels, `Cli.Run(args) error` with one exit site in `main`, `ErrUsage` mapped to exit 2, `-h`/`--help` for every command, `tabwriter` output, injected `IOs`.
 
@@ -61,7 +60,7 @@ Window and pane targets use `'=name:idx'`; `man tmux` (3.8) confirms the `=` pre
 
 ### 1.5 First window and `base-index`
 
-`new-session` creates one window at the current `base-index`. The chain replaces it only if a saved window has that same index. Saved with `base-index 1`, restored with `0`: blank window `0` stays and saved windows are added beside it. `GetBaseIndex` exists but nothing calls it; it also reads the global option, not the session's. **Fix:** read the real `base-index` and map saved indexes onto it, or kill the leftover window explicitly. `pane-base-index` is not needed while panes are addressed through the window's active pane.
+`new-session` creates one window at the current `base-index`. The chain replaces it only if a saved window has that same index. Saved with `base-index 1`, restored with `0`: blank window `0` stays and saved windows are added beside it. `GetBaseIndex` was deleted as unused; the global `base-index` option is not the session's own anyway. **Fix:** read the real `base-index` and map saved indexes onto it, or kill the leftover window explicitly. `pane-base-index` is not needed while panes are addressed through the window's active pane.
 
 ### 1.6 Rollback and Ctrl-C
 
@@ -73,7 +72,7 @@ tmux stops at the first failing command and leaves a half-built session that blo
 
 ### 2.1 Layout
 
-`Line` has no `window_layout`, `Window` has no layout, and every split is `-h`, so multi-pane windows restore as side-by-side columns. A detached `new-session` starts at 80x24, so several `-h` splits can fail with "no space for new pane" (**verify**).
+`Line` and `Window` now carry `WindowLayout` and `select-layout` runs after the splits, but every split is still `-h`. A detached `new-session` starts at 80x24, so several `-h` splits can fail with "no space for new pane" (**verify**).
 
 Decisions:
 
@@ -86,7 +85,7 @@ Decisions:
 
 ### 2.2 Start directory
 
-The old `startDirArgs` dropped `-c` when the path was not a directory. The new code always passes `-c`. What tmux does with a missing directory is unverified. **Fix:** port the guard, or verify the fallback and document it.
+The old `startDirArgs` dropped `-c` when the path was not a directory. The new code passes `-c` when the path is set. Verified: tmux does not fail on a missing directory, it silently starts in `$HOME`. **Fix:** decide whether to warn.
 
 ### 2.3 Pane titles
 
@@ -159,7 +158,7 @@ Dropping these shrinks the file about 46% (33,291 to 17,841 bytes) without chang
 
 ### 3.4 Panics
 
-`buildNewWindowsCmd` panics for a window without panes and `panes[0]` is unchecked. Safe for live data, unsafe for loaded JSON. **Fix:** return an error from the build step and validate loaded data first.
+Done: a window without panes returns `ErrWindowWithoutPanes` instead of panicking. Still to do: validate loaded data before building.
 
 ---
 
@@ -167,7 +166,7 @@ Dropping these shrinks the file about 46% (33,291 to 17,841 bytes) without chang
 
 ### 4.1 Execution seam
 
-`exec.Command` is called directly in 5 places; nothing is fakeable. Introduce one seam, and put `-v` logging and `--dry-run` behind it:
+`exec.Command` is called directly in 8 places (`session.go`, `window.go`, `tmux.go`); nothing is fakeable. Introduce one seam, and put `-v` logging and `--dry-run` behind it:
 
 ```go
 type Runner interface {
@@ -180,7 +179,7 @@ Commands receive a small interface (defined where it is consumed) instead of cal
 
 ### 4.2 One string vs argv
 
-Joining the chain into a single `exec.Command` argument relies on tmux parsing one string as a command list (**verify**). **Fix:** pass `[]string` argv with `";"` elements, or run a script via `source-file -` so tmux reports the failing line. Decision pending: one chain (fast, opaque errors), separate calls (exact errors, more forks), or `source-file -`.
+Decided: argv with `";"` elements. Window creation does this already; only the dead `CreateSessions` still joins one string. The original concern: joining the chain into a single `exec.Command` argument relies on tmux parsing one string as a command list (**verify**). **Fix:** pass `[]string` argv with `";"` elements, or run a script via `source-file -` so tmux reports the failing line. Decision pending: one chain (fast, opaque errors), separate calls (exact errors, more forks), or `source-file -`.
 
 ### 4.3 Typed errors
 
@@ -194,7 +193,7 @@ func (e *TmuxError) Error() string { ... }
 func (e *TmuxError) Unwrap() error { return e.Err }
 ```
 
-Today failure is `exit status 1` with no stderr and no failing step. Add `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`errors.Is(err, exec.ErrNotFound)` → "tmux not found in PATH"). `GetBaseIndex` drops its cause (no `%w`), `ErrCannotCreateSessions` says "cannot create session". Use `errors.Is(err, fs.ErrNotExist)` and call `os.Remove` directly instead of `os.Stat` + `os.IsNotExist` (check-then-act, TOCTOU). Use `errors.Join` for multiple restore errors.
+Today failure is `exit status 1` with no stderr and no failing step. Add `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`errors.Is(err, exec.ErrNotFound)` → "tmux not found in PATH"). `ErrNoTemplate` lives in `cmd` and `ErrSessionExists` in `tmux`. `hasFile` already uses `errors.Is(err, fs.ErrNotExist)`. Use `errors.Join` for multiple restore errors.
 
 ### 4.4 No server, no tmux
 
@@ -216,18 +215,18 @@ No goroutines today, so no races.
 
 ## 5. Port the remaining commands
 
-### 5.1 `save` does nothing
+### 5.1 `save` and shared helpers
 
-It confirms, fetches data, discards it and writes nothing. Its description still mentions the literal `~/.config/tmxu`. **Fix:** write the file through the config store; share `snapshotSession` with `save-template`; share `restoreSession` between `restore-sessions` and `new-session -templ`; one helper maps `errSessionExists` to a user message.
+Done: `save` writes `tmux-sessions2.json` through the config store. Its description still mentions the literal `~/.config/tmxu` and the old `tmux-sessions.json`. **Fix:** share `snapshotSession` with `save-template`; share `restoreSession` between `restore-sessions` and `new-session -templ`; one helper maps `errSessionExists` to a user message.
 
 ### 5.2 Input validation
 
 - `new-session` with an empty name must be rejected.
 - Template names are used in paths, so `save-template -name ../x` would write outside the templates directory. **Fix:** `validName` rejects empty, `/`, `\`, `..`, leading `.`. Done in part: the commands slug the name (`utils.Slug`) and reject one that slugs to `""`, which also stops a `.json` file. Still open:
-  - Normalize at the boundary that owns the invariant ("file name = slug"). `config` should slug, so `HasTemplate` and `ShowTemplate` cannot disagree; a missed call in `new_session.go` already broke names with spaces.
+  - Normalize at the boundary that owns the invariant ("file name = slug"). `config` now slugs (`ErrInvalidTemplateName`), so `HasTemplate` and `ShowTemplate` agree; the command-level check still uses `ErrTemplateNameNotProvided`.
   - A sentinel must describe the failure: `ErrTemplateNameNotProvided` for a name like `!!!` is misleading; use `ErrInvalidTemplateName`.
   - A slug is lossy: `My Proj` and `my-proj` share a file, so `save-template` overwrites silently, and `list-templates` shows slugs. Accept it, or keep the display name in the file.
-- Loading templates must skip non-`.json` entries and subdirectories, and report a bad file without failing the whole list.
+- Done: listing templates skips non-`.json` entries and subdirectories.
 - `delete-template`: clear error for a missing template, `-f` for `rm` semantics.
 
 ### 5.3 Menu (`attach -menu`)
@@ -253,9 +252,9 @@ Done: `AttachToSession` takes the injected streams (`in io.Reader, out, errw io.
 
 ### 5.6 Config
 
-- Files hold working-directory paths and window names: `0600` files, `0700` dirs.
+- Files hold working-directory paths and window names: `0600` files, `0700` dirs (done).
 - `os.WriteFile` truncates in place; a crash mid-write corrupts the only backup. One helper: `os.CreateTemp` in the same dir, write, `Sync`, `Close`, `Chmod`, `Rename`. Keep a `.bak`.
-- Create the directory on first use (`os.MkdirAll`).
+- Create the directory on first use (`os.MkdirAll`; done, but read-only commands do it too).
 - `TMXU_CONFIG_DIR` and `--config-dir`, precedence flag > env > default. Do not clear the environment (`TMUX_TMPDIR` and `TMUX` are consumed by tmux).
 - Ignore a relative `XDG_CONFIG_HOME` (the spec requires absolute).
 - Keep macOS on `~/.config`: `os.UserConfigDir` would return `~/Library/Application Support`.
@@ -294,18 +293,16 @@ TTY detection via `x/term`; `NO_COLOR` and `TERM=dumb` respected if color is add
 ### 6.6 Idiomatic Go cleanup
 
 - `Comperable`/`Eq` with type assertions allows `Window.Eq(Session)` and compiles. Use `slices.ContainsFunc` and a `map[string]struct{}`; `utils.Contain` makes `parseTmuxLines` O(n²) in panes.
-- `GetTmuxData`/`GetBaseIndex`: `Get` prefix and stutter → `Snapshot()`, `BaseIndex()`.
 - `GetTitle`/`GetPath` return a shell-quoted copy, not the field (`Session.GetName` is already gone; `buildNewSessionsCmd` calls `utils.Quote` directly). Call `utils.Quote` at the call site, or name them `Quoted*`.
-- `baseIndex.go` → `base_index.go`.
 - The `cfg` field is unused in three commands.
-- Exported identifiers lost their doc comments; `internal/cli` has no package comment; unexport what is not API; `Data` has no exported accessors.
+- Exported identifiers lost their doc comments; unexport what is not API; `Data` has no exported accessors.
 - Single map lookup in `parseTmuxLines`.
 
 ---
 
 ## 7. Testing
 
-Current tests cover the pure `build*Cmd` functions and `Quote`. Nothing runs through a fake, nothing covers `internal/cli` or `config`, and `-race` is not used.
+Current tests cover only `utils` (`Quote`, `Escape`, `Slug`). No `build*Cmd` test exists, nothing runs through a fake, and `cmd`, `cli`, `config` and `tmux` have none. `-race` runs in CI only.
 
 - **Fake runner** with `calls [][]string` and `fn func(args []string) ([]byte, error)`; assert exact args.
 - **Tmux layer:** `CreateSessions`, `CreateWindows`, `Snapshot`, `ListSessions` ordering, empty output, a window without panes.
@@ -324,7 +321,7 @@ Current tests cover the pure `build*Cmd` functions and `Quote`. Nothing runs thr
 
 ### 8.1 CI and release
 
-- No build, vet, test or lint runs on PRs today. `ci.yaml`: `go build ./...`, `go vet ./...`, gofmt diff check, `go test -race ./...`, staticcheck, `go mod tidy` diff. Pin actions by SHA (`actions/checkout@v5` is unpinned); Dependabot for modules and actions.
+- `main-check.yaml` runs vet, gofmt, build and `go test -race ./...` on PRs. Missing: staticcheck and a `go mod tidy` diff. Pin actions by SHA (`actions/checkout@v6` and `setup-go@v5` are unpinned); Dependabot for modules and actions.
 - The existing workflow tags `version.txt` on push to main. `git tag` fails when the tag exists, there is no `git config user.name/email`, no `v*` check, and no GitHub Release, binaries, checksums or changelog. The version lives in two places.
 - **Fix:** trigger on `push: tags: ['v*']`; the git tag is the single source: `-ldflags "-s -w -X main.version=$TAG"` with `-trimpath` and `CGO_ENABLED=0`, falling back to `debug.ReadBuildInfo().Main.Version` for `go install` users. Delete `version.txt`. Matrix darwin/linux × amd64/arm64, `sha256sum`, `gh release create`.
 - Alternative if you later value speed over learning: goreleaser (archives with LICENSE/README/man/completions, checksums, changelog, Homebrew tap).
@@ -341,7 +338,7 @@ Current tests cover the pure `build*Cmd` functions and `Quote`. Nothing runs thr
 
 - **README:** Go "1.16+" is wrong (`go.mod` requires 1.26). Add the tmux 3.8+ requirement, install, completion setup, exit codes, JSON format, an fzf recipe, and how it differs from tmux-resurrect, tmuxinator and sesh.
 - **`.gitignore`:** the unanchored `tmxu` also ignores any future `cmd/tmxu/`; use `/tmxu`. Add `.DS_Store`, `dist/`, `.claude/`, `*.test`, `coverage.out`.
-- **`justfile`:** `run` passes the literal string rather than the variable (needs `{{ARGS}}` with `*ARGS`); mixed tabs and spaces; `lint` runs `go fix -diff`, which is not a linter. Add `build`, `install`, `check` (fmt + vet + staticcheck + `test -race`), groups.
+- **`justfile`:** `run` takes a single `{{CMD}}` argument (no `*ARGS`); mixed tabs and spaces (unchecked); `lint` runs `go fix -diff`, which is not a linter. Add `install` and `check` (`build` exists; fmt + vet + staticcheck + `test -race`), groups.
 - **`CLAUDE.md`** is stale (`gh.go`, `Formula/tmxu.rb`, old type names, `cli/` layout): fix it or leave it untracked.
 - **Add** `CONTRIBUTING.md` (build with `just`, run tests, commit convention, release by tagging), `CHANGELOG.md`, `.editorconfig`.
 - **Homebrew:** no `Formula/` directory exists, so references are dead. Add a tap that installs the man page and completions, or remove the references.
@@ -377,7 +374,7 @@ Alternative readiness signal: `send-keys 'tmux wait-for -S <name>' Enter` is exa
 2. Pane names: derived from the window, `@name` option, or raw titles.
 3. On-disk format: reuse the `internal/tmux` structs or a separate persisted shape (recommended: separate).
 4. Existing sessions on restore: skip, refuse, or force with confirmation.
-5. Panic or error for a window without panes (recommended: error).
+5. Decided: error, not panic (`ErrWindowWithoutPanes`).
 6. Wait for shells by default or opt-in.
 
 ---

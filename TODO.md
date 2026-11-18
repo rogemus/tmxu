@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write thin
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`). Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, files 0600, dirs 0700). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` tests: only `utils` (`Quote`, `Escape`, `Slug`) plus the `internal/expect` helper, all written by hand (see Tests). Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`); this covers file reads, writes and deletes only, directory creation and `ListTemplates` still use plain paths. Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, files 0600, dirs 0700). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` tests: only `utils` (`Quote`, `Escape`, `Slug`) plus the `internal/expect` helper, all written by hand (see Tests). Everything that shells out to tmux needs the runner seam.
 
 Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Port `restore` to `internal/` (the old `cli/` package is already deleted). `attach -menu` is not ported: it was broken in the previous version, so the flag is dropped.
 
@@ -21,12 +21,12 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] No rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session` (also applies to restore, see Features)
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
-- [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`)
+- [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate`, `HasTemplate`, `ListTemplates` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`, `list-templates`)
 
 ### Layout and tmux commands
 
 - [ ] `CreateSessions` and `buildNewSessionsCmd` (`session.go`) have no callers and still pass one joined string to `exec.Command`; delete them, or rewrite on argv when restore needs them
-- [ ] Stop building JSON inside the tmux format string (`GetTmuxData`, `ListSessions`): a `"`, `\` or newline in a name or title fails every row; use a safe delimiter or escaping
+- [ ] Stop building JSON inside the tmux format string (`Snapshot`/`SessionSnapshot` through `buildListPanesFormat`, `ListSessions`): a `"`, `\` or newline in a name or title fails every row; use a safe delimiter or escaping
 - [ ] Decide what to do with session names containing `:` or `.` (target by session id, or reject)
 
 ### Sessions
@@ -35,13 +35,13 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
   - Decision: exit 1 means `(false, nil)`, which also covers "no server running"; other exit codes and `exec.ErrNotFound` stay typed errors
   - Verified: absent session exits 1 with `can't find session: NAME`; no server exits 1 with `error connecting to ...`; success exits 0 with empty stdout, so decide by exit code (`errors.As` + `*exec.ExitError`), not by output
   - Use `-t "=NAME"` (exact match; `list-panes -s -t =NAME` verified); quote `=NAME` in a zsh shell, it expands otherwise
-  - `save-template` must return an explicit "session not found" error for `false` (`save_template.go:64`: `err != nil || !hasSession { return err }` returns nil)
-  - `dump -session` targets `=NAME` (`tmux.go:92`) but `HasSession` does not; make them agree
+  - `save-template` must return an explicit "session not found" error for `false` (`save_template.go:72-75`: `err != nil || !hasSession { return err }` returns nil)
+  - `dump -session` targets `=NAME` (`tmux.go:97`) but `HasSession` does not; make them agree
 
 ### CLI behavior
 
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
-- [ ] `dump`, `ls`, `version` and `save` ignore extra positional args
+- [ ] Only `new-session` rejects extra positional args (`ErrUnexpectedArgument`); `dump`, `ls`, `version`, `save`, `attach`, `save-template`, `show-template` and `delete-template` ignore them
 - [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
 
 ## Cosmetic changes
@@ -57,6 +57,8 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
 - [ ] Stale text: `save` and `restore` `DescLong` say `tmux-sessions.json` (code writes `tmux-sessions2.json`); restore claims "skips existing, `-force` replaces", not implemented
 - [ ] Stale comments: fzf menu `// TODO` and blank first line in `AttachSession.Run`
+- [ ] `ls` `DescLong` promises window counts but only names are printed
+- [ ] `-force` (restore) and `-menu` (attach) are parsed but never read; hide them from help until implemented
 
 ### Duplication and dead code
 
@@ -64,7 +66,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] `save`: one shared `snapshotSession` for sessions and templates
 - [ ] `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
 - [ ] `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
-- [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (4 places) into one helper
+- [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (5 places: four in `templates.go`, one in `sessions.go`) into one helper
 - [ ] Generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
 - [ ] `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
 - [ ] Single map lookup in `parseTmuxLines`; drop `make(map, 0)` hints
@@ -77,8 +79,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] One `run()` helper or a `Runner` interface (`Run`, `Attach`) with an `execRunner`; no direct `exec.Command` elsewhere
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
 - [ ] Typed `*TmuxError{Args, Stderr, Err}`; include stderr in messages
-- [ ] Sentinels `ErrNoSession`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message (`ErrNoTemplate` exists)
-- [ ] `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist` (done in `hasFile`; check the rest)
+- [ ] Sentinels `ErrNoSession`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message (`ErrNoTemplate` lives in `cmd`, `ErrSessionExists` in `tmux`)
 - [ ] `errors.Join` to collect restore errors
 
 ## Features
@@ -116,7 +117,8 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 ### Templates and config
 
 - [ ] Templates: clear missing-file error for `show-template` / `delete-template`, `-f` for `delete-template`, and an overwrite policy for `save-template` (it truncates silently, see Decisions)
-- [ ] Config store: `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`- [ ] Config: `TMXU_CONFIG_DIR` env and `--config-dir`; ignore a relative `XDG_CONFIG_HOME`; doc comments on `Config`, `DirPath`, `New`
+- [ ] Config store: `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
+- [ ] Config: `TMXU_CONFIG_DIR` env and `--config-dir`; ignore a relative `XDG_CONFIG_HOME`; doc comments on `Config`, `DirPath`, `New`
 
 ### CLI surface
 
@@ -128,8 +130,8 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 ### Ship it (after the migration)
 
-- [ ] `ci.yaml`: `go build`, `go vet`, gofmt diff check, `go test -race ./...`, staticcheck, `go mod tidy` diff
-- [ ] Release on `v*` tag push; git tag is the single version source (`-ldflags -X`, `-trimpath`, `CGO_ENABLED=0`, fallback to `debug.ReadBuildInfo`); delete `version.txt` and the `version` command's GitHub check if it is no longer needed
+- [ ] CI: `main-check.yaml` already runs build, vet, gofmt and `go test -race ./...`; add staticcheck and a `go mod tidy` diff
+- [ ] Release on `v*` tag push; git tag is the single version source (`-ldflags -X`, `-trimpath`, `CGO_ENABLED=0`, fallback to `debug.ReadBuildInfo`); delete `version.txt` (`release.yaml` tags from it on every push to main today)
 - [ ] Release workflow: build matrix (darwin/linux x amd64/arm64), `sha256sum`, `gh release create`
 - [ ] README: fix Go "1.16+" (go.mod requires 1.26), document tmux 3.8+, install, completion setup, exit codes, JSON format, an fzf recipe, how it differs from tmux-resurrect, tmuxinator, sesh
 
@@ -141,10 +143,10 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 
 - [ ] `fakeRunner` recording args and returning canned output
 - [ ] Tests for `CreateSessions`, `CreateWindows`, `Snapshot`, `ListSessions` through the fake
-- [ ] Command-level tests with injected stdin/stdout/stderr (done for `version`, flag errors of `dump`, usage errors of `new-session` and `attach`, declined `save`; the rest needs the runner)
+- [ ] Command-level tests with injected stdin/stdout/stderr (none exist yet; most need the runner)
 - [ ] Add a `Run` test for each command's success path once a fake runner exists
 - [ ] Tests that flags reach their fields (`-json`, `-path`, `-menu`): a value receiver or a nil `Flags()` broke this silently before
-- [ ] Run tests with `-race`; use `t.Helper`, `t.Cleanup`, `t.Setenv`
+- [ ] Add `-race` to `just test` (CI already uses it); use `t.Helper`, `t.Cleanup`, `t.Setenv`
 
 ### Builders and data model
 
@@ -212,7 +214,7 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 - [ ] Man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
 - [ ] Homebrew tap or formula, installing the man page and completions (or remove references)
 - [ ] Pin GitHub Actions by SHA; add Dependabot for modules and actions
-- [ ] `justfile`: add `build`, `install`, `check`; decide whether `run` takes several arguments (`*ARGS`)
+- [ ] `justfile`: add `install` and `check` (`build` exists); decide whether `run` (one `CMD` argument) takes several (`*ARGS`)
 - [ ] `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
 - [ ] Golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
 - [ ] Optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux
