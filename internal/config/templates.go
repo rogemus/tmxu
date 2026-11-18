@@ -18,12 +18,7 @@ var (
 const templatesDirName = "templates"
 
 func (c Config) ListTemplates() ([]string, error) {
-	path, err := tmxuConfigDir(c.DirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	path, err = tmxuTemplatesDir(path)
+	path, err := tmxuTemplatesDir(c.DirPath)
 	if err != nil {
 		return nil, err
 	}
