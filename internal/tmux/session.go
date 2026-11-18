@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
 	"strings"
 
@@ -72,14 +72,14 @@ func ListSessions() ([]Session, error) {
 	return sessions, nil
 }
 
-func AttachToSession(name string) error {
+func AttachToSession(name string, in io.Reader, out, errw io.Writer) error {
 	cmd := exec.Command("tmux", "attach", "-t", "="+name)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdin = in
+	cmd.Stdout = out
+	cmd.Stderr = errw
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%w %s: %w", ErrCannotAttachToSession, name, err)
+		return fmt.Errorf("%w: %s: %w", ErrCannotAttachToSession, name, err)
 	}
 
 	return nil

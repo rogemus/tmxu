@@ -59,5 +59,5 @@ func (c *AttachSession) Run(args []string) error {
 		return ErrSessionNameNotProvided
 	}
 
-	return tmux.AttachToSession(c.fs.Arg(0))
+	return tmux.AttachToSession(c.fs.Arg(0), c.ios.In, c.ios.Out, c.ios.Err)
 }

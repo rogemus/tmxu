@@ -249,7 +249,7 @@ New `bufio.Reader` per call, read error dropped, EOF silently means "no", so cro
 
 ### 5.5 Attach plumbing
 
-`AttachToSession` writes to `os.Stdin/Stdout/Stderr` instead of the injected `IOs`, and its error format `%w %s: %w` lacks a colon.
+Done: `AttachToSession` takes the injected streams (`in io.Reader, out, errw io.Writer`; `tmux` cannot import `cmd`'s `IOs` without a cycle) and its error format is `%w: %s: %w`. `exec.Cmd` still passes the terminal through, because `ios.In` holds an `*os.File`.
 
 ### 5.6 Config
 
@@ -297,7 +297,7 @@ TTY detection via `x/term`; `NO_COLOR` and `TERM=dumb` respected if color is add
 - `GetTmuxData`/`GetBaseIndex`: `Get` prefix and stutter → `Snapshot()`, `BaseIndex()`.
 - `GetTitle`/`GetPath` return a shell-quoted copy, not the field (`Session.GetName` is already gone; `buildNewSessionsCmd` calls `utils.Quote` directly). Call `utils.Quote` at the call site, or name them `Quoted*`.
 - `baseIndex.go` → `base_index.go`.
-- `wantsHelp` is a method that ignores its receiver; the `cfg` field is unused in three commands.
+- The `cfg` field is unused in three commands.
 - Exported identifiers lost their doc comments; `internal/cli` has no package comment; unexport what is not API; `Data` has no exported accessors.
 - Single map lookup in `parseTmuxLines`.
 

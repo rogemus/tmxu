@@ -60,8 +60,8 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 ### Duplication and dead code
 
-- [ ] `utils.Quote` has no callers on the argv path; only `buildNewSessionsCmd` (dead, `GetName` is gone) and `printError` in `main.go` use it; delete it once both go. Note `new-session -s` is format-expanded, so a rewrite on argv needs `utils.Escape` for the name
-- [ ] Unused: `BaseIndex` (`base_index.go`), `ErrCannotSaveTemplate`, `ErrCannotDeleteTemplate`
+- [ ] `utils.Quote` has no callers on the argv path; only `buildNewSessionsCmd` (dead, `GetName` is gone) uses it (`printError` is gone); delete it with `CreateSessions` and `buildNewSessionsCmd`. Note `new-session -s` is format-expanded, so a rewrite on argv needs `utils.Escape` for the name
+- [ ] Unused: `ErrCannotSaveTemplate`, `ErrCannotDeleteTemplate`
 - [ ] `save`: one shared `snapshotSession` for sessions and templates
 - [ ] `Snapshot` and `SessionSnapshot` duplicate about 10 lines (see the shared `snapshotSession` item)
 - [ ] `writeLayoutNode`, `Window.Layout` and `normalizeWindowLayout` are no longer used by `Data.String` (the tree shows names and paths only); keep them for a future flag, or delete them with their tests
@@ -72,10 +72,6 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
 - [ ] Single map lookup in `parseTmuxLines`; drop `make(map, 0)` hints
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
-- [ ] `wantsHelp` becomes a plain function
-- [ ] Detect a primary command name collision in `newCmd` (only aliases are checked)
-- [ ] `AttachToSession` uses the injected `cmd.IOs` instead of `os.*`; fix the `%w %s: %w` error format
-- [ ] Errors to stderr, data to stdout (already true for `ls` and `version`; hold the line for new commands)
 
 ### Structure and refactors
 
@@ -102,7 +98,7 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 - [ ] Check `has-session` before creating; skip or refuse existing sessions (today only `NewSession` detects a duplicate, from tmux's stderr; a duplicate in a `CreateSessions` chain stops the rest)
 - [ ] Never use `-k` on a session that was not created in this run
 - [ ] Explicit force path with a prompt that lists what will be killed; refuse to kill the current session (`$TMUX`, `display-message -p '#S'`)
-- [ ] Read the real `base-index` (use or delete `BaseIndex`, which has no callers); handle saved index != current base so no blank leftover window stays
+- [ ] Read the real `base-index` (`BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
 - [ ] Roll back sessions created in this run when a later step fails
 - [ ] Ctrl-C during restore: clean up or report the partial session
 
@@ -230,7 +226,7 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 
 ## Decisions
 
-Settled so far: a window without panes is an error (`ErrWindowWithoutPanes`, no `panic`), one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
+Settled so far: errors, prompts and diagnostics go to stderr, data and success messages to stdout, a window without panes is an error (`ErrWindowWithoutPanes`, no `panic`), one argv chain with `";"` elements (no `source-file`), derived pane names `<window>_<index>`, on-disk format reuses the `internal/tmux` structs, `dump -session` prints real data (sanitizing lives in `save-template`), text output is a names-only tree (no ids, indexes or layouts; those stay in `-json`), JSON shapes are `{"sessions":[...]}`, `{"templates":[...]}` and `{"version":"..."}`, and flags have one name each (`-yes`, no short alias; `flag` has none).
 
 - [ ] Existing sessions on restore: skip, refuse, or force
 - [ ] Layout restore: apply the raw tmux JSON with `select-layout` (done; exact, needs the pane count to match first) or rebuild it from the normalized `LayoutNode` with recursive `split-window -l N%` (readable file, relative sizes, no `select-layout`; approximate, needs verifying on 3.8)

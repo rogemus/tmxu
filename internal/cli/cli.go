@@ -40,7 +40,7 @@ func (c *Cli) Run(args []string) error {
 		return c.unknownCmdError(name)
 	}
 
-	if c.wantsHelp(rest) {
+	if wantsHelp(rest) {
 		return c.helpCmd(c.ios.Out, command)
 	}
 
@@ -149,7 +149,7 @@ func (c *Cli) unknownCmdError(name string) error {
 	return fmt.Errorf("%w: %q", ErrUnknownCommand, name)
 }
 
-func (c *Cli) wantsHelp(args []string) bool {
+func wantsHelp(args []string) bool {
 	for _, a := range args {
 		if a == "--" {
 			return false
@@ -164,18 +164,24 @@ func (c *Cli) wantsHelp(args []string) bool {
 
 func (c *Cli) newCmd(command cmd.Cmd) {
 	info := command.Info()
-	c.cmds[info.Command] = command
+	c.register(info.Command, command)
 	c.cmdsOrder = append(c.cmdsOrder, info.Command)
 
 	for _, alias := range info.Aliases {
-		com, ok := c.cmds[alias]
-		if ok {
-			// NOTE: internal error, update cmds config
-			msg := fmt.Sprintf("alias already used by: %s\n", com.Info().Command)
-			panic(msg)
-		}
-		c.cmds[alias] = command
+		c.register(alias, command)
 	}
+}
+
+func (c *Cli) register(name string, command cmd.Cmd) {
+	if name == "help" || name == "-h" || name == "--help" {
+		panic(fmt.Sprintf("command name %q is reserved for help", name))
+	}
+
+	if other, ok := c.cmds[name]; ok {
+		panic(fmt.Sprintf("command name %q already used by: %s", name, other.Info().Command))
+	}
+
+	c.cmds[name] = command
 }
 
 func New(cfg config.Config, ios cmd.IOs) *Cli {
