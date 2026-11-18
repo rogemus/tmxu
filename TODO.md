@@ -2,13 +2,13 @@
 
 Everything left to do to finish porting `restore` into `internal/` and to ship `tmxu` as a good Unix tool. Reasoning for every item lives in [AI-REVIEW.md](AI-REVIEW.md).
 
-Policy: stdlib-first. Only `golang.org/x/term` stays as a dependency. Write things by hand to learn Go.
+Policy: stdlib-first. Only `golang.org/x/term` is allowed as a dependency (currently not in `go.mod`; add it with the menu or `term.GetSize` work). Write things by hand to learn Go.
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
 Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (registered, `Run` is still a stub), `list-templates`, `save-template`, `delete-template`, `show-template`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`); this covers file reads, writes and deletes only, directory creation and `ListTemplates` still use plain paths. Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. Restore and the menu are not ported. `new-session -templ` works end to end (error paths are still open, see Bugs). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, files 0600, dirs 0700). Window layouts are read, stored as raw tmux JSON and applied after the splits. `internal/` tests: only `utils` (`Quote`, `Escape`, `Slug`) plus the `internal/expect` helper, all written by hand (see Tests). Everything that shells out to tmux needs the runner seam.
 
-Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Port `restore` to `internal/` (the old `cli/` package is already deleted). `attach -menu` is not ported: it was broken in the previous version, so the flag is dropped.
+Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Port `restore` to `internal/` (the old `cli/` package is already deleted). `attach -menu` is not ported yet: it was broken in the previous version. The flag stays registered (and `restore -force`) and will be implemented.
 
 Sections: [Bugs](#bugs) · [Cosmetic changes](#cosmetic-changes) · [Features](#features) · [Tests](#tests) · [Nice to have](#nice-to-have) · [Decisions](#decisions)
 
@@ -51,12 +51,10 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 ### Naming and text
 
 - [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
-- [ ] `ls` still uses `tabwriter` for a single column; print plainly, or keep it for a future column
 - [ ] `Config.DirPath` is now the parent (`~/.config`), not the app dir; rename it or make `New` return the app dir (`tmxu paths` and messages need the app dir)
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
 - [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
 - [ ] Stale text: `restore` `DescLong` claims "skips existing, `-force` replaces", not implemented
-- [ ] `-force` (restore) and `-menu` (attach) are parsed but never read; hide them from help until implemented
 
 ### Duplication and dead code
 
@@ -145,7 +143,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] Command-level tests with injected stdin/stdout/stderr (none exist yet; most need the runner)
 - [ ] Add a `Run` test for each command's success path once a fake runner exists
 - [ ] Tests that flags reach their fields (`-json`, `-path`, `-menu`): a value receiver or a nil `Flags()` broke this silently before
-- [ ] Add `-race` to `just test` (CI already uses it); use `t.Helper`, `t.Cleanup`, `t.Setenv`
+- [ ] Use `t.Helper`, `t.Cleanup`, `t.Setenv` in tests (`just test` already runs with `-race`)
 
 ### Builders and data model
 
@@ -193,7 +191,7 @@ Not needed for 0.8.0. Pick up when the core is solid.
 
 ### Menu (`attach -menu`)
 
-- [ ] `attach -menu`: implement it, or remove the flag (help says "not implemented yet"); drop the blank first line of `Run`
+- [ ] `attach -menu`: implement it (the flag stays; help says "not implemented yet"); drop the `// TODO: implement fzf style menu` comment in `Run` when done
 - [ ] Menu: `term.IsTerminal` check with a plain-list fallback; handle `MakeRaw` and read errors, EOF, Ctrl-C (byte 3), empty items, titles longer than the pad width; multibyte-safe padding
 - [ ] Menu: draw on stderr or `/dev/tty`; alternate screen; escapes as constants; restore the terminal on SIGTERM/SIGHUP through context cancellation
 
@@ -213,7 +211,6 @@ Symptom: after restore, panes "catch up" (shells still booting, prompts redraw) 
 - [ ] Man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
 - [ ] Homebrew tap or formula, installing the man page and completions (or remove references)
 - [ ] Pin GitHub Actions by SHA; add Dependabot for modules and actions
-- [ ] `justfile`: add `install` and `check` (`build` exists); decide whether `run` (one `CMD` argument) takes several (`*ARGS`)
 - [ ] `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
 - [ ] Golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
 - [ ] Optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux

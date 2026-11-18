@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"text/tabwriter"
+	"strings"
 
 	"github.com/rogemus/tmxu/internal/tmux"
 )
@@ -64,11 +64,12 @@ func (c *ListSessions) Run(args []string) error {
 		return printJSON(c.ios.Out, map[string][]tmux.Session{"sessions": sessions})
 	}
 
-	w := tabwriter.NewWriter(c.ios.Out, 2, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "Session Name")
+	var b strings.Builder
+	fmt.Fprintln(&b, "Session Name")
 	for _, s := range sessions {
-		fmt.Fprintf(w, "%s\n", s.Name)
+		fmt.Fprintln(&b, s.Name)
 	}
 
-	return w.Flush()
+	_, err = io.WriteString(c.ios.Out, b.String())
+	return err
 }

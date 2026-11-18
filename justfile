@@ -1,10 +1,17 @@
 _default:
   just --list
 
+# Download module dependencies
 [group: 'setup']
-install:
+setup:
   go mod download
 
+# Install the tmxu binary into $GOBIN (or $GOPATH/bin)
+[group: 'install']
+install:
+  go install .
+
+# Build the tmxu binary into the current directory
 [group: 'build']
 build:
   go build .
@@ -13,6 +20,10 @@ build:
 [group: 'dev']
 run CMD:
   go run ./ {{CMD}}
+
+# Run lint, then tests; use before committing
+[group: 'quality']
+check: lint test
 
 # Run all Go tests
 [group: 'test']
