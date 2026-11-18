@@ -228,17 +228,16 @@ func SanitizeSnapshot(data SnapshotData, sessionName string) (SnapshotData, erro
 }
 
 func parseTmuxLines(lines []Line) SnapshotData {
-	sessions := make(map[string]Session, 0)
-	windows := make(map[string][]Window, 0)
-	panes := make(map[string][]Pane, 0)
+	sessions := make(map[string]Session)
+	windows := make(map[string][]Window)
+	panes := make(map[string][]Pane)
 
 	for _, l := range lines {
 		s := l.Session()
-		if _, ok := sessions[s.Slug]; ok {
-			s = sessions[s.Slug]
-		} else {
-			sessions[s.Slug] = s
+		if existingS, ok := sessions[s.Slug]; ok {
+			s = existingS
 		}
+		sessions[s.Slug] = s
 
 		w := l.Window()
 		if !utils.Contain(windows[s.Slug], w) {

@@ -65,7 +65,6 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] Config: fold the repeated `os.OpenRoot` + `defer root.Close()` (5 places: four in `templates.go`, one in `sessions.go`) into one helper
 - [ ] Generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
 - [ ] `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
-- [ ] Single map lookup in `parseTmuxLines`; drop `make(map, 0)` hints
 - [ ] Replace `Comperable`/`Eq` with `slices.ContainsFunc` and a `map[string]struct{}` set (`Pane.Eq` and `Session.Eq` are gone; `Window.Eq` and `utils.Contain` remain)
 
 ### Structure and refactors
@@ -118,7 +117,6 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 ### CLI surface
 
-- [ ] `-V` / `--version` globally
 - [ ] Help layout: Usage, Commands, Options, Environment, Exit status
 - [ ] `-yes` for restore, new and delete-template (done for `save-sessions`), `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
 - [ ] `tmxu paths` prints the resolved directories
