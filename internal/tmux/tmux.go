@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"sort"
 	"strings"
 
@@ -240,7 +241,7 @@ func parseTmuxLines(lines []Line) SnapshotData {
 		sessions[s.Slug] = s
 
 		w := l.Window()
-		if !utils.Contain(windows[s.Slug], w) {
+		if !slices.ContainsFunc(windows[s.Slug], func(win Window) bool { return win.ID == w.ID }) {
 			windows[s.Slug] = append(windows[s.Slug], w)
 		}
 

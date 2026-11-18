@@ -24,11 +24,6 @@ type Window struct {
 	TargetIndex  string          `json:"-"`
 }
 
-func (w Window) Eq(c utils.Comperable) bool {
-	i, ok := c.(Window)
-	return ok && i.ID == w.ID
-}
-
 func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane) error {
 	if len(windows) == 0 {
 		return nil
