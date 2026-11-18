@@ -18,7 +18,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 
 ### Templates and `new-session -templ`
 
-- [ ] `newSessionFromTempl` wraps a nil `err` when the template is missing (`%!w(<nil>)`); return `err` for I/O failures and a named not-found error (with `c.templ`) for `!hasTemplate`
 - [ ] No rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session` (also applies to restore, see Features)
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
 - [ ] `SanitizeSnapshot`: `Sessions` is keyed by slug but looked up by `sessionName`, so a name like `my.sess` misses silently (zero `Session`); look up by `utils.Slug(name)`, use `v, ok :=` and return an error on a miss
@@ -62,7 +61,6 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 ### Naming and text
 
-- [ ] `ErrInvalidTemplName` is misspelled; it is replaced by `ErrNoTemplate` (see sentinels below)
 - [ ] `list-templates` `DescLong` says "with their windows and panes", but it lists names only; fix the text or extend the command
 - [ ] `dump` `DescLong` says "indented JSON", but `Data.JSON` is compact
 - [ ] Fix the `"tmux s"` example in `save-sessions` (`tmxu s`)
@@ -71,8 +69,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] Final sessions file name (drop the `2` in `tmux-sessions2.json` once the old file is gone)
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
 - [ ] Map `ErrSessionExists` to a user message in one place
-- [ ] Template commands: `delete-template` and `show-template` wrap `ErrCannotParseSaveTemplateCmdFlags` (copy-paste, use own sentinels); return `ErrTemplateNameNotProvided` (defined, unused) instead of `ErrSessionNameNotProvided`; `show-template` `Arg` shows `[templateName]` but the name is required
-- [ ] Wrap the cause in `GetBaseIndex` with `%w`
+- [ ] `show-template` `Arg` shows `[templateName]` but the name is required
 - [ ] Doc comments on exported identifiers (most in `tmux`, `cmd`, `config` and `utils` have none, including `utils.Slug`); unexport what is not API; package doc for `internal/cli`
 - [ ] Fix stale `CLAUDE.md` (`gh.go`, `Formula/`, old `cli/` layout) or leave it untracked
 - [ ] `.gitignore`: anchor `/tmxu`; add `.DS_Store`, `dist/`, `*.test`, `coverage.out`
@@ -102,7 +99,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] One `run()` helper or a `Runner` interface (`Run`, `Attach`) with an `execRunner`; no direct `exec.Command` elsewhere
 - [ ] Commands take their tmux dependency through an interface instead of calling package functions
 - [ ] Typed `*TmuxError{Args, Stderr, Err}`; include stderr in messages
-- [ ] Sentinels `ErrNoSession`, `ErrNoTemplate`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message; `new-session -templ` with a missing template returns `ErrNoTemplate` with the name (replaces the misspelled `ErrInvalidTemplName`)
+- [ ] Sentinels `ErrNoSession`, `ErrNoTmux` (`exec.ErrNotFound`); "tmux not found in PATH" message (`ErrNoTemplate` exists)
 - [ ] `errors.Is(err, fs.ErrNotExist)` instead of `os.Stat` + `os.IsNotExist` (done in `hasFile`; check the rest)
 - [ ] `errors.Join` to collect restore errors
 
@@ -256,7 +253,7 @@ Settled so far: one argv chain with `";"` elements (no `source-file`), derived p
 
 ## Suggested order
 
-1. Bugs in the template path (nil `err`, rollback, comma-ok, `panic`), since `new-session -templ` is the newest code
+1. Bugs in the template path (rollback, comma-ok, `panic`), since `new-session -templ` is the newest code
 2. Runner seam, `TmuxError`, typed parsing (Cosmetic > Structure, Bugs > Sessions), with the first tests on the fake
 3. Restore safety and parity (Features), with tests on the fake
 4. Persisted shape, config store, atomic writes
