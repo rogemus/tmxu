@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,10 +20,7 @@ var (
 const templatesDirName = "templates"
 
 func (c Config) ListTemplates() ([]string, error) {
-	path, err := tmxuTemplatesDir(c.DirPath)
-	if err != nil {
-		return nil, err
-	}
+	path := tmxuTemplatesDirPath(c.AppDirPath)
 
 	entries, err := readTemplateFiles(path)
 	if err != nil {
@@ -38,10 +36,7 @@ func (c Config) ShowTemplate(templateName string) ([]byte, error) {
 		return nil, err
 	}
 
-	path, err := tmxuTemplatesDir(c.DirPath)
-	if err != nil {
-		return nil, err
-	}
+	path := tmxuTemplatesDirPath(c.AppDirPath)
 
 	root, err := os.OpenRoot(path)
 	if err != nil {
@@ -58,7 +53,7 @@ func (c Config) SaveTemplate(data []byte, templateName string) (string, error) {
 		return "", err
 	}
 
-	path, err := tmxuTemplatesDir(c.DirPath)
+	path, err := tmxuTemplatesDir(c.AppDirPath)
 	if err != nil {
 		return "", err
 	}
@@ -78,10 +73,7 @@ func (c Config) DeleteTemplate(templateName string) (string, error) {
 		return "", err
 	}
 
-	path, err := tmxuTemplatesDir(c.DirPath)
-	if err != nil {
-		return "", err
-	}
+	path := tmxuTemplatesDirPath(c.AppDirPath)
 
 	root, err := os.OpenRoot(path)
 	if err != nil {
@@ -98,12 +90,12 @@ func (c Config) HasTemplate(templateName string) (bool, error) {
 		return false, err
 	}
 
-	path, err := tmxuTemplatesDir(c.DirPath)
-	if err != nil {
-		return false, err
-	}
+	path := tmxuTemplatesDirPath(c.AppDirPath)
 
 	root, err := os.OpenRoot(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -134,6 +126,9 @@ func readTemplatesName(entries []os.DirEntry) []string {
 
 func readTemplateFiles(path string) ([]os.DirEntry, error) {
 	entries, err := os.ReadDir(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%w %s: %w", ErrCannotReadTemplatesDir, path, err)
 	}
@@ -155,7 +150,7 @@ func tmxuTemplatesDirPath(path string) string {
 }
 
 func tmxuTemplatesDir(dirPath string) (string, error) {
-	path := tmxuTemplatesDirPath(tmxuConfigDirPath(dirPath))
+	path := tmxuTemplatesDirPath(dirPath)
 	err := os.MkdirAll(path, 0700)
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrCannotCreateTmxuTemplatesDir, err)

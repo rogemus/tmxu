@@ -8,12 +8,12 @@ import (
 const sessionsFileName = "tmux-sessions2.json"
 
 func (c Config) SaveSessions(data []byte) (string, error) {
-	path, err := tmxuConfigDir(c.DirPath)
+	err := ensureTmxuConfigDir(c.AppDirPath)
 	if err != nil {
 		return "", err
 	}
 
-	root, err := os.OpenRoot(path)
+	root, err := os.OpenRoot(c.AppDirPath)
 	if err != nil {
 		return "", err
 	}

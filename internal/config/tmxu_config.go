@@ -16,14 +16,13 @@ var (
 	ErrCannotCheckFile           = errors.New("cannot check file")
 )
 
-func tmxuConfigDir(dirPath string) (string, error) {
-	path := tmxuConfigDirPath(dirPath)
+func ensureTmxuConfigDir(path string) error {
 	err := os.MkdirAll(path, 0700)
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrCannotCreateTmxuConfigDir, err)
+		return fmt.Errorf("%w: %w", ErrCannotCreateTmxuConfigDir, err)
 	}
 
-	return path, nil
+	return nil
 }
 
 func tmxuConfigDirPath(path string) string {

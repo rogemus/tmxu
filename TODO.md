@@ -21,7 +21,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 - [ ] No rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session` (also applies to restore, see Features)
 - [ ] `--path` is not applied to template windows or panes (`SanitizeSnapshot` clears every `Pane.Path` and the `-c` flag is skipped for an empty path); see Decisions
 - [ ] `new-session`: names with `.` or `:` (tmux may rewrite them, so the printed name and `attach` could disagree; verify, then reject or print the real name)
-- [ ] Config: `Config.ShowTemplate`, `SaveTemplate`, `DeleteTemplate`, `HasTemplate`, `ListTemplates` and `SaveSessions` call `tmxuTemplatesDir`/`tmxuConfigDir`, which create directories even for read-only commands (`show`, `delete`, `list-templates`)
 
 ### Layout and tmux commands
 
@@ -51,8 +50,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 ### Naming and text
 
 - [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
-- [ ] `Config.DirPath` is now the parent (`~/.config`), not the app dir; rename it or make `New` return the app dir (`tmxu paths` and messages need the app dir)
-- [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
+- [ ] Use `cfg.AppDirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
 - [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
 - [ ] Stale text: `restore` `DescLong` claims "skips existing, `-force` replaces", not implemented
 
@@ -112,7 +110,7 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 - [ ] Templates: clear missing-file error for `show-template` / `delete-template`, `-f` for `delete-template`, and an overwrite policy for `save-template` (it truncates silently, see Decisions)
 - [ ] Config store: `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
-- [ ] Config: `TMXU_CONFIG_DIR` env and `--config-dir`; ignore a relative `XDG_CONFIG_HOME`; doc comments on `Config`, `DirPath`, `New`
+- [ ] Config: `TMXU_CONFIG_DIR` env and `--config-dir`; ignore a relative `XDG_CONFIG_HOME`; doc comments on `Config`, `BaseDirPath`, `AppDirPath`, `New`
 
 ### CLI surface
 
@@ -158,6 +156,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 ### Config and CLI
 
 - [ ] `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
+- [ ] Missing config dir (`t.TempDir()` plus `t.Setenv("XDG_CONFIG_HOME", ...)`): `config.New` and the read-only calls (`ListTemplates` returns an empty list, `HasTemplate` returns `(false, nil)`, `ShowTemplate` and `DeleteTemplate` return an error) create no directory; `SaveSessions` and `SaveTemplate` create it
 - [ ] `Config.SaveSessions` with `t.TempDir()`: two consecutive calls (dir missing, then dir exists), read the file back
 - [ ] Config store round trip, missing file, bad JSON, traversal name (rejected by `os.Root`), non-`.json` file, delete missing, using `t.TempDir()` (save, show and delete all exist now; no tests yet)
 - [ ] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling

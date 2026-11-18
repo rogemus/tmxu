@@ -19,21 +19,23 @@ var (
 const configDirName = "tmxu"
 
 type Config struct {
-	DirPath string
-	Version string
+	BaseDirPath string
+	AppDirPath  string
+	Version     string
 }
 
 func New(version string) (Config, error) {
 	v := strings.TrimSpace(version)
 
-	cDir, err := configDir()
+	baseDir, err := configDir()
 	if err != nil {
 		return Config{}, err
 	}
 
 	return Config{
-		DirPath: cDir,
-		Version: v,
+		BaseDirPath: baseDir,
+		AppDirPath:  tmxuConfigDirPath(baseDir),
+		Version:     v,
 	}, nil
 }
 
