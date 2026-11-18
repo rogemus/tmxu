@@ -103,10 +103,7 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 - [ ] Decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
 - [ ] Start directory guard (old `startDirArgs`): verified that tmux does not fail on a missing `-c` directory, it silently starts in `$HOME`; decide whether to warn
-- [ ] Set pane titles without changing the active pane (`select-pane -T`; verify it leaves the active pane alone)
 - [ ] Restore the original active pane and window
-- [ ] Add `session_created` (`time.Time`) to the parsed line
-- [ ] Preserve session order (`session_created` as `time.Time`; slice, not map; numeric sort of `$N`)
 - [ ] `attach` / `switch-client` when `$TMUX` is set; `=name` exact target
 
 ### Errors, signals, environment
