@@ -14,7 +14,6 @@ var _ Cmd = (*ShowTemplate)(nil)
 
 var (
 	ErrCannotParseShowTemplateCmdFlags = fmt.Errorf("%w: cannot parse show template cmd flags", ErrUsage)
-	ErrTemplateNameNotProvided         = fmt.Errorf("%w: template name not provided", ErrUsage)
 )
 
 type ShowTemplate struct {

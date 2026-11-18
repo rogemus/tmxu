@@ -101,12 +101,9 @@ func (c *Cli) helpCmd(w io.Writer, command cmd.Cmd) error {
 		Flags: make([]cmd.Flag, 0),
 	}
 
-	fs := command.Flags()
-	if fs != nil {
-		fs.VisitAll(func(f *flag.Flag) {
-			data.Flags = append(data.Flags, cmd.Flag{Name: f.Name, Desc: f.Usage})
-		})
-	}
+	command.Flags().VisitAll(func(f *flag.Flag) {
+		data.Flags = append(data.Flags, cmd.Flag{Name: f.Name, Desc: f.Usage})
+	})
 
 	return cmdHelpTmpl.Execute(w, data)
 }

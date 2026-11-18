@@ -5,12 +5,18 @@ package cmd
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 )
 
 // ErrUsage marks errors caused by wrong invocation (unknown command, bad flag,
 // missing argument). main maps it to exit code 2.
 var ErrUsage = errors.New("usage error")
+
+var (
+	ErrSessionNameNotProvided  = fmt.Errorf("%w: session name not provided", ErrUsage)
+	ErrTemplateNameNotProvided = fmt.Errorf("%w: template name not provided", ErrUsage)
+)
 
 type Info struct {
 	Command   string

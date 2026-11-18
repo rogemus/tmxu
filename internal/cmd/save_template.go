@@ -94,6 +94,6 @@ func (c *SaveTemplate) Run(args []string) error {
 		return err
 	}
 
-	fmt.Fprintf(c.ios.Out, "Templates saved at: %s\n", path)
-	return nil
+	_, err = fmt.Fprintf(c.ios.Out, "Templates saved at: %s\n", path)
+	return err
 }

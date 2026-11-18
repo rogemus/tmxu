@@ -51,7 +51,7 @@ func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane
 
 	out, err := exec.Command("tmux", argv...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s %w", ErrCannotCreateWindows, strings.TrimSpace(string(out)), err)
+		return fmt.Errorf("%w: %s: %w", ErrCannotCreateWindows, strings.TrimSpace(string(out)), err)
 	}
 
 	return nil

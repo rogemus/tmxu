@@ -80,6 +80,6 @@ func (c *SaveSessions) Run(args []string) error {
 		return err
 	}
 
-	fmt.Fprintf(c.ios.Out, "Tmux sessions saved at %s\n", fPath)
-	return nil
+	_, err = fmt.Fprintf(c.ios.Out, "Tmux sessions saved at %s\n", fPath)
+	return err
 }

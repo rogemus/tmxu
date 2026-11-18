@@ -26,23 +26,27 @@ type Session struct {
 }
 
 func NewSession(name string, dir string) error {
+	return createSession(name, dir)
+}
+
+func NewSessionFromTempl(name string, snapshot SnapshotData, dir string) error {
+	err := createSession(name, dir)
+	if err != nil {
+		return err
+	}
+
+	sSlug := sessionSlug(name)
+	windows, _ := snapshot.Windows[sSlug]
+	return CreateWindows(name, windows, snapshot.Panes)
+}
+
+func createSession(name string, dir string) error {
 	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()
 	if err != nil {
 		return newSessionError(name, out, err)
 	}
 
 	return nil
-}
-
-func NewSessionFromTempl(name string, snapshot SnapshotData, dir string) error {
-	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()
-	if err != nil {
-		return newSessionError(name, out, err)
-	}
-
-	sSlug := sessionSlug(name)
-	windows, _ := snapshot.Windows[sSlug]
-	return CreateWindows(name, windows, snapshot.Panes)
 }
 
 func ListSessions() ([]Session, error) {

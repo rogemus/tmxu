@@ -58,10 +58,6 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
 - [ ] Stale text: `save` and `restore` `DescLong` say `tmux-sessions.json` (code writes `tmux-sessions2.json`); restore claims "skips existing, `-force` replaces", not implemented
 - [ ] Stale comments: fzf menu `// TODO` and blank first line in `AttachSession.Run`
-- [ ] Unchecked `Fprint*` errors (`save_template.go:89`, `save_sessions.go:52,71`, `list_sessions.go:57,59`, `list_templates.go:65,67`); `list-templates` prints "no templates" to stdout
-- [ ] `CreateWindows` error format drops a separator (`%w: %s %w`); `NewSession` and `NewSessionFromTempl` duplicate the create call and error handling
-- [ ] `ErrSessionNameNotProvided` (`new_session.go`) and `ErrTemplateNameNotProvided` (`show_template.go`) are shared but live in one command's file; move to `cmd.go`
-- [ ] `cli.go:102`: the `fs != nil` guard is no longer needed
 
 ### Duplication and dead code
 

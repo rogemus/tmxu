@@ -68,7 +68,7 @@ func (c *ListTemplates) Run(args []string) error {
 	}
 
 	if len(templates) == 0 {
-		_, err = fmt.Fprintf(c.ios.Out, "no templates\n")
+		_, err = fmt.Fprintln(c.ios.Err, "no templates")
 		return err
 	}
 

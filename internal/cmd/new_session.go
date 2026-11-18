@@ -15,7 +15,6 @@ var _ Cmd = (*NewSession)(nil)
 
 var (
 	ErrCannotParseNewSessionCmdFlags = fmt.Errorf("%w: cannot parse new session cmd flags", ErrUsage)
-	ErrSessionNameNotProvided        = fmt.Errorf("%w: session name not provided", ErrUsage)
 	ErrUnexpectedArgument            = fmt.Errorf("%w: unexpected argument, flags go before the session name", ErrUsage)
 	ErrNoTemplate                    = fmt.Errorf("%w: template not found", ErrUsage)
 )
