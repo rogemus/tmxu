@@ -138,22 +138,10 @@ func buildNewSessionCmd(name, dir string) []string {
 	return argv
 }
 
-// SessionExistsError reports that a session with the given name is already running.
-// It unwraps to ErrSessionExists.
-type SessionExistsError struct {
-	Name string
-}
-
-func (e *SessionExistsError) Error() string {
-	return fmt.Sprintf("%s: %s", ErrSessionExists, e.Name)
-}
-
-func (e *SessionExistsError) Unwrap() error { return ErrSessionExists }
-
 func newSessionError(name string, out []byte, err error) error {
 	msg := strings.TrimSpace(string(out))
 	if strings.HasPrefix(msg, "duplicate session:") {
-		return &SessionExistsError{Name: name}
+		return fmt.Errorf("%w: %s", ErrSessionExists, name)
 	}
 
 	return fmt.Errorf("%w %s: %s: %w", ErrCannotCreateSession, name, msg, err)

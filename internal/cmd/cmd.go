@@ -27,6 +27,15 @@ type Info struct {
 	Examples  []string
 }
 
+// Usage returns the one-line synopsis of the command.
+func (i Info) Usage() string {
+	if i.Arg == "" {
+		return "tmxu " + i.Command
+	}
+
+	return "tmxu " + i.Command + " " + i.Arg
+}
+
 type Flag struct {
 	Name string
 	Desc string

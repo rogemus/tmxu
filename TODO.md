@@ -41,7 +41,6 @@ Wrong behavior, reachable panics, silent failures, and unsafe states in code tha
 ### CLI behavior
 
 - [ ] Flags after positional args work; `--` terminator honored (today `-path` after a name is silently ignored)
-- [ ] Missing required argument prints usage and exits 2 (done for `attach` and `new-session`; apply to the rest)
 - [ ] `dump`, `ls`, `version` and `save` ignore extra positional args
 - [ ] `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY
 
@@ -177,6 +176,7 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] `Config.SaveSessions` with `t.TempDir()`: two consecutive calls (dir missing, then dir exists), read the file back
 - [ ] Config store round trip, missing file, bad JSON, traversal name (rejected by `os.Root`), non-`.json` file, delete missing, using `t.TempDir()` (save, show and delete all exist now; no tests yet)
 - [ ] `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
+- [ ] `Cli.Run` adds `\nUsage: ...` to an `ErrUsage` error and keeps `errors.Is(err, cmd.ErrUsage)` true; `Info.Usage()` with and without `Arg`; `new-session` on a duplicate session returns an error that satisfies `errors.Is(err, tmux.ErrSessionExists)` (needs the runner seam)
 
 ### Manual verification against tmux
 

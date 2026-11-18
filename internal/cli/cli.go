@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -43,7 +44,12 @@ func (c *Cli) Run(args []string) error {
 		return c.helpCmd(c.ios.Out, command)
 	}
 
-	return command.Run(rest)
+	err := command.Run(rest)
+	if errors.Is(err, cmd.ErrUsage) {
+		return fmt.Errorf("%w\nUsage: %s", err, command.Info().Usage())
+	}
+
+	return err
 }
 
 var cmdHelpTmpl = template.Must(
@@ -62,7 +68,7 @@ DESCRIPTION:
 {{- end}}
 
 USAGE:
-  tmxu {{.Info.Command}}{{with .Info.Arg}} {{.}}{{end}}{{if .Flags}} [flags]{{end}}
+  {{.Info.Usage}}{{if .Flags}} [flags]{{end}}
 {{- if .Flags}}
 
 FLAGS:
