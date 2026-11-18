@@ -25,8 +25,6 @@ type Session struct {
 	Name string `json:"session_name"`
 }
 
-func (s Session) GetName() string { return utils.Quote(s.Name) }
-
 func NewSession(name string, dir string) error {
 	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()
 	if err != nil {
@@ -52,7 +50,6 @@ func ListSessions() ([]Session, error) {
 		[]string{
 			`"session_id": "#{session_id}"`,
 			`"session_name": "#{session_name}"`,
-			`"session_windows": #{session_windows}`,
 		}, ",",
 	) + "},"
 
@@ -119,7 +116,8 @@ func buildNewSessionsCmd(sessions []Session) string {
 	cmds := make([]string, 0)
 
 	for _, s := range sessions {
-		cmd := strings.Join([]string{"new-session -d -s", s.GetName()}, " ")
+		name := utils.Quote(s.Name)
+		cmd := strings.Join([]string{"new-session -d -s", name}, " ")
 		cmds = append(cmds, cmd)
 	}
 

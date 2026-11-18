@@ -8,6 +8,7 @@ import (
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*NewSession)(nil)
@@ -99,7 +100,8 @@ func (c *NewSession) newSession(name string) error {
 }
 
 func (c *NewSession) newSessionFromTempl(name string) error {
-	hasTemplate, err := c.cfg.HasTemplate(c.templ)
+	templSlug := utils.Slug(c.templ)
+	hasTemplate, err := c.cfg.HasTemplate(templSlug)
 	if err != nil {
 		return err
 	}
@@ -107,7 +109,7 @@ func (c *NewSession) newSessionFromTempl(name string) error {
 		return fmt.Errorf("%w: %q", ErrNoTemplate, c.templ)
 	}
 
-	data, err := c.cfg.ShowTemplate(c.templ)
+	data, err := c.cfg.ShowTemplate(templSlug)
 	if err != nil {
 		return err
 	}

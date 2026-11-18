@@ -7,6 +7,7 @@ import (
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*SaveTemplate)(nil)
@@ -75,6 +76,11 @@ func (c *SaveTemplate) Run(args []string) error {
 		templateName = c.name
 	}
 
+	templSlug := utils.Slug(templateName)
+	if templSlug == "" {
+		return ErrTemplateNameNotProvided
+	}
+
 	snapshot, err = tmux.SanitizeSnapshot(snapshot, sessionName)
 	if err != nil {
 		return err
@@ -85,7 +91,7 @@ func (c *SaveTemplate) Run(args []string) error {
 		return err
 	}
 
-	path, err := c.cfg.SaveTemplate(out, templateName)
+	path, err := c.cfg.SaveTemplate(out, templSlug)
 	if err != nil {
 		return err
 	}

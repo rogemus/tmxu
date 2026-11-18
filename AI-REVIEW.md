@@ -1,6 +1,6 @@
 # AI Review
 
-Reasoning behind [TODO.md](TODO.md). Section numbers match. Covers the move from the old top-level `cli/` package into `internal/` (`tmux`, `utils`, `cmd`, `cli`, `config`) and the work needed to ship `tmxu` as a well-behaved Unix tool.
+Reasoning behind [TODO.md](TODO.md). Section numbers match. Covers the move from the old top-level `cli/` package (now deleted) into `internal/` (`tmux`, `utils`, `cmd`, `cli`, `config`) and the work needed to ship `tmxu` as a well-behaved Unix tool.
 
 Policy: stdlib-first, written by hand. `golang.org/x/term` is the only dependency. Single user, so no migration from the old `tmux-sessions.json`. tmux 3.8+ only.
 
@@ -155,11 +155,11 @@ Dropping these shrinks the file about 46% (33,291 to 17,841 bytes) without chang
 
 ### 3.3 DTO vs domain
 
-`Session` doubles as the tmux DTO: its tags are tmux key names (`session_id`, `session_name`, `session_windows`) while `Window` and `Pane` use `id`, `name`, `index`. A saved file would mix both styles. **Fix:** a parsed-line type for tmux output, a domain type, and a persisted type; recommended separate persisted shape.
+`Session` doubles as the tmux DTO: its tags are tmux key names (`session_id`, `session_name`) while `Window` and `Pane` use `id`, `name`, `index`. A saved file would mix both styles. **Fix:** a parsed-line type for tmux output, a domain type, and a persisted type; recommended separate persisted shape.
 
 ### 3.4 Panics
 
-`buildNewWindowsCmd` panics for a window without panes and `panes[0]` is unchecked. Safe for live data, unsafe for loaded JSON. **Fix:** return an error from the build step and validate loaded data first. `NewSession` also hard-codes `WindowsCount: 0`.
+`buildNewWindowsCmd` panics for a window without panes and `panes[0]` is unchecked. Safe for live data, unsafe for loaded JSON. **Fix:** return an error from the build step and validate loaded data first.
 
 ---
 
@@ -223,7 +223,10 @@ It confirms, fetches data, discards it and writes nothing. Its description still
 ### 5.2 Input validation
 
 - `new-session` with an empty name must be rejected.
-- Template names are used in paths, so `save-template -name ../x` would write outside the templates directory. **Fix:** `validName` rejects empty, `/`, `\`, `..`, leading `.`.
+- Template names are used in paths, so `save-template -name ../x` would write outside the templates directory. **Fix:** `validName` rejects empty, `/`, `\`, `..`, leading `.`. Done in part: the commands slug the name (`utils.Slug`) and reject one that slugs to `""`, which also stops a `.json` file. Still open:
+  - Normalize at the boundary that owns the invariant ("file name = slug"). `config` should slug, so `HasTemplate` and `ShowTemplate` cannot disagree; a missed call in `new_session.go` already broke names with spaces.
+  - A sentinel must describe the failure: `ErrTemplateNameNotProvided` for a name like `!!!` is misleading; use `ErrInvalidTemplateName`.
+  - A slug is lossy: `My Proj` and `my-proj` share a file, so `save-template` overwrites silently, and `list-templates` shows slugs. Accept it, or keep the display name in the file.
 - Loading templates must skip non-`.json` entries and subdirectories, and report a bad file without failing the whole list.
 - `delete-template`: clear error for a missing template, `-f` for `rm` semantics.
 
@@ -262,7 +265,7 @@ New `bufio.Reader` per call, read error dropped, EOF silently means "no", so cro
 
 ### 5.7 Cut-over
 
-Two packages named `cli` are confusing. Delete the top-level `cli/` as soon as parity is reached.
+Done: the old top-level `cli/` package is deleted (`dcba230`), so only `internal/cli` remains.
 
 ---
 
@@ -292,7 +295,7 @@ TTY detection via `x/term`; `NO_COLOR` and `TERM=dumb` respected if color is add
 
 - `Comperable`/`Eq` with type assertions allows `Window.Eq(Session)` and compiles. Use `slices.ContainsFunc` and a `map[string]struct{}`; `utils.Contain` makes `parseTmuxLines` O(n²) in panes.
 - `GetTmuxData`/`GetBaseIndex`: `Get` prefix and stutter → `Snapshot()`, `BaseIndex()`.
-- `GetName`/`GetTitle`/`GetPath` return a shell-quoted copy, not the field. Call `utils.Quote` at the call site, or name them `Quoted*`.
+- `GetTitle`/`GetPath` return a shell-quoted copy, not the field (`Session.GetName` is already gone; `buildNewSessionsCmd` calls `utils.Quote` directly). Call `utils.Quote` at the call site, or name them `Quoted*`.
 - `baseIndex.go` → `base_index.go`.
 - `wantsHelp` is a method that ignores its receiver; the `cfg` field is unused in three commands.
 - Exported identifiers lost their doc comments; `internal/cli` has no package comment; unexport what is not API; `Data` has no exported accessors.
@@ -384,7 +387,7 @@ Alternative readiness signal: `send-keys 'tmux wait-for -S <name>' Enter` is exa
 1. **Seam and parsing:** `Runner`, `TmuxError`, safe line format, typed `Line`. Concepts: small interfaces, fakes.
 2. **Restore safety and parity** with tests on the fake: `HasSession`, no `-k`, `base-index`, layout, rollback.
 3. **Persisted shape and config store:** clean schema, atomic writes, `0600`. Concepts: `os.CreateTemp`, `os.Rename`, generics for `readJSON[T]`.
-4. **Port commands**, then delete `cli/`.
+4. **Port `restore`** (`cli/` is already deleted).
 5. **`context` and signals.** Concepts: `exec.CommandContext`, `signal.NotifyContext`.
 6. **CLI surface:** flags, exit codes, `--json`, `-0`, `-y`, `--dry-run`.
 7. **Goroutines:** parallel snapshot and shell-wait polling, under `-race`.

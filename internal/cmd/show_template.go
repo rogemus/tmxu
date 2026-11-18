@@ -7,6 +7,7 @@ import (
 
 	"github.com/rogemus/tmxu/internal/config"
 	"github.com/rogemus/tmxu/internal/tmux"
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*ShowTemplate)(nil)
@@ -58,11 +59,12 @@ func (c *ShowTemplate) Run(args []string) error {
 	}
 
 	templateName := c.fs.Arg(0)
-	if templateName == "" {
+	slug := utils.Slug(templateName)
+	if slug == "" {
 		return ErrTemplateNameNotProvided
 	}
 
-	data, err := c.cfg.ShowTemplate(templateName)
+	data, err := c.cfg.ShowTemplate(slug)
 	if err != nil {
 		return err
 	}
