@@ -38,7 +38,7 @@ var listTemplatesInfo = Info{
 	Command:   "list-templates",
 	Aliases:   []string{"lt"},
 	DescShort: "List all saved templates",
-	DescLong:  "Lists the names of all saved templates, numbered. Templates are stored in ~/.config/tmxu/templates/. With -json prints {\"templates\":[...]} on one line; no templates prints {\"templates\":[]}.",
+	DescLong:  "Lists the names of all saved templates, numbered. Templates are stored in %s. With -json prints {\"templates\":[...]} on one line; no templates prints {\"templates\":[]}.",
 	Examples: []string{
 		"tmxu list-templates",
 		"tmxu lt",
@@ -47,7 +47,11 @@ var listTemplatesInfo = Info{
 }
 
 func (c *ListTemplates) Flags() *flag.FlagSet { return c.fs }
-func (c *ListTemplates) Info() Info           { return listTemplatesInfo }
+func (c *ListTemplates) Info() Info {
+	info := listTemplatesInfo
+	info.DescLong = fmt.Sprintf(info.DescLong, c.cfg.TemplatesDir())
+	return info
+}
 func (c *ListTemplates) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {

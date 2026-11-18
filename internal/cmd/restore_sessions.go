@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"flag"
+	"fmt"
 	"io"
 
 	"github.com/rogemus/tmxu/internal/config"
@@ -32,7 +33,7 @@ var restoreSessionsInfo = Info{
 	Command:   "restore-sessions",
 	Aliases:   []string{"restore", "r"},
 	DescShort: "Restore tmux sessions",
-	DescLong:  "Recreates tmux sessions from ~/.config/tmxu/tmux-sessions.json. Skips sessions that already exist; -force replaces them instead. Not implemented yet.",
+	DescLong:  "Recreates tmux sessions from %s. Skips sessions that already exist; -force replaces them instead. Not implemented yet.",
 	Examples: []string{
 		"tmxu restore-sessions",
 		"tmxu restore",
@@ -42,7 +43,11 @@ var restoreSessionsInfo = Info{
 }
 
 func (c *RestoreSessions) Flags() *flag.FlagSet { return c.fs }
-func (c *RestoreSessions) Info() Info           { return restoreSessionsInfo }
+func (c *RestoreSessions) Info() Info {
+	info := restoreSessionsInfo
+	info.DescLong = fmt.Sprintf(info.DescLong, c.cfg.SessionsFile())
+	return info
+}
 func (c *RestoreSessions) Run(args []string) error {
 	return nil
 }

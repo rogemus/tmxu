@@ -43,7 +43,7 @@ var saveSessionsInfo = Info{
 	Aliases:   []string{"save", "s"},
 	Arg:       "",
 	DescShort: "Save tmux sessions",
-	DescLong:  "Captures all running tmux sessions including windows, panes, and layouts. Asks for confirmation first; -yes skips the prompt. Saves to ~/.config/tmxu/tmux-sessions.json.",
+	DescLong:  "Captures all running tmux sessions including windows, panes, and layouts. Asks for confirmation first; -yes skips the prompt. Saves to %s.",
 	Examples: []string{
 		"tmxu save-sessions",
 		"tmxu save",
@@ -53,7 +53,11 @@ var saveSessionsInfo = Info{
 }
 
 func (c *SaveSessions) Flags() *flag.FlagSet { return c.fs }
-func (c *SaveSessions) Info() Info           { return saveSessionsInfo }
+func (c *SaveSessions) Info() Info {
+	info := saveSessionsInfo
+	info.DescLong = fmt.Sprintf(info.DescLong, c.cfg.SessionsFile())
+	return info
+}
 func (c *SaveSessions) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {

@@ -50,9 +50,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 ### Naming and text
 
 - [ ] `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
-- [ ] Use `cfg.AppDirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
 - [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
-- [ ] Stale text: `restore` `DescLong` claims "skips existing, `-force` replaces", not implemented
 
 ### Duplication and dead code
 
@@ -116,12 +114,11 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 - [ ] Help layout: Usage, Commands, Options, Environment, Exit status
 - [ ] `-yes` for restore, new and delete-template (done for `save-sessions`), `-n` / `--dry-run` (restore, new, delete-template, save), `-q` / `-v` with `log/slog` to stderr (`-v` logs tmux args)
-- [ ] `tmxu paths` prints the resolved directories
 - [ ] Decide what bare `tmxu` does (help + exit 0 today)
 
 ### Ship it (after the migration)
 
-- [ ] Switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); update the status text and `DescLong` mentions to match
+- [ ] Switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 - [ ] CI: `main-check.yaml` already runs build, vet, gofmt and `go test -race ./...`; add staticcheck and a `go mod tidy` diff
 - [ ] Release on `v*` tag push; git tag is the single version source (`-ldflags -X`, `-trimpath`, `CGO_ENABLED=0`, fallback to `debug.ReadBuildInfo`); delete `version.txt` (`release.yaml` tags from it on every push to main today)
 - [ ] Release workflow: build matrix (darwin/linux x amd64/arm64), `sha256sum`, `gh release create`
@@ -148,7 +145,8 @@ I write every test myself, by hand, to learn how they work. Claude only reviews 
 - [ ] Template names through the commands: `new-session -templ "my proj"` finds `my-proj.json` (`HasTemplate` and `ShowTemplate` agree), `save-template` and `delete-template` use the same file, a name that slugs to `""` is rejected
 - [ ] Error paths: `SanitizeSnapshot` with an unknown session name; `DesanitizeTemplSnapshot` with a missing `Sessions`, `Windows` or `Panes` key; check `errors.Is` with the sentinel
 - [ ] `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index, a loaded snapshot (empty `Window.Slug`) still lists its panes
-- [ ] `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`
+- [ ] `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`, `paths` and `paths -json` (three lines in the order config, templates, sessions; creates nothing)
+- [ ] `Info()` of the six commands that format `DescLong` from `cfg` (`%s` is filled with the real path, no stray `%!s(MISSING)`)
 - [ ] `parseTmuxLines` ordering and a duplicate-name case
 - [ ] `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
 - [ ] Window layout: decoding real tmux text, `isSplitLayout` (single pane, split, empty, invalid), `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits

@@ -38,7 +38,7 @@ var deleteTemplateInfo = Info{
 	Aliases:   []string{"dt"},
 	Arg:       "<templateName>",
 	DescShort: "Delete saved template",
-	DescLong:  "Removes the template file <templateName>.json from ~/.config/tmxu/templates/. Does not ask for confirmation.",
+	DescLong:  "Removes the template file <templateName>.json from %s. Does not ask for confirmation.",
 	Examples: []string{
 		"tmxu delete-template templateName",
 		"tmxu dt templateName",
@@ -46,7 +46,11 @@ var deleteTemplateInfo = Info{
 }
 
 func (c *DeleteTemplate) Flags() *flag.FlagSet { return c.fs }
-func (c *DeleteTemplate) Info() Info           { return deleteTemplateInfo }
+func (c *DeleteTemplate) Info() Info {
+	info := deleteTemplateInfo
+	info.DescLong = fmt.Sprintf(info.DescLong, c.cfg.TemplatesDir())
+	return info
+}
 func (c *DeleteTemplate) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {

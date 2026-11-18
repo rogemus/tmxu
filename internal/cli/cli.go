@@ -205,6 +205,8 @@ func New(cfg config.Config, ios cmd.IOs) *Cli {
 	c.newCmd(dCmd)
 	vCmd := cmd.NewVersion(ios, cfg)
 	c.newCmd(vCmd)
+	pCmd := cmd.NewPaths(ios, cfg)
+	c.newCmd(pCmd)
 	ltCmd := cmd.NewListTemplates(ios, cfg)
 	c.newCmd(ltCmd)
 	stCmd := cmd.NewSaveTemplate(ios, cfg)

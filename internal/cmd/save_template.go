@@ -40,7 +40,7 @@ var saveTemplateInfo = Info{
 	Aliases:   []string{"st"},
 	Arg:       "<sessionName>",
 	DescShort: "Save session as template",
-	DescLong:  "Saves a running tmux session as a reusable template in ~/.config/tmxu/templates/. The session name and every pane path are replaced with placeholders, so a template can be reused under any name. -name sets the template name; it defaults to the session name. An existing template with the same name is overwritten. Flags go before the session name.",
+	DescLong:  "Saves a running tmux session as a reusable template in %s. The session name and every pane path are replaced with placeholders, so a template can be reused under any name. -name sets the template name; it defaults to the session name. An existing template with the same name is overwritten. Flags go before the session name.",
 	Examples: []string{
 		"tmxu st sessionName",
 		"tmxu save-template sessionName",
@@ -49,7 +49,11 @@ var saveTemplateInfo = Info{
 }
 
 func (c *SaveTemplate) Flags() *flag.FlagSet { return c.fs }
-func (c *SaveTemplate) Info() Info           { return saveTemplateInfo }
+func (c *SaveTemplate) Info() Info {
+	info := saveTemplateInfo
+	info.DescLong = fmt.Sprintf(info.DescLong, c.cfg.TemplatesDir())
+	return info
+}
 func (c *SaveTemplate) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {

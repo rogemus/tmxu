@@ -40,7 +40,7 @@ var showTemplateInfo = Info{
 	Aliases:   []string{"show", "sht"},
 	Arg:       "<templateName>",
 	DescShort: "Show template overview",
-	DescLong:  "Prints a saved template as a tree of its windows and the named panes in each. Templates are stored in ~/.config/tmxu/templates/. With -json prints the saved template JSON instead. Flags go before the template name.",
+	DescLong:  "Prints a saved template as a tree of its windows and the named panes in each. Templates are stored in %s. With -json prints the saved template JSON instead. Flags go before the template name.",
 	Examples: []string{
 		"tmxu show-template default",
 		"tmxu show default",
@@ -50,7 +50,11 @@ var showTemplateInfo = Info{
 }
 
 func (c *ShowTemplate) Flags() *flag.FlagSet { return c.fs }
-func (c *ShowTemplate) Info() Info           { return showTemplateInfo }
+func (c *ShowTemplate) Info() Info {
+	info := showTemplateInfo
+	info.DescLong = fmt.Sprintf(info.DescLong, c.cfg.TemplatesDir())
+	return info
+}
 func (c *ShowTemplate) Run(args []string) error {
 	err := c.fs.Parse(args)
 	if err != nil {
