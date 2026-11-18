@@ -19,6 +19,10 @@ var (
 
 const templatesDirName = "templates"
 
+func (c Config) TemplatesDir() string {
+	return tmxuTemplatesDirPath(c.AppDirPath)
+}
+
 func (c Config) ListTemplates() ([]string, error) {
 	path := tmxuTemplatesDirPath(c.AppDirPath)
 

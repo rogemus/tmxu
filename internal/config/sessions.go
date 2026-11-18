@@ -2,10 +2,15 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 )
 
 // TODO: temp name remove 2 once everything is working
 const sessionsFileName = "tmux-sessions2.json"
+
+func (c Config) SessionsFile() string {
+	return filepath.Join(c.AppDirPath, sessionsFileName)
+}
 
 func (c Config) SaveSessions(data []byte) (string, error) {
 	err := ensureTmxuConfigDir(c.AppDirPath)
