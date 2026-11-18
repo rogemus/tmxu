@@ -48,7 +48,6 @@ var attachSessionInfo = Info{
 func (c *AttachSession) Flags() *flag.FlagSet { return c.fs }
 func (c *AttachSession) Info() Info           { return attachSessionInfo }
 func (c *AttachSession) Run(args []string) error {
-
 	// TODO: implement fzf style menu
 	err := c.fs.Parse(args)
 	if err != nil {

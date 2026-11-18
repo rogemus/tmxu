@@ -55,9 +55,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 - [ ] `Config.DirPath` is now the parent (`~/.config`), not the app dir; rename it or make `New` return the app dir (`tmxu paths` and messages need the app dir)
 - [ ] Use `cfg.DirPath` in messages and descriptions instead of the literal `~/.config/tmxu`
 - [ ] Doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `Session`, `Window`, constructors and `utils.Slug` have none); unexport what is not API
-- [ ] Stale text: `save` and `restore` `DescLong` say `tmux-sessions.json` (code writes `tmux-sessions2.json`); restore claims "skips existing, `-force` replaces", not implemented
-- [ ] Stale comments: fzf menu `// TODO` and blank first line in `AttachSession.Run`
-- [ ] `ls` `DescLong` promises window counts but only names are printed
+- [ ] Stale text: `restore` `DescLong` claims "skips existing, `-force` replaces", not implemented
 - [ ] `-force` (restore) and `-menu` (attach) are parsed but never read; hide them from help until implemented
 
 ### Duplication and dead code
@@ -130,6 +128,7 @@ New capabilities and the remaining migration. Restore comes first, then the CLI 
 
 ### Ship it (after the migration)
 
+- [ ] Switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); update the status text and `DescLong` mentions to match
 - [ ] CI: `main-check.yaml` already runs build, vet, gofmt and `go test -race ./...`; add staticcheck and a `go mod tidy` diff
 - [ ] Release on `v*` tag push; git tag is the single version source (`-ldflags -X`, `-trimpath`, `CGO_ENABLED=0`, fallback to `debug.ReadBuildInfo`); delete `version.txt` (`release.yaml` tags from it on every push to main today)
 - [ ] Release workflow: build matrix (darwin/linux x amd64/arm64), `sha256sum`, `gh release create`

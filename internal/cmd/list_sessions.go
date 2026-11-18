@@ -38,7 +38,7 @@ var listSessionsInfo = Info{
 	Aliases:   []string{"list", "ls"},
 	Arg:       "",
 	DescShort: "List all active sessions in tmux",
-	DescLong:  "Displays all currently running tmux sessions with their names and window counts. With -json prints {\"sessions\":[...]} on one line.",
+	DescLong:  "Displays all currently running tmux sessions with their names. With -json prints {\"sessions\":[...]} on one line.",
 	Examples: []string{
 		"tmxu list-sessions",
 		"tmxu list",

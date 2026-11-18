@@ -1,6 +1,10 @@
 _default:
   just --list
 
+[group: 'setup']
+install:
+  go mod download
+
 [group: 'build']
 build:
   go build .
@@ -13,7 +17,7 @@ run CMD:
 # Run all Go tests
 [group: 'test']
 test:
-  go test ./...
+  go test -race ./...
 
 # Format Go code with gofmt
 [group: 'quality']
