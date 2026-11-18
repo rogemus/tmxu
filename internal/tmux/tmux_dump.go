@@ -35,9 +35,14 @@ func (d SnapshotData) writeWindows(b *strings.Builder, sid string) {
 	windows := slices.Clone(d.Windows[sid])
 	slices.SortFunc(windows, func(x, y Window) int { return cmp.Compare(x.Index, y.Index) })
 
+	// Window.Slug is not persisted, so a loaded snapshot has it empty;
+	// derive the panes key the same way the snapshot keys were built.
+	sessionName := d.Sessions[sid].Name
+	panesOf := func(w Window) []Pane { return d.Panes[windowSlug(w, sessionName)] }
+
 	nameWidth := 0
 	for _, w := range windows {
-		for _, p := range d.Panes[w.Slug] {
+		for _, p := range panesOf(w) {
 			nameWidth = max(nameWidth, utf8.RuneCountInString(p.Title))
 		}
 	}
@@ -50,7 +55,7 @@ func (d SnapshotData) writeWindows(b *strings.Builder, sid string) {
 
 		fmt.Fprintf(b, "%s%s\n", branch, w.Name)
 
-		panes := d.Panes[w.Slug]
+		panes := panesOf(w)
 		for pi, p := range panes {
 			paneBranch := "├─ "
 			if pi == len(panes)-1 {
