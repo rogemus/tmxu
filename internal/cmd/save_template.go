@@ -73,11 +73,6 @@ func (c *SaveTemplate) Run(args []string) error {
 		return ErrTemplateNameNotProvided
 	}
 
-	hasSession, err := tmux.HasSession(sessionName)
-	if err != nil || !hasSession {
-		return err
-	}
-
 	snapshot, err := tmux.Snapshot(sessionName)
 	if err != nil {
 		return err

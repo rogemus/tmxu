@@ -15,6 +15,7 @@ var (
 	ErrCannotListSessions    = errors.New("cannot list sessions")
 	ErrCannotAttachToSession = errors.New("cannot attach to session")
 	ErrSessionExists         = errors.New("session already exists")
+	ErrNoSession             = errors.New("session not found")
 	ErrCannotValidateSession = errors.New("cannot validate session")
 )
 
@@ -94,16 +95,19 @@ func CreateSessions(sessions []Session) error {
 }
 
 func HasSession(sessionName string) (bool, error) {
-	output, err := exec.Command("tmux", "has-session", "-t", sessionName).Output()
+	err := exec.Command("tmux", "has-session", "-t", "="+sessionName).Run()
+
 	if err != nil {
+		var ee *exec.ExitError
+
+		if errors.As(err, &ee) && ee.ExitCode() == 1 {
+			return false, nil
+		}
+
 		return false, fmt.Errorf("%w %s: %w", ErrCannotValidateSession, sessionName, err)
 	}
 
-	if strings.TrimSpace(string(output)) == "" {
-		return true, nil
-	}
-
-	return false, nil
+	return true, nil
 }
 
 func parseSessionLines(output []byte) ([]Session, error) {

@@ -141,13 +141,23 @@ func (d SnapshotData) sessionIDs() []string {
 }
 
 // Snapshot reads the live tmux state. An empty sessionName snapshots every
-// session on the server, otherwise only that session.
+// session on the server, otherwise only that session, or ErrNoSession if it
+// does not exist.
 func Snapshot(sessionName string) (SnapshotData, error) {
 	argv := []string{
 		"list-panes", "-F", buildListPanesFormat(),
 	}
 
 	if sessionName != "" {
+		hasSession, err := HasSession(sessionName)
+		if err != nil {
+			return SnapshotData{}, err
+		}
+
+		if !hasSession {
+			return SnapshotData{}, fmt.Errorf("%w: %s", ErrNoSession, sessionName)
+		}
+
 		argv = append(argv, "-s", "-t", "="+sessionName)
 	} else {
 		argv = append(argv, "-a")
