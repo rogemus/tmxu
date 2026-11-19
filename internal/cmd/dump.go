@@ -57,13 +57,7 @@ func (c *Dump) Run(args []string) error {
 		return fmt.Errorf("%w: %w", ErrCannotParseDumpCmdFlags, err)
 	}
 
-	var d tmux.SnapshotData
-	if c.session != "" {
-		d, err = tmux.SessionSnapshot(c.session)
-	} else {
-		d, err = tmux.Snapshot()
-	}
-
+	d, err := tmux.Snapshot(c.session)
 	if err != nil {
 		return err
 	}

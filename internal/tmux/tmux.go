@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/rogemus/tmxu/internal/utils"
@@ -16,10 +17,10 @@ import (
 
 var (
 	ErrCannotGetTmuxData        = errors.New("cannot get tmux data")
-	ErrCannotParseTmuxLines     = errors.New("cannot parse tmux lines")
 	ErrCannotLoadSnapshot       = errors.New("cannot load snapshot")
 	ErrCannotSanitizeSnapshot   = errors.New("cannot sanitize snapshot")
 	ErrCannotDesanitizeSnapshot = errors.New("cannot desanitize snapshot")
+	ErrCannotParseLine          = errors.New("cannot parse tmux line")
 )
 
 const SchemaVersion = 2
@@ -28,16 +29,61 @@ const SchemaVersion = 2
 // session of its own until a new one is created from it.
 const templateSessionName = ""
 
+// lineSafeSeparator splits the fields of one `list-panes` row. ASCII Unit
+// Separator: tmux names are not expected to contain it, unlike `,` or `:`.
+const lineSafeSeparator = "\x1f"
+
+// linePartsCount is the number of fields in one row. Keep it equal to the
+// length of `fields` in buildListPanesFormat.
+const linePartsCount = 9
+
 type Line struct {
-	SessionID    string          `json:"session_id"`
-	SessionName  string          `json:"session_name"`
-	WindowID     string          `json:"window_id"`
-	WindowIndex  int             `json:"window_index"`
-	WindowName   string          `json:"window_name"`
-	WindowLayout json.RawMessage `json:"window_layout"`
-	PaneID       string          `json:"pane_id"`
-	PaneIndex    int             `json:"pane_index"`
-	PanePath     string          `json:"pane_path"`
+	SessionID    string
+	SessionName  string
+	WindowID     string
+	WindowIndex  int
+	WindowName   string
+	WindowLayout json.RawMessage
+	PaneID       string
+	PaneIndex    int
+	PanePath     string
+}
+
+func parseLines(output []byte) ([]Line, error) {
+	lines := make([]Line, 0)
+	outputLines := strings.SplitSeq(strings.TrimSuffix(string(output), "\n"), "\n")
+
+	for outputLine := range outputLines {
+		parts := strings.SplitN(outputLine, lineSafeSeparator, linePartsCount)
+		if len(parts) != linePartsCount {
+			return nil, fmt.Errorf("%w: missing parts %d out of %d", ErrCannotParseLine, len(parts), linePartsCount)
+		}
+
+		windowIndex, err := strconv.Atoi(parts[3])
+		if err != nil {
+			return nil, fmt.Errorf("%w: %q: %w", ErrCannotParseLine, outputLine, err)
+		}
+		paneIndex, err := strconv.Atoi(parts[7])
+		if err != nil {
+			return nil, fmt.Errorf("%w: %q: %w", ErrCannotParseLine, outputLine, err)
+		}
+
+		line := Line{
+			SessionID:    parts[0],
+			SessionName:  parts[1],
+			WindowID:     parts[2],
+			WindowIndex:  windowIndex,
+			WindowName:   parts[4],
+			WindowLayout: json.RawMessage(parts[5]),
+			PaneID:       parts[6],
+			PaneIndex:    paneIndex,
+			PanePath:     parts[8],
+		}
+
+		lines = append(lines, line)
+	}
+
+	return lines, nil
 }
 
 func (l Line) Session() Session {
@@ -94,35 +140,30 @@ func (d SnapshotData) sessionIDs() []string {
 	return ids
 }
 
-func SessionSnapshot(sessionName string) (SnapshotData, error) {
-	o, err := exec.Command("tmux", "list-panes", "-F", buildListPanesFormat(), "-s", "-t", "="+sessionName).Output()
+// Snapshot reads the live tmux state. An empty sessionName snapshots every
+// session on the server, otherwise only that session.
+func Snapshot(sessionName string) (SnapshotData, error) {
+	argv := []string{
+		"list-panes", "-F", buildListPanesFormat(),
+	}
+
+	if sessionName != "" {
+		argv = append(argv, "-s", "-t", "="+sessionName)
+	} else {
+		argv = append(argv, "-a")
+	}
+
+	o, err := exec.Command("tmux", argv...).Output()
 	if err != nil {
 		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
 	}
 
-	var l []Line
-	err = json.Unmarshal(normalizeListPanesOut(o), &l)
+	lines, err := parseLines(o)
 	if err != nil {
-		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
+		return SnapshotData{}, err
 	}
 
-	data := parseTmuxLines(l)
-	return data, nil
-}
-
-func Snapshot() (SnapshotData, error) {
-	o, err := exec.Command("tmux", "list-panes", "-a", "-F", buildListPanesFormat()).Output()
-	if err != nil {
-		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotGetTmuxData, err)
-	}
-
-	var l []Line
-	err = json.Unmarshal(normalizeListPanesOut(o), &l)
-	if err != nil {
-		return SnapshotData{}, fmt.Errorf("%w: %w", ErrCannotParseTmuxLines, err)
-	}
-
-	data := parseTmuxLines(l)
+	data := parseTmuxLines(lines)
 	return data, nil
 }
 
@@ -257,26 +298,22 @@ func parseTmuxLines(lines []Line) SnapshotData {
 	}
 }
 
+// buildListPanesFormat returns the `list-panes -F` format: one row per pane,
+// fields joined by lineSafeSeparator. Field order must match parseLines.
+// pane_current_path stays last so SplitN keeps any stray separator in it.
 func buildListPanesFormat() string {
 	fields :=
 		[]string{
-			`"session_id": "#{session_id}"`,
-			`"session_name": "#{session_name}"`,
-			`"window_id": "#{window_id}"`,
-			`"window_index": #{window_index}`,
-			`"window_name": "#{window_name}"`,
-			`"window_layout": #{window_layout}`,
-			`"pane_id": "#{pane_id}"`,
-			`"pane_index": #{pane_index}`,
-			`"pane_path": "#{pane_current_path}"`,
+			`#{session_id}`,
+			`#{session_name}`,
+			`#{window_id}`,
+			`#{window_index}`,
+			`#{window_name}`,
+			`#{window_layout}`,
+			`#{pane_id}`,
+			`#{pane_index}`,
+			`#{pane_current_path}`,
 		}
 
-	return fmt.Sprintf("{%s},", strings.Join(fields, ","))
-}
-
-func normalizeListPanesOut(output []byte) []byte {
-	strOut := strings.TrimSpace(string(output))
-	cleaned := strings.TrimSuffix(strOut, ",")
-
-	return []byte(fmt.Sprintf("[%s]", cleaned))
+	return strings.Join(fields, lineSafeSeparator)
 }

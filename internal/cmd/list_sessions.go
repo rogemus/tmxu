@@ -65,7 +65,6 @@ func (c *ListSessions) Run(args []string) error {
 	}
 
 	var b strings.Builder
-	fmt.Fprintln(&b, "Session Name")
 	for _, s := range sessions {
 		fmt.Fprintln(&b, s.Name)
 	}

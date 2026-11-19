@@ -1,7 +1,6 @@
 package tmux
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,10 +18,14 @@ var (
 	ErrCannotValidateSession = errors.New("cannot validate session")
 )
 
+// sessionPartsCount is the number of fields in one `list-sessions` row. Keep it
+// equal to the length of `fields` in buildListSessionsFormat.
+const sessionPartsCount = 2
+
 type Session struct {
-	ID   string `json:"-"`
-	Slug string `json:"-"`
-	Name string `json:"session_name"`
+	ID   string
+	Slug string
+	Name string
 }
 
 func NewSession(name string, dir string) error {
@@ -50,21 +53,12 @@ func createSession(name string, dir string) error {
 }
 
 func ListSessions() ([]Session, error) {
-	format := "{" + strings.Join(
-		[]string{
-			`"session_id": "#{session_id}"`,
-			`"session_name": "#{session_name}"`,
-		}, ",",
-	) + "},"
-
-	o, err := exec.Command("tmux", "list-sessions", "-F", format).Output()
+	o, err := exec.Command("tmux", "list-sessions", "-F", buildListSessionsFormat()).Output()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
 	}
 
-	sess := "[" + strings.TrimSuffix(strings.TrimSpace(string(o)), ",") + "]"
-	var sessions []Session
-	err = json.Unmarshal([]byte(sess), &sessions)
+	sessions, err := parseSessionLines(o)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
 	}
@@ -112,8 +106,43 @@ func HasSession(sessionName string) (bool, error) {
 	return false, nil
 }
 
+func parseSessionLines(output []byte) ([]Session, error) {
+	sessions := make([]Session, 0)
+	outputLines := strings.SplitSeq(strings.TrimSuffix(string(output), "\n"), "\n")
+
+	for outputLine := range outputLines {
+		parts := strings.SplitN(outputLine, lineSafeSeparator, sessionPartsCount)
+		if len(parts) != sessionPartsCount {
+			return nil, fmt.Errorf("%w: missing parts %d out of %d", ErrCannotParseLine, len(parts), sessionPartsCount)
+		}
+
+		session := Session{
+			ID:   parts[0],
+			Name: parts[1],
+		}
+
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
+}
+
 func sessionSlug(sessionName string) string {
 	return utils.Slug(sessionName)
+}
+
+// buildListSessionsFormat returns the `list-sessions -F` format: one row per
+// session, fields joined by lineSafeSeparator. Field order must match
+// parseSessionLines. session_name stays last so SplitN keeps any stray
+// separator in it.
+func buildListSessionsFormat() string {
+	fields :=
+		[]string{
+			`#{session_id}`,
+			`#{session_name}`,
+		}
+
+	return strings.Join(fields, lineSafeSeparator)
 }
 
 func buildNewSessionsCmd(sessions []Session) string {

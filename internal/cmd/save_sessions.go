@@ -69,7 +69,7 @@ func (c *SaveSessions) Run(args []string) error {
 		return nil
 	}
 
-	s, err := tmux.Snapshot()
+	s, err := tmux.Snapshot("")
 	if err != nil {
 		return err
 	}

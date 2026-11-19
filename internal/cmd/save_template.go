@@ -78,7 +78,7 @@ func (c *SaveTemplate) Run(args []string) error {
 		return err
 	}
 
-	snapshot, err := tmux.SessionSnapshot(sessionName)
+	snapshot, err := tmux.Snapshot(sessionName)
 	if err != nil {
 		return err
 	}
