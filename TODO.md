@@ -15,7 +15,7 @@ Every item starts with a type and a difficulty tag, for example `1. [BUG] #HARD 
 - Difficulty: `#EASY` is one small change in one place, `#MEDIUM` touches a few files or needs a small design choice, `#HARD` is a design question or a cross-cutting change.
 - Numbers restart in each section and shift when an item is removed.
 
-Sections: [Must Fix](#must-fix) · [Should Fix](#should-fix) · [Nice to have](#nice-to-have) · [Cosmetics](#cosmetics) · [Settled decisions](#settled-decisions)
+Sections: [Must Fix](#must-fix) · [Should Fix](#should-fix) · [Nice to have](#nice-to-have) · [0.9.0 plans](#090-plans) · [Cosmetics](#cosmetics) · [Settled decisions](#settled-decisions)
 
 ## Must Fix
 
@@ -38,7 +38,6 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 14. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 15. [RELEASE] #MEDIUM release on `v*` tag push; git tag is the single version source (`-ldflags -X`, `-trimpath`, `CGO_ENABLED=0`, fallback to `debug.ReadBuildInfo`); delete `version.txt` (`release.yaml` tags from it on every push to main today)
 16. [RELEASE] #MEDIUM workflow build matrix (darwin/linux x amd64/arm64), `sha256sum`, `gh release create`
-17. [DOCS] #MEDIUM README: fix Go "1.16+" (go.mod requires 1.26), document tmux 3.8+, install, completion setup, exit codes, JSON format, an fzf recipe, how it differs from tmux-resurrect, tmuxinator, sesh
 
 ## Should Fix
 
@@ -102,30 +101,36 @@ Not needed for 0.8.0. Pick up when the core is solid.
 7. [FEATURE] #HARD `attach -menu`: implement it (the flag stays; help says "not implemented yet"); drop the `// TODO: implement fzf style menu` comment in `Run` when done
 8. [FEATURE] #HARD menu: `term.IsTerminal` check with a plain-list fallback; handle `MakeRaw` and read errors, EOF, Ctrl-C (byte 3), empty items, titles longer than the pad width; multibyte-safe padding
 9. [FEATURE] #MEDIUM menu: draw on stderr or `/dev/tty`; alternate screen; escapes as constants; restore the terminal on SIGTERM/SIGHUP through context cancellation
-10. [FEATURE] #MEDIUM `tmxu completion zsh|bash|fish` (hand-written, `//go:embed` or generated from the registry); hidden `__complete` for session and template names; tests for it
-11. [DOCS] #MEDIUM man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
-12. [RELEASE] #MEDIUM Homebrew tap or formula, installing the man page and completions (or remove references)
-13. [RELEASE] #EASY CI: `main-check.yaml` already runs build, vet, gofmt and `go test -race ./...`; add staticcheck and a `go mod tidy` diff
-14. [RELEASE] #EASY pin GitHub Actions by SHA; add Dependabot for modules and actions
-15. [DOCS] #EASY `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
-16. [TEST] #MEDIUM golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
-17. [TEST] #MEDIUM optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux
-18. [TEST] #EASY tests that flags reach their fields (`-json`, `-path`, `-menu`): a value receiver or a nil `Flags()` broke this silently before
-19. [TEST] #MEDIUM `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index
-20. [TEST] #EASY `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`, `paths` and `paths -json` (three lines in the order config, templates, sessions; creates nothing)
-21. [TEST] #EASY `Info()` of the six commands that format `DescLong` from `cfg` (`%s` is filled with the real path, no stray `%!s(MISSING)`)
-22. [TEST] #MEDIUM `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
-23. [TEST] #MEDIUM window layout: decoding real tmux text, `isSplitLayout` (single pane, split, empty, invalid), `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
-24. [TEST] #EASY `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
-25. [TEST] #EASY `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
-26. [TEST] #MEDIUM `Cli.Run` adds `\nUsage: ...` to an `ErrUsage` error and keeps `errors.Is(err, cmd.ErrUsage)` true; `Info.Usage()` with and without `Arg`; `new-session` on a duplicate session returns an error that satisfies `errors.Is(err, tmux.ErrSessionExists)` (needs the runner seam)
-27. [TEST] #EASY use `t.Helper`, `t.Cleanup`, `t.Setenv` in tests (`just test` already runs with `-race`)
-28. [FEATURE] #HARD performance (parked): symptom is panes "catching up" (shells still booting, prompts redraw) after restore; baseline first with `time tmxu restore`, and if it is under about 2 s the first two items are probably enough
+10. [DOCS] #MEDIUM man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
+11. [RELEASE] #MEDIUM Homebrew tap or formula, installing the man page and completions (or remove references)
+12. [RELEASE] #EASY CI: `main-check.yaml` already runs build, vet, gofmt and `go test -race ./...`; add staticcheck and a `go mod tidy` diff
+13. [RELEASE] #EASY pin GitHub Actions by SHA; add Dependabot for modules and actions
+14. [DOCS] #EASY `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
+15. [TEST] #MEDIUM golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
+16. [TEST] #MEDIUM optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux
+17. [TEST] #EASY tests that flags reach their fields (`-json`, `-path`, `-menu`): a value receiver or a nil `Flags()` broke this silently before
+18. [TEST] #MEDIUM `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index
+19. [TEST] #EASY `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`, `paths` and `paths -json` (three lines in the order config, templates, sessions; creates nothing)
+20. [TEST] #EASY `Info()` of the six commands that format `DescLong` from `cfg` (`%s` is filled with the real path, no stray `%!s(MISSING)`)
+21. [TEST] #MEDIUM `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
+22. [TEST] #MEDIUM window layout: decoding real tmux text, `isSplitLayout` (single pane, split, empty, invalid), `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
+23. [TEST] #EASY `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
+24. [TEST] #EASY `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling
+25. [TEST] #MEDIUM `Cli.Run` adds `\nUsage: ...` to an `ErrUsage` error and keeps `errors.Is(err, cmd.ErrUsage)` true; `Info.Usage()` with and without `Arg`; `new-session` on a duplicate session returns an error that satisfies `errors.Is(err, tmux.ErrSessionExists)` (needs the runner seam)
+26. [TEST] #EASY use `t.Helper`, `t.Cleanup`, `t.Setenv` in tests (`just test` already runs with `-race`)
+27. [FEATURE] #HARD performance (parked): symptom is panes "catching up" (shells still booting, prompts redraw) after restore; baseline first with `time tmxu restore`, and if it is under about 2 s the first two items are probably enough
     - `new-session -x <cols> -y <rows>` from `term.GetSize`; no flags when stdout is not a TTY
     - Wait for panes to be ready: poll `capture-pane -p -t <pane>` every ~50 ms, ~5 s timeout per session, sessions in parallel; `waiting for shells...` on stderr; warn on timeout; `-no-wait` to skip
     - Batch a window's tmux calls into one invocation (low priority)
     - Staggered start in batches of 3-4 sessions (only if still janky)
     - Parallel snapshot with `sync.WaitGroup`, indexed result slice and a semaphore (measure first); restore stays sequential
+
+## 0.9.0 plans
+
+Planned for the release after 0.8.0. The man page and the Homebrew tap in Nice to have depend on completions.
+
+1. [FEATURE] #MEDIUM `tmxu completion zsh|bash|fish` (hand-written, `//go:embed` or generated from the registry); hidden `__complete` for session and template names; tests for it; a README section on installing completions
+2. [DOCS] #EASY README fzf recipe: `tmxu ls -json | jq -r '.sessions[].session_name' | fzf`, then `tmxu attach`; a shell function and a tmux `bind-key` example; `jq` is optional; `attach -menu` is the built-in alternative
 
 ## Cosmetics
 
