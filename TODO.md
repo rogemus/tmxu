@@ -36,8 +36,12 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 12. [DECISION] #EASY template start directories: `AsTemplate` clears every pane path, so `new-session -templ` windows start in tmux's default directory and `-path` is ignored for them; keep that, apply `-path` to every window and pane, or keep paths in templates
 13. [VERIFY] #EASY `select-layout` in the argv chain on a multi-pane template (`ran_liftup`, `dt_demo_now` window 2): the layout is raw tmux JSON that still carries the old pane ids (`"I":"%5"`) and `"a":true`; check that tmux accepts it for the new panes, and if not strip `I` in `buildSetLayoutCmd`; tmux needs the pane count to match
 14. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
-15. [RELEASE] #MEDIUM release on `v*` tag push; git tag is the single version source (`-ldflags -X`, `-trimpath`, `CGO_ENABLED=0`, fallback to `debug.ReadBuildInfo`); delete `version.txt` (`release.yaml` tags from it on every push to main today)
-16. [RELEASE] #MEDIUM workflow build matrix (darwin/linux x amd64/arm64), `sha256sum`, `gh release create`
+15. [RELEASE] #MEDIUM `release.yaml` publishes on a `v*` tag push (the tag trigger, `-ldflags -X main.version`, the `debug.ReadBuildInfo` fallback and the `version.txt` removal are done; today a tag push only vets, tests and builds, and publishes nothing)
+   - build matrix (darwin/linux x amd64/arm64) with `-trimpath` and `CGO_ENABLED=0`, one archive per target
+   - `sha256sum` into `checksums.txt`, then `gh release create` with `--generate-notes`
+   - let the release job depend on the checks, since a tag can sit on a commit that never ran CI
+   - verify: `go install github.com/rogemus/tmxu@<tag>` prints that tag from `tmxu version`
+   - in `appVersion` (`main.go`), check `version != "dev"` before `ReadBuildInfo`, so a build without build info keeps the ldflag value
 
 ## Should Fix
 
@@ -104,7 +108,7 @@ Not needed for 0.8.0. Pick up when the core is solid.
 10. [DOCS] #MEDIUM man page `man/tmxu.1` (NAME, SYNOPSIS, COMMANDS, OPTIONS, FILES, ENVIRONMENT, EXIT STATUS, EXAMPLES, SEE ALSO)
 11. [RELEASE] #MEDIUM Homebrew tap or formula, installing the man page and completions (or remove references)
 12. [RELEASE] #EASY CI: `main-check.yaml` already runs build, vet, gofmt and `go test -race ./...`; add staticcheck and a `go mod tidy` diff
-13. [RELEASE] #EASY pin GitHub Actions by SHA; add Dependabot for modules and actions
+13. [RELEASE] #EASY add Dependabot for modules and actions (it keeps the pinned action SHAs in both workflows current)
 14. [DOCS] #EASY `CONTRIBUTING.md`, `CHANGELOG.md`, `.editorconfig`
 15. [TEST] #MEDIUM golden files in `testdata/` with an `-update` flag (saved JSON, help output, `ls` table)
 16. [TEST] #MEDIUM optional integration test on a private socket (`tmux -L tmxu-test-<name>`), skipped without tmux

@@ -3,20 +3,38 @@
 package main
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/rogemus/tmxu/internal/cli"
 	"github.com/rogemus/tmxu/internal/cmd"
 	"github.com/rogemus/tmxu/internal/config"
 )
 
-//go:embed version.txt
-var version string
+var version = "dev"
+
+func appVersion() string {
+	if version != "dev" {
+		return version
+	}
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	if info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+
+	return "dev"
+}
 
 func main() {
+	version = appVersion()
+
 	ios := cmd.IOs{
 		Out: os.Stdout,
 		In:  os.Stdin,
