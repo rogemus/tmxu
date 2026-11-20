@@ -119,11 +119,7 @@ func (c *NewSession) newSessionFromTempl(name string) error {
 		return err
 	}
 
-	snapshot, err = tmux.DesanitizeTemplSnapshot(snapshot, name)
-	if err != nil {
-		return err
-	}
-	err = tmux.NewSessionFromTempl(name, snapshot, c.path)
+	err = snapshot.RestoreFromTempl(name, c.path)
 	if err != nil {
 		return err
 	}

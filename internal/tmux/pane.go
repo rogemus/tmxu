@@ -11,18 +11,30 @@ type PaneData struct {
 	Path  string `json:"pane_path"`
 }
 
-func buildNewPanesCmd(window Window, panes []Pane) []string {
+// AsTemplate clears the start directory, so a template pane starts in tmux's
+// default directory.
+func (d *PaneData) AsTemplate() *PaneData {
+	d.Path = ""
+	return d
+}
+
+func paneTitle(windowName string, index int) string {
+	return fmt.Sprintf("%s_%d", windowName, index)
+}
+
+func buildNewPanesCmd(winTarget, winName string, panes []PaneData) []string {
 	argv := make([]string, 0)
+
 	for _, p := range panes {
-		argv = appendCmd(argv, buildSplitPaneCmd(window, p))
-		argv = appendCmd(argv, buildRenamePaneCmd(window, p))
+		argv = appendCmd(argv, buildSplitPaneCmd(winTarget, p))
+		argv = appendCmd(argv, buildRenamePaneCmd(winTarget, winName, p))
 	}
 
 	return argv
 }
 
-func buildSplitPaneCmd(window Window, pane Pane) []string {
-	cmd := []string{"split-window", "-h", "-t", window.TargetIndex}
+func buildSplitPaneCmd(winTarget string, pane PaneData) []string {
+	cmd := []string{"split-window", "-h", "-t", winTarget}
 
 	if pane.Path != "" {
 		cmd = append(cmd, "-c", pane.Path)
@@ -31,9 +43,9 @@ func buildSplitPaneCmd(window Window, pane Pane) []string {
 	return cmd
 }
 
-func buildRenamePaneCmd(window Window, pane Pane) []string {
-	paneTarget := fmt.Sprintf("%s.%d", window.TargetIndex, pane.Index)
-	title := utils.Escape(pane.Title)
+func buildRenamePaneCmd(winTarget, winName string, pane PaneData) []string {
+	paneTarget := fmt.Sprintf("%s.%d", winTarget, pane.Index)
+	title := utils.Escape(paneTitle(winName, pane.Index))
 
 	return []string{"select-pane", "-t", paneTarget, "-T", title}
 }

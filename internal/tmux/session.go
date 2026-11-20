@@ -17,6 +17,7 @@ var (
 	ErrSessionExists         = errors.New("session already exists")
 	ErrNoSession             = errors.New("session not found")
 	ErrCannotValidateSession = errors.New("cannot validate session")
+	ErrInvalidTemplate       = errors.New("invalid template")
 )
 
 // sessionPartsCount is the number of fields in one `list-sessions` row. Keep it
@@ -28,19 +29,23 @@ type SessionData struct {
 	Windows []WindowData `json:"session_windows,omitempty"`
 }
 
-func NewSession(name string, dir string) error {
-	return createSession(name, dir)
-}
+// AsTemplate clears the session name and every pane path, so the session can
+// be saved as a template and reused under any name.
+func (d SessionData) AsTemplate() SessionData {
+	d.Name = ""
 
-func NewSessionFromTempl(name string, snapshot SnapshotData, dir string) error {
-	err := createSession(name, dir)
-	if err != nil {
-		return err
+	for wi := range d.Windows {
+		w := &d.Windows[wi]
+		for pi := range w.Panes {
+			w.Panes[pi].AsTemplate()
+		}
 	}
 
-	sSlug := sessionSlug(name)
-	windows, _ := snapshot.Windows[sSlug]
-	return CreateWindows(name, windows, snapshot.Panes)
+	return d
+}
+
+func NewSession(name string, dir string) error {
+	return createSession(name, dir)
 }
 
 func createSession(name string, dir string) error {
@@ -127,10 +132,6 @@ func parseSessionLines(output []byte) ([]SessionData, error) {
 	}
 
 	return sessions, nil
-}
-
-func sessionSlug(sessionName string) string {
-	return utils.Slug(sessionName)
 }
 
 // buildListSessionsFormat returns the `list-sessions -F` format: one row per

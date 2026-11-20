@@ -32,6 +32,6 @@ func isSplitLayout(raw json.RawMessage) bool {
 	return len(wl.Root.Children) > 0
 }
 
-func buildSetLayoutCmd(window Window) []string {
-	return []string{"select-layout", "-t", window.TargetIndex, string(window.WindowLayout)}
+func buildSetLayoutCmd(winTarget string, winLayout json.RawMessage) []string {
+	return []string{"select-layout", "-t", winTarget, string(winLayout)}
 }

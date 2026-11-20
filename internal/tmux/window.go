@@ -22,12 +22,12 @@ type WindowData struct {
 	Panes  []PaneData      `json:"window_panes,omitempty"`
 }
 
-func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane) error {
+func CreateWindows(sessionName string, windows []WindowData) error {
 	if len(windows) == 0 {
 		return nil
 	}
 
-	argv, err := buildNewWindowsCmd(sessionName, windows, panes)
+	argv, err := buildNewWindowsCmd(sessionName, windows)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCreateWindows, err)
 	}
@@ -40,12 +40,8 @@ func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane
 	return nil
 }
 
-func windowSlug(window Window, sessionName string) string {
-	return utils.Slug(fmt.Sprintf("%s_%s_%d", sessionName, window.Name, window.Index))
-}
-
-func windowTarget(window Window, sessionName string) string {
-	return fmt.Sprintf("=%s:%d", sessionName, window.Index)
+func windowTarget(sessionName string, winIndex int) string {
+	return fmt.Sprintf("=%s:%d", sessionName, winIndex)
 }
 
 // appendCmd adds cmd to argv, joined by the ";" argument tmux treats as a command separator.
@@ -57,36 +53,38 @@ func appendCmd(argv []string, cmd []string) []string {
 	return append(argv, cmd...)
 }
 
-func buildNewWindowsCmd(sessionName string, windows []Window, panesMap map[string][]Pane) ([]string, error) {
+func buildNewWindowsCmd(sessionName string, windows []WindowData) ([]string, error) {
 	argv := make([]string, 0)
 
 	for _, w := range windows {
-		slug := windowSlug(w, sessionName)
-		panes, ok := panesMap[slug]
-		if !ok || len(panes) == 0 {
-			return nil, fmt.Errorf("%w: %s", ErrWindowWithoutPanes, slug)
+		panes := w.Panes
+
+		if len(panes) == 0 {
+			return nil, fmt.Errorf("%w: %s", ErrWindowWithoutPanes, w.Name)
 		}
 
 		firstPane := panes[0]
 		restOfPanes := panes[1:]
-		argv = appendCmd(argv, buildNewWindowCmd(w, firstPane))
-		argv = appendCmd(argv, buildRenamePaneCmd(w, firstPane))
+		winTarget := windowTarget(sessionName, w.Index)
+
+		argv = appendCmd(argv, buildNewWindowCmd(winTarget, w.Name, firstPane))
+		argv = appendCmd(argv, buildRenamePaneCmd(winTarget, w.Name, firstPane))
 
 		if len(restOfPanes) > 0 {
-			argv = appendCmd(argv, buildNewPanesCmd(w, restOfPanes))
+			argv = appendCmd(argv, buildNewPanesCmd(winTarget, w.Name, restOfPanes))
 		}
 
-		if len(w.WindowLayout) > 0 {
-			argv = appendCmd(argv, buildSetLayoutCmd(w))
+		if len(w.Layout) > 0 {
+			argv = appendCmd(argv, buildSetLayoutCmd(winTarget, w.Layout))
 		}
 	}
 
 	return argv, nil
 }
 
-func buildNewWindowCmd(window Window, pane Pane) []string {
-	name := utils.Escape(window.Name)
-	cmd := []string{"new-window", "-k", "-d", "-t", window.TargetIndex, "-n", name}
+func buildNewWindowCmd(winTarget, winName string, pane PaneData) []string {
+	name := utils.Escape(winName)
+	cmd := []string{"new-window", "-k", "-d", "-t", winTarget, "-n", name}
 
 	if pane.Path != "" {
 		cmd = append(cmd, "-c", pane.Path)

@@ -19,31 +19,29 @@ func (d SnapshotData) JSON() ([]byte, error) {
 func (d SnapshotData) String() string {
 	var b strings.Builder
 
-	for i, sid := range d.sessionIDs() {
+	sessions := slices.Clone(d.Sessions)
+	slices.SortFunc(sessions, func(x, y SessionData) int { return cmp.Compare(x.Name, y.Name) })
+
+	for i, s := range sessions {
 		if i > 0 {
 			b.WriteString("\n")
 		}
 
-		fmt.Fprintln(&b, d.Sessions[sid].Name)
-		d.writeWindows(&b, sid)
+		fmt.Fprintln(&b, s.Name)
+		writeWindows(&b, s)
 	}
 
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func (d SnapshotData) writeWindows(b *strings.Builder, sid string) {
-	windows := slices.Clone(d.Windows[sid])
-	slices.SortFunc(windows, func(x, y Window) int { return cmp.Compare(x.Index, y.Index) })
-
-	// Window.Slug is not persisted, so a loaded snapshot has it empty;
-	// derive the panes key the same way the snapshot keys were built.
-	sessionName := d.Sessions[sid].Name
-	panesOf := func(w Window) []Pane { return d.Panes[windowSlug(w, sessionName)] }
+func writeWindows(b *strings.Builder, s SessionData) {
+	windows := slices.Clone(s.Windows)
+	slices.SortFunc(windows, func(x, y WindowData) int { return cmp.Compare(x.Index, y.Index) })
 
 	nameWidth := 0
 	for _, w := range windows {
-		for _, p := range panesOf(w) {
-			nameWidth = max(nameWidth, utf8.RuneCountInString(p.Title))
+		for _, p := range w.Panes {
+			nameWidth = max(nameWidth, utf8.RuneCountInString(paneTitle(w.Name, p.Index)))
 		}
 	}
 
@@ -55,23 +53,22 @@ func (d SnapshotData) writeWindows(b *strings.Builder, sid string) {
 
 		fmt.Fprintf(b, "%s%s\n", branch, w.Name)
 
-		panes := panesOf(w)
-		for pi, p := range panes {
+		for pi, p := range w.Panes {
 			paneBranch := "├─ "
-			if pi == len(panes)-1 {
+			if pi == len(w.Panes)-1 {
 				paneBranch = "└─ "
 			}
 
-			writePane(b, rail+paneBranch, p, nameWidth)
+			writePane(b, rail+paneBranch, paneTitle(w.Name, p.Index), p.Path, nameWidth)
 		}
 	}
 }
 
-func writePane(b *strings.Builder, prefix string, p Pane, nameWidth int) {
-	if p.Path == "" {
-		fmt.Fprintf(b, "%s%s\n", prefix, p.Title)
+func writePane(b *strings.Builder, prefix, title, path string, nameWidth int) {
+	if path == "" {
+		fmt.Fprintf(b, "%s%s\n", prefix, title)
 		return
 	}
 
-	fmt.Fprintf(b, "%s%-*s  %s\n", prefix, nameWidth, p.Title, p.Path)
+	fmt.Fprintf(b, "%s%-*s  %s\n", prefix, nameWidth, title, path)
 }

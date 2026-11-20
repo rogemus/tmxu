@@ -76,10 +76,11 @@ func (c *ShowTemplate) Run(args []string) error {
 		return err
 	}
 
-	snapshot, err = tmux.DesanitizeTemplSnapshot(snapshot, templateName)
+	_, err = snapshot.Template()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %q", err, templateName)
 	}
 
+	snapshot.Sessions[0].Name = templateName
 	return dumpSnapshot(c.json, snapshot, c.ios.Out)
 }
