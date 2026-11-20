@@ -6,10 +6,8 @@ import (
 	"github.com/rogemus/tmxu/internal/utils"
 )
 
-type Pane struct {
-	ID    string `json:"-"`
+type PaneData struct {
 	Index int    `json:"pane_index"`
-	Title string `json:"pane_title"`
 	Path  string `json:"pane_path"`
 }
 

@@ -61,7 +61,7 @@ func (c *ListSessions) Run(args []string) error {
 	}
 
 	if c.json {
-		return printJSON(c.ios.Out, map[string][]tmux.Session{"sessions": sessions})
+		return printJSON(c.ios.Out, map[string][]tmux.SessionData{"sessions": sessions})
 	}
 
 	var b strings.Builder

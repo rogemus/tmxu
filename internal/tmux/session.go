@@ -21,12 +21,11 @@ var (
 
 // sessionPartsCount is the number of fields in one `list-sessions` row. Keep it
 // equal to the length of `fields` in buildListSessionsFormat.
-const sessionPartsCount = 2
+const sessionPartsCount = 1
 
-type Session struct {
-	ID   string
-	Slug string
-	Name string
+type SessionData struct {
+	Name    string       `json:"session_name"`
+	Windows []WindowData `json:"session_windows,omitempty"`
 }
 
 func NewSession(name string, dir string) error {
@@ -53,7 +52,7 @@ func createSession(name string, dir string) error {
 	return nil
 }
 
-func ListSessions() ([]Session, error) {
+func ListSessions() ([]SessionData, error) {
 	o, err := exec.Command("tmux", "list-sessions", "-F", buildListSessionsFormat()).Output()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
@@ -80,7 +79,7 @@ func AttachToSession(name string, in io.Reader, out, errw io.Writer) error {
 	return nil
 }
 
-func CreateSessions(sessions []Session) error {
+func CreateSessions(sessions []SessionData) error {
 	if len(sessions) == 0 {
 		return nil
 	}
@@ -110,8 +109,8 @@ func HasSession(sessionName string) (bool, error) {
 	return true, nil
 }
 
-func parseSessionLines(output []byte) ([]Session, error) {
-	sessions := make([]Session, 0)
+func parseSessionLines(output []byte) ([]SessionData, error) {
+	sessions := make([]SessionData, 0)
 	outputLines := strings.SplitSeq(strings.TrimSuffix(string(output), "\n"), "\n")
 
 	for outputLine := range outputLines {
@@ -120,9 +119,8 @@ func parseSessionLines(output []byte) ([]Session, error) {
 			return nil, fmt.Errorf("%w: missing parts %d out of %d", ErrCannotParseLine, len(parts), sessionPartsCount)
 		}
 
-		session := Session{
-			ID:   parts[0],
-			Name: parts[1],
+		session := SessionData{
+			Name: parts[0],
 		}
 
 		sessions = append(sessions, session)
@@ -142,14 +140,13 @@ func sessionSlug(sessionName string) string {
 func buildListSessionsFormat() string {
 	fields :=
 		[]string{
-			`#{session_id}`,
 			`#{session_name}`,
 		}
 
 	return strings.Join(fields, lineSafeSeparator)
 }
 
-func buildNewSessionsCmd(sessions []Session) string {
+func buildNewSessionsCmd(sessions []SessionData) string {
 	cmds := make([]string, 0)
 
 	for _, s := range sessions {

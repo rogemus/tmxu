@@ -7,12 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"slices"
-	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var (
@@ -35,16 +31,13 @@ const lineSafeSeparator = "\x1f"
 
 // linePartsCount is the number of fields in one row. Keep it equal to the
 // length of `fields` in buildListPanesFormat.
-const linePartsCount = 9
+const linePartsCount = 6
 
 type Line struct {
-	SessionID    string
 	SessionName  string
-	WindowID     string
 	WindowIndex  int
 	WindowName   string
 	WindowLayout json.RawMessage
-	PaneID       string
 	PaneIndex    int
 	PanePath     string
 }
@@ -59,25 +52,22 @@ func parseLines(output []byte) ([]Line, error) {
 			return nil, fmt.Errorf("%w: missing parts %d out of %d", ErrCannotParseLine, len(parts), linePartsCount)
 		}
 
-		windowIndex, err := strconv.Atoi(parts[3])
+		windowIndex, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return nil, fmt.Errorf("%w: %q: %w", ErrCannotParseLine, outputLine, err)
 		}
-		paneIndex, err := strconv.Atoi(parts[7])
+		paneIndex, err := strconv.Atoi(parts[4])
 		if err != nil {
 			return nil, fmt.Errorf("%w: %q: %w", ErrCannotParseLine, outputLine, err)
 		}
 
 		line := Line{
-			SessionID:    parts[0],
-			SessionName:  parts[1],
-			WindowID:     parts[2],
+			SessionName:  parts[0],
 			WindowIndex:  windowIndex,
-			WindowName:   parts[4],
-			WindowLayout: json.RawMessage(parts[5]),
-			PaneID:       parts[6],
+			WindowName:   parts[2],
+			WindowLayout: json.RawMessage(parts[3]),
 			PaneIndex:    paneIndex,
-			PanePath:     parts[8],
+			PanePath:     parts[5],
 		}
 
 		lines = append(lines, line)
@@ -86,58 +76,9 @@ func parseLines(output []byte) ([]Line, error) {
 	return lines, nil
 }
 
-func (l Line) Session() Session {
-	return Session{
-		ID:   l.SessionID,
-		Slug: utils.Slug(l.SessionName),
-		Name: l.SessionName,
-	}
-}
-
-func (l Line) Window() Window {
-	slug := utils.Slug(fmt.Sprintf("%s_%s_%d", l.SessionName, l.WindowName, l.WindowIndex))
-	target := fmt.Sprintf("=%s:%d", l.SessionName, l.WindowIndex)
-
-	w := Window{
-		ID:          l.WindowID,
-		Slug:        slug,
-		Name:        l.WindowName,
-		Index:       l.WindowIndex,
-		TargetIndex: target,
-	}
-
-	// A single pane fills the window, so only split windows keep a layout.
-	if isSplitLayout(l.WindowLayout) {
-		w.WindowLayout = l.WindowLayout
-	}
-
-	return w
-}
-
-func (l Line) Pane() Pane {
-	return Pane{
-		ID:    l.PaneID,
-		Index: l.PaneIndex,
-		Path:  l.PanePath,
-		Title: fmt.Sprintf("%s_%d", l.WindowName, l.PaneIndex),
-	}
-}
-
 type SnapshotData struct {
-	Version  int                 `json:"version"`
-	Sessions map[string]Session  `json:"sessions"`
-	Windows  map[string][]Window `json:"windows"`
-	Panes    map[string][]Pane   `json:"panes"`
-}
-
-func (d SnapshotData) sessionIDs() []string {
-	ids := make([]string, 0, len(d.Sessions))
-	for id := range d.Sessions {
-		ids = append(ids, id)
-	}
-
-	sort.Strings(ids)
-	return ids
+	Version  int           `json:"version"`
+	Sessions []SessionData `json:"sessions"`
 }
 
 // Snapshot reads the live tmux state. An empty sessionName snapshots every
@@ -280,31 +221,52 @@ func SanitizeSnapshot(data SnapshotData, sessionName string) (SnapshotData, erro
 }
 
 func parseTmuxLines(lines []Line) SnapshotData {
-	sessions := make(map[string]Session)
-	windows := make(map[string][]Window)
-	panes := make(map[string][]Pane)
+	type winKey struct{ ses, index int }
+	sessions := make([]SessionData, 0)
+
+	sessionPos := map[string]int{}
+	windowPos := map[winKey]int{}
 
 	for _, l := range lines {
-		s := l.Session()
-		if existingS, ok := sessions[s.Slug]; ok {
-			s = existingS
+		si, ok := sessionPos[l.SessionName]
+		if !ok {
+			sessions = append(sessions, SessionData{
+				Name:    l.SessionName,
+				Windows: make([]WindowData, 0),
+			})
+			si = len(sessions) - 1
+			sessionPos[l.SessionName] = si
 		}
-		sessions[s.Slug] = s
 
-		w := l.Window()
-		if !slices.ContainsFunc(windows[s.Slug], func(win Window) bool { return win.ID == w.ID }) {
-			windows[s.Slug] = append(windows[s.Slug], w)
+		wKey := winKey{si, l.WindowIndex}
+		wi, ok := windowPos[wKey]
+		if !ok {
+			w := WindowData{
+				Name:  l.WindowName,
+				Index: l.WindowIndex,
+				Panes: make([]PaneData, 0),
+			}
+
+			if isSplitLayout(l.WindowLayout) {
+				w.Layout = l.WindowLayout
+			}
+
+			sessions[si].Windows = append(sessions[si].Windows, w)
+			wi = windowPos[wKey]
+			windowPos[wKey] = wi
 		}
 
-		p := l.Pane()
-		panes[w.Slug] = append(panes[w.Slug], p)
+		p := PaneData{
+			Path:  l.PanePath,
+			Index: l.PaneIndex,
+		}
+
+		sessions[si].Windows[wi].Panes = append(sessions[si].Windows[wi].Panes, p)
 	}
 
 	return SnapshotData{
 		Version:  SchemaVersion,
 		Sessions: sessions,
-		Windows:  windows,
-		Panes:    panes,
 	}
 }
 
@@ -314,13 +276,10 @@ func parseTmuxLines(lines []Line) SnapshotData {
 func buildListPanesFormat() string {
 	fields :=
 		[]string{
-			`#{session_id}`,
 			`#{session_name}`,
-			`#{window_id}`,
 			`#{window_index}`,
 			`#{window_name}`,
 			`#{window_layout}`,
-			`#{pane_id}`,
 			`#{pane_index}`,
 			`#{pane_current_path}`,
 		}

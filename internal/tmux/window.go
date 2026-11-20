@@ -15,13 +15,11 @@ var (
 	ErrWindowWithoutPanes  = errors.New("window has no panes")
 )
 
-type Window struct {
-	ID           string          `json:"-"`
-	Slug         string          `json:"-"`
-	Index        int             `json:"window_index"`
-	Name         string          `json:"window_name"`
-	WindowLayout json.RawMessage `json:"window_layout,omitempty"`
-	TargetIndex  string          `json:"-"`
+type WindowData struct {
+	Name   string          `json:"window_name"`
+	Index  int             `json:"window_index"`
+	Layout json.RawMessage `json:"window_layout,omitempty"`
+	Panes  []PaneData      `json:"window_panes,omitempty"`
 }
 
 func CreateWindows(sessionName string, windows []Window, panes map[string][]Pane) error {
