@@ -190,7 +190,7 @@ func parseTmuxLines(lines []Line) SnapshotData {
 			}
 
 			sessions[si].Windows = append(sessions[si].Windows, w)
-			wi = windowPos[wKey]
+			wi = len(sessions[si].Windows) - 1
 			windowPos[wKey] = wi
 		}
 
