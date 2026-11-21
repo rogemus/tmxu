@@ -77,13 +77,14 @@ Flags go **before** the session or template name: `tmxu new -path /tmp/app name`
 | `show-template <name>`    | `show`, `sht` | Show a template as a tree            |
 | `delete-template <name>`  | `dt`          | Delete a template (no confirmation)  |
 
-| Command          | Flag           | Description                               |
-| ---------------- | -------------- | ----------------------------------------- |
-| `list-templates` | `-json`        | Print JSON                                |
-| `save-template`  | `-name <name>` | Template name (default: the session name) |
-| `show-template`  | `-json`        | Print the saved template JSON             |
+| Command          | Flag           | Description                                              |
+| ---------------- | -------------- | -------------------------------------------------------- |
+| `list-templates` | `-json`        | Print JSON                                               |
+| `save-template`  | `-name <name>` | Template name (default: the session name)                |
+| `save-template`  | `-force`       | Replace a template that already exists (default: refuse) |
+| `show-template`  | `-json`        | Print the saved template JSON                            |
 
-A template keeps windows, panes and layouts but no session name and no pane paths, so it can be reused under any name. Template names are turned into file names (`My Proj` and `my-proj` are the same file).
+A template keeps windows, panes and layouts but no session name and no pane paths, so it can be reused under any name. `save-template` refuses to replace an existing template unless you pass `-force`. Template names are turned into file names (`My Proj` and `my-proj` are the same file).
 
 ### Utility
 

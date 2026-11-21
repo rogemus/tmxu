@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -14,14 +15,16 @@ var _ Cmd = (*SaveTemplate)(nil)
 
 var (
 	ErrCannotParseSaveTemplateCmdFlags = fmt.Errorf("%w: cannot parse save template cmd flags", ErrUsage)
+	ErrTemplateExists                  = errors.New("template already exists")
 )
 
 type SaveTemplate struct {
 	ios IOs
 	cfg config.Config
 
-	fs   *flag.FlagSet
-	name string
+	fs    *flag.FlagSet
+	name  string
+	force bool
 }
 
 func NewSaveTemplate(ios IOs, cfg config.Config) *SaveTemplate {
@@ -32,6 +35,7 @@ func NewSaveTemplate(ios IOs, cfg config.Config) *SaveTemplate {
 	}
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.StringVar(&cmd.name, "name", "", "Name of the template. Defaults to session name")
+	cmd.fs.BoolVar(&cmd.force, "force", false, "override existing template while saving")
 	return cmd
 }
 
@@ -40,11 +44,12 @@ var saveTemplateInfo = Info{
 	Aliases:   []string{"st"},
 	Arg:       "<sessionName>",
 	DescShort: "Save session as template",
-	DescLong:  "Saves a running tmux session as a reusable template in %s. The session name and every pane path are replaced with placeholders, so a template can be reused under any name. -name sets the template name; it defaults to the session name. An existing template with the same name is overwritten. Flags go before the session name.",
+	DescLong:  "Saves a running tmux session as a reusable template in %s. The session name and every pane path are replaced with placeholders, so a template can be reused under any name. -name sets the template name; it defaults to the session name. An existing template with the same name is refused unless -force is given. Flags go before the session name.",
 	Examples: []string{
 		"tmxu st sessionName",
 		"tmxu save-template sessionName",
 		"tmxu save-template -name templateName sessionName",
+		"tmxu save-template -force -name templateName sessionName",
 	},
 }
 
@@ -76,6 +81,15 @@ func (c *SaveTemplate) Run(args []string) error {
 	snapshot, err := tmux.Snapshot(sessionName)
 	if err != nil {
 		return err
+	}
+
+	hasTemplate, err := c.cfg.HasTemplate(templateName)
+	if err != nil {
+		return err
+	}
+
+	if hasTemplate && !c.force {
+		return fmt.Errorf("%w: %q (use -force to overwrite)", ErrTemplateExists, templateName)
 	}
 
 	snapshot = snapshot.AsTemplate()

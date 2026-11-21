@@ -32,16 +32,15 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 8. [FEATURE] #HARD decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
 9. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
 10. [DECISION] #EASY existing sessions on restore: skip, refuse, or force
-11. [DECISION] #EASY `save-template` when the template exists: refuse, overwrite, or require `-f` (it truncates silently today)
-12. [DECISION] #EASY template start directories: `AsTemplate` clears every pane path, so `new-session -templ` windows start in tmux's default directory and `-path` is ignored for them; keep that, apply `-path` to every window and pane, or keep paths in templates
-13. [VERIFY] #EASY `select-layout` in the argv chain on a multi-pane template (`ran_liftup`, `dt_demo_now` window 2): the layout is raw tmux JSON that still carries the old pane ids (`"I":"%5"`) and `"a":true`; check that tmux accepts it for the new panes, and if not strip `I` in `buildSetLayoutCmd`; tmux needs the pane count to match
-14. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
-15. [RELEASE] #MEDIUM `release.yaml` publishes on a `v*` tag push (the tag trigger, `-ldflags -X main.version`, the `debug.ReadBuildInfo` fallback and the `version.txt` removal are done; today a tag push only vets, tests and builds, and publishes nothing)
-   - build matrix (darwin/linux x amd64/arm64) with `-trimpath` and `CGO_ENABLED=0`, one archive per target
-   - `sha256sum` into `checksums.txt`, then `gh release create` with `--generate-notes`
-   - let the release job depend on the checks, since a tag can sit on a commit that never ran CI
-   - verify: `go install github.com/rogemus/tmxu@<tag>` prints that tag from `tmxu version`
-   - in `appVersion` (`main.go`), check `version != "dev"` before `ReadBuildInfo`, so a build without build info keeps the ldflag value
+11. [DECISION] #EASY template start directories: `AsTemplate` clears every pane path, so `new-session -templ` windows start in tmux's default directory and `-path` is ignored for them; keep that, apply `-path` to every window and pane, or keep paths in templates
+12. [VERIFY] #EASY `select-layout` in the argv chain on a multi-pane template (`ran_liftup`, `dt_demo_now` window 2): the layout is raw tmux JSON that still carries the old pane ids (`"I":"%5"`) and `"a":true`; check that tmux accepts it for the new panes, and if not strip `I` in `buildSetLayoutCmd`; tmux needs the pane count to match
+13. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
+14. [VERIFY] #EASY first run of `release.yaml` (written, never run on GitHub: `check` then a 4-target `build` matrix then `release`; archives `tmxu_<version without v>_<os>_<arch>.tar.gz`, `checksums.txt`, `gh release create --generate-notes`; every `v*` tag makes a normal release, there is no prerelease flag)
+   - push a throwaway tag (`v0.0.1-rc1`): four green builds and a release with four archives plus `checksums.txt`
+   - download one archive: `sha256sum -c checksums.txt` passes, `tar -tzvf` shows `-rwxr-xr-x` on `tmxu`, `tmxu version` prints the tag
+   - `go install github.com/rogemus/tmxu@<tag>` and `tmxu version` print the tag (the `debug.ReadBuildInfo` path)
+   - clean up: `gh release delete <tag> --cleanup-tag`
+   - run `actionlint` on both workflows once (not installed here)
 
 ## Should Fix
 
