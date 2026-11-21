@@ -11,15 +11,16 @@ Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `versi
 Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Port `restore` to `internal/` (the old `cli/` package is already deleted). `attach -menu` is not ported yet: it was broken in the previous version. The flag stays registered (and `restore -force`) and will be implemented.
 
 Every item starts with a type and a difficulty tag, for example `1. [BUG] #HARD ...`.
+
 - Type: `[BUG]`, `[FEATURE]`, `[REFACTOR]`, `[TEST]`, `[DECISION]`, `[VERIFY]`, `[RELEASE]`, `[DOCS]`, `[COSMETIC]`.
 - Difficulty: `#EASY` is one small change in one place, `#MEDIUM` touches a few files or needs a small design choice, `#HARD` is a design question or a cross-cutting change.
 - Numbers restart in each section and shift when an item is removed.
 
-Sections: [Must Fix](#must-fix) · [Should Fix](#should-fix) · [Nice to have](#nice-to-have) · [0.9.0 plans](#090-plans) · [Cosmetics](#cosmetics) · [Settled decisions](#settled-decisions)
+Sections: [Must Fix](#must-fix) · [Should Fix](#should-fix) · [Verify](#verify) · [Nice to have](#nice-to-have) · [0.9.0 plans](#090-plans) · [Cosmetics](#cosmetics) · [Settled decisions](#settled-decisions)
 
 ## Must Fix
 
-Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, decisions the code is waiting on, and release mechanics.
+Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, decisions the code is waiting on, and release mechanics. The checks that need a real run, including the ones that block the release, are in [Verify](#verify).
 
 1. [BUG] #HARD no rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session`; applies to `new-session -templ` and to restore (roll back sessions created in this run when a later step fails)
 2. [BUG] #MEDIUM `CreateSessions` and `buildNewSessionsCmd` (`session.go`) have no callers and still pass one joined string to `exec.Command`; rewrite on argv for restore (or delete them)
@@ -32,17 +33,7 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 8. [FEATURE] #HARD decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
 9. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
 10. [DECISION] #EASY existing sessions on restore: skip, refuse, or force
-11. [VERIFY] #EASY `new-session -templ -path` (decided: `-path` is the start directory of every pane, applied by `withPaneDirPath` in `RestoreFromTempl`; without `-path` panes start in the directory `tmxu` runs from, because a `new-window` without `-c` uses the client's directory, not the session's; written, not run yet)
-   - `tmxu new -templ <t> -path /tmp x`, then `tmux list-panes -s -t =x -F '#{pane_current_path}'`: every pane under `/tmp` (macOS prints `/private/tmp`)
-   - `tmxu new -templ <t> y` without `-path`: panes start in the current directory
-12. [VERIFY] #EASY `select-layout` in the argv chain on a multi-pane template (`ran_liftup`, `dt_demo_now` window 2): the layout is raw tmux JSON that still carries the old pane ids (`"I":"%5"`) and `"a":true`; check that tmux accepts it for the new panes, and if not strip `I` in `buildSetLayoutCmd`; tmux needs the pane count to match
-13. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
-14. [VERIFY] #EASY first run of `release.yaml` (written, never run on GitHub: `check` then a 4-target `build` matrix then `release`; archives `tmxu_<version without v>_<os>_<arch>.tar.gz`, `checksums.txt`, `gh release create --generate-notes`; every `v*` tag makes a normal release, there is no prerelease flag)
-   - push a throwaway tag (`v0.0.1-rc1`): four green builds and a release with four archives plus `checksums.txt`
-   - download one archive: `sha256sum -c checksums.txt` passes, `tar -tzvf` shows `-rwxr-xr-x` on `tmxu`, `tmxu version` prints the tag
-   - `go install github.com/rogemus/tmxu@<tag>` and `tmxu version` print the tag (the `debug.ReadBuildInfo` path)
-   - clean up: `gh release delete <tag> --cleanup-tag`
-   - run `actionlint` on both workflows once (not installed here)
+11. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 
 ## Should Fix
 
@@ -84,13 +75,28 @@ Not blocking, but restore is risky or unpleasant without them. Roughly in the or
 34. [TEST] #MEDIUM template names through the commands: `new-session -templ "my proj"` finds `my-proj.json` (`HasTemplate` and `ShowTemplate` agree), `save-template` and `delete-template` use the same file, a name that slugs to `""` is rejected
 35. [TEST] #MEDIUM missing config dir (`t.TempDir()` plus `t.Setenv("XDG_CONFIG_HOME", ...)`): `config.New` and the read-only calls (`ListTemplates` returns an empty list, `HasTemplate` returns `(false, nil)`, `ShowTemplate` and `DeleteTemplate` return an error) create no directory; `SaveSessions` and `SaveTemplate` create it
 36. [TEST] #MEDIUM config store round trip, missing file, bad JSON, traversal name (rejected by `os.Root`), non-`.json` file, delete missing, using `t.TempDir()`; `Config.SaveSessions` two consecutive calls (dir missing, then dir exists), read the file back
-37. [VERIFY] #EASY whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
-38. [VERIFY] #EASY a window name or pane title ending in `;`: tmux treats a trailing `;` on an argv word as a command separator, so it may need `\;` even in argv form
-39. [VERIFY] #EASY the `\x1f` field separator (`lineSafeSeparator`): check on a throwaway server that tmux prints it raw (`list-sessions -F $'#{session_name}\x1f#{session_id}' | od -c`) and what it does to a `\n` or control character in a session or window name; `parseLines` assumes neither reaches the output
-40. [VERIFY] #MEDIUM on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
-    - Verified (default server, not a private socket): `new-session -s` is format-expanded (`-s 'a##b'` creates `a#b`); `-t` is not (`has-session -t '=a#b'` finds it, `'=a##b'` does not)
-    - Verified: duplicate `new-session` exits 1 with `duplicate session: NAME` and stops a chain; `new-session -A -d` on an existing session fails without a terminal; `-c` with a missing directory exits 0 and falls back to `$HOME`
-    - Verified: tmux 3.8 prints `#{window_layout}` as JSON; it can contain keys the structs do not model (`"l":0`), so the raw text is what gets sent back to `select-layout`
+
+## Verify
+
+Checks that need a real tmux server or a real GitHub run, not more code. Items 1 to 3 are needed before 0.8.0.
+
+1. [VERIFY] #EASY `new-session -templ -path` (decided: `-path` is the start directory of every pane, applied by `withPaneDirPath` in `RestoreFromTempl`; without `-path` panes start in the directory `tmxu` runs from, because a `new-window` without `-c` uses the client's directory, not the session's; written, not run yet)
+   - `tmxu new -templ <t> -path /tmp x`, then `tmux list-panes -s -t =x -F '#{pane_current_path}'`: every pane under `/tmp` (macOS prints `/private/tmp`)
+   - `tmxu new -templ <t> y` without `-path`: panes start in the current directory
+2. [VERIFY] #EASY `select-layout` in the argv chain on a multi-pane template (`ran_liftup`, `dt_demo_now` window 2): the layout is raw tmux JSON that still carries the old pane ids (`"I":"%5"`) and `"a":true`; check that tmux accepts it for the new panes, and if not strip `I` in `buildSetLayoutCmd`; tmux needs the pane count to match
+3. [VERIFY] #EASY first run of `release.yaml` (written, never run on GitHub: `check` then a 4-target `build` matrix then `release`; archives `tmxu_<version without v>_<os>_<arch>.tar.gz`, `checksums.txt`, `gh release create --generate-notes`; every `v*` tag makes a normal release, there is no prerelease flag)
+   - push a throwaway tag (`v0.0.1-rc1`): four green builds and a release with four archives plus `checksums.txt`
+   - download one archive: `sha256sum -c checksums.txt` passes, `tar -tzvf` shows `-rwxr-xr-x` on `tmxu`, `tmxu version` prints the tag
+   - `go install github.com/rogemus/tmxu@<tag>` and `tmxu version` print the tag (the `debug.ReadBuildInfo` path)
+   - clean up: `gh release delete <tag> --cleanup-tag`
+   - run `actionlint` on both workflows once (not installed here)
+4. [VERIFY] #EASY whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
+5. [VERIFY] #EASY a window name or pane title ending in `;`: tmux treats a trailing `;` on an argv word as a command separator, so it may need `\;` even in argv form
+6. [VERIFY] #EASY the `\x1f` field separator (`lineSafeSeparator`): check on a throwaway server that tmux prints it raw (`list-sessions -F $'#{session_name}\x1f#{session_id}' | od -c`) and what it does to a `\n` or control character in a session or window name; `parseLines` assumes neither reaches the output
+7. [VERIFY] #MEDIUM on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
+   - Verified (default server, not a private socket): `new-session -s` is format-expanded (`-s 'a##b'` creates `a#b`); `-t` is not (`has-session -t '=a#b'` finds it, `'=a##b'` does not)
+   - Verified: duplicate `new-session` exits 1 with `duplicate session: NAME` and stops a chain; `new-session -A -d` on an existing session fails without a terminal; `-c` with a missing directory exits 0 and falls back to `$HOME`
+   - Verified: tmux 3.8 prints `#{window_layout}` as JSON; it can contain keys the structs do not model (`"l":0`), so the raw text is what gets sent back to `select-layout`
 
 ## Nice to have
 
