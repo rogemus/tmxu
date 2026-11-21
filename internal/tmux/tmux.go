@@ -95,14 +95,19 @@ func (d SnapshotData) Template() (SessionData, error) {
 }
 
 // RestoreFromTempl creates a session called sessionName from a template
-// snapshot. The template is validated before tmux is touched.
-func (d SnapshotData) RestoreFromTempl(sessionName, dir string) error {
+// snapshot. The template is validated before tmux is touched. When dirPath is
+// not empty, the session and every pane of the template start there.
+func (d SnapshotData) RestoreFromTempl(sessionName, dirPath string) error {
 	session, err := d.Template()
 	if err != nil {
 		return err
 	}
 
-	err = createSession(sessionName, dir)
+	if dirPath != "" {
+		session = session.withPaneDirPath(dirPath)
+	}
+
+	err = createSession(sessionName, dirPath)
 	if err != nil {
 		return err
 	}

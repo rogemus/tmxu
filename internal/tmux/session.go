@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/rogemus/tmxu/internal/utils"
@@ -44,14 +45,36 @@ func (d SessionData) AsTemplate() SessionData {
 	return d
 }
 
-func NewSession(name string, dir string) error {
-	return createSession(name, dir)
+// withPaneDirPath returns a copy of the session in which every pane starts in
+// dirPath. The windows and panes are cloned first, so the receiver's data is
+// left unchanged.
+func (d SessionData) withPaneDirPath(dirPath string) SessionData {
+	windows := slices.Clone(d.Windows)
+
+	for wi := range windows {
+		w := &windows[wi]
+		panes := slices.Clone(w.Panes)
+
+		for pi := range panes {
+			panes[pi].Path = dirPath
+		}
+
+		w.Panes = panes
+	}
+
+	d.Windows = windows
+
+	return d
 }
 
-func createSession(name string, dir string) error {
-	out, err := exec.Command("tmux", buildNewSessionCmd(name, dir)...).CombinedOutput()
+func NewSession(sessionName, dirPath string) error {
+	return createSession(sessionName, dirPath)
+}
+
+func createSession(sessionName, dirPath string) error {
+	out, err := exec.Command("tmux", buildNewSessionCmd(sessionName, dirPath)...).CombinedOutput()
 	if err != nil {
-		return newSessionError(name, out, err)
+		return newSessionError(sessionName, out, err)
 	}
 
 	return nil
@@ -159,21 +182,21 @@ func buildNewSessionsCmd(sessions []SessionData) string {
 	return strings.Join(cmds, " ; ")
 }
 
-func buildNewSessionCmd(name, dir string) []string {
-	argv := []string{"new-session", "-d", "-s", name}
+func buildNewSessionCmd(sessionName, dirPath string) []string {
+	argv := []string{"new-session", "-d", "-s", sessionName}
 
-	if dir != "" {
-		argv = append(argv, "-c", dir)
+	if dirPath != "" {
+		argv = append(argv, "-c", dirPath)
 	}
 
 	return argv
 }
 
-func newSessionError(name string, out []byte, err error) error {
+func newSessionError(sessionName string, out []byte, err error) error {
 	msg := strings.TrimSpace(string(out))
 	if strings.HasPrefix(msg, "duplicate session:") {
-		return fmt.Errorf("%w: %s", ErrSessionExists, name)
+		return fmt.Errorf("%w: %s", ErrSessionExists, sessionName)
 	}
 
-	return fmt.Errorf("%w %s: %s: %w", ErrCannotCreateSession, name, msg, err)
+	return fmt.Errorf("%w %s: %s: %w", ErrCannotCreateSession, sessionName, msg, err)
 }
