@@ -13,6 +13,7 @@ import (
 
 var (
 	ErrCannotCreateSession   = errors.New("cannot create session")
+	ErrCannotKillSessions    = errors.New("cannot kill sessions")
 	ErrCannotListSessions    = errors.New("cannot list sessions")
 	ErrCannotAttachToSession = errors.New("cannot attach to session")
 	ErrSessionExists         = errors.New("session already exists")
@@ -121,6 +122,16 @@ func CreateSessions(sessions []SessionData) error {
 	return nil
 }
 
+func KillSessions(sessions []SessionData) error {
+	cmd := buildKillSessionsCmd(sessions)
+	_, err := exec.Command("tmux", cmd).Output()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotKillSessions, err)
+	}
+
+	return nil
+}
+
 func HasSession(sessionName string) (bool, error) {
 	err := exec.Command("tmux", "has-session", "-t", "="+sessionName).Run()
 
@@ -176,6 +187,18 @@ func buildNewSessionsCmd(sessions []SessionData) string {
 	for _, s := range sessions {
 		name := utils.Quote(s.Name)
 		cmd := strings.Join([]string{"new-session -d -s", name}, " ")
+		cmds = append(cmds, cmd)
+	}
+
+	return strings.Join(cmds, " ; ")
+}
+
+func buildKillSessionsCmd(sessions []SessionData) string {
+	cmds := make([]string, 0)
+
+	for _, s := range sessions {
+		name := utils.Quote(s.Name)
+		cmd := strings.Join([]string{"kill-session -t", "=" + name}, " ")
 		cmds = append(cmds, cmd)
 	}
 

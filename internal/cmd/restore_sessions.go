@@ -1,14 +1,23 @@
 package cmd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/rogemus/tmxu/internal/config"
+	"github.com/rogemus/tmxu/internal/tmux"
+	"github.com/rogemus/tmxu/internal/utils"
 )
 
 var _ Cmd = (*RestoreSessions)(nil)
+
+var (
+	ErrCannotParseRestoreSessionsCmdFlags = fmt.Errorf("%w: cannot parse restore sessions cmd flags", ErrUsage)
+	ErrSessionsAlreadyCreated             = errors.New("sessions already created")
+)
 
 type RestoreSessions struct {
 	ios IOs
@@ -16,6 +25,7 @@ type RestoreSessions struct {
 
 	fs    *flag.FlagSet
 	force bool
+	yes   bool
 }
 
 func NewRestoreSessions(ios IOs, cfg config.Config) *RestoreSessions {
@@ -26,6 +36,7 @@ func NewRestoreSessions(ios IOs, cfg config.Config) *RestoreSessions {
 	}
 	cmd.fs.SetOutput(io.Discard)
 	cmd.fs.BoolVar(&cmd.force, "force", false, "override existing sessions while restoring")
+	cmd.fs.BoolVar(&cmd.yes, "yes", false, "Skip the confirmation prompt")
 	return cmd
 }
 
@@ -49,5 +60,70 @@ func (c *RestoreSessions) Info() Info {
 	return info
 }
 func (c *RestoreSessions) Run(args []string) error {
-	return nil
+	err := c.fs.Parse(args)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotParseRestoreSessionsCmdFlags, err)
+	}
+
+	prompt := "Restore all tmux sessions?"
+	if c.force {
+		prompt = "Restore all tmux sessions? Existing sessions with the same names will be killed."
+	}
+
+	if !c.yes && !utils.Confirm(prompt, c.ios.In, c.ios.Err) {
+		fmt.Fprintln(c.ios.Err, "Aborted")
+		return nil
+	}
+
+	data, err := c.cfg.ReadSessionsFile()
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := tmux.LoadSnapshot(data)
+	if err != nil {
+		return err
+	}
+
+	ls, err := tmux.ListSessions()
+	if err != nil {
+		return err
+	}
+
+	existing := snapshot.ExistingIn(ls)
+	if len(existing) > 0 {
+		if !c.force {
+			sesNames := make([]string, 0, len(existing))
+
+			for _, es := range existing {
+				sesNames = append(sesNames, es.Name)
+			}
+
+			return fmt.Errorf(
+				"%w: sessions already created [%s] (use -force to override them)",
+				ErrSessionsAlreadyCreated,
+				strings.Join(sesNames, ", "),
+			)
+		}
+
+		err = tmux.KillSessions(existing)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tmux.CreateSessions(snapshot.Sessions)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range snapshot.Sessions {
+		err := tmux.CreateWindows(s.Name, s.Windows)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = fmt.Fprintf(c.ios.Out, "Restored %d tmux sessions\n", len(snapshot.Sessions))
+	return err
 }

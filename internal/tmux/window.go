@@ -67,7 +67,7 @@ func buildNewWindowsCmd(sessionName string, windows []WindowData) ([]string, err
 		restOfPanes := panes[1:]
 		winTarget := windowTarget(sessionName, w.Index)
 
-		argv = appendCmd(argv, buildNewWindowCmd(winTarget, w.Name, firstPane))
+		argv = appendCmd(argv, buildNewFirstWindowCmd(winTarget, w.Name, firstPane))
 		argv = appendCmd(argv, buildRenamePaneCmd(winTarget, w.Name, firstPane))
 
 		if len(restOfPanes) > 0 {
@@ -82,7 +82,10 @@ func buildNewWindowsCmd(sessionName string, windows []WindowData) ([]string, err
 	return argv, nil
 }
 
-func buildNewWindowCmd(winTarget, winName string, pane PaneData) []string {
+// buildNewFirstWindowCmd builds the command that recreates the first window of
+// a restored session. -k replaces the window new-session already created at
+// that index, so it is needed only here.
+func buildNewFirstWindowCmd(winTarget, winName string, pane PaneData) []string {
 	name := utils.Escape(winName)
 	cmd := []string{"new-window", "-k", "-d", "-t", winTarget, "-n", name}
 

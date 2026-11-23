@@ -26,3 +26,18 @@ func (c Config) SaveSessions(data []byte) (string, error) {
 
 	return saveToFile(root, sessionsFileName, data)
 }
+
+func (c Config) ReadSessionsFile() ([]byte, error) {
+	err := ensureTmxuConfigDir(c.AppDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	root, err := os.OpenRoot(c.AppDirPath)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+
+	return readFile(root, sessionsFileName)
+}

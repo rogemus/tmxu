@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -82,6 +83,22 @@ func (d SnapshotData) AsTemplate() SnapshotData {
 	}
 
 	return d
+}
+
+// ExistingIn returns the sessions of the snapshot whose names are already
+// present in sessions.
+func (d SnapshotData) ExistingIn(sessions []SessionData) []SessionData {
+	existing := make([]SessionData, 0)
+
+	for _, s := range d.Sessions {
+		if slices.ContainsFunc(sessions, func(ss SessionData) bool {
+			return ss.Name == s.Name
+		}) {
+			existing = append(existing, s)
+		}
+	}
+
+	return existing
 }
 
 // Template returns the only session of a template snapshot, or
