@@ -5,8 +5,7 @@ import (
 	"path/filepath"
 )
 
-// TODO: temp name remove 2 once everything is working
-const sessionsFileName = "tmux-sessions2.json"
+const sessionsFileName = "tmux-sessions.json"
 
 func (c Config) SessionsFile() string {
 	return filepath.Join(c.AppDirPath, sessionsFileName)
