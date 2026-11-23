@@ -22,16 +22,15 @@ Sections: [Must Fix](#must-fix) · [Should Fix](#should-fix) · [Verify](#verify
 
 Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, decisions the code is waiting on, and release mechanics. The checks that need a real run, including the ones that block the release, are in [Verify](#verify).
 
-1. [BUG] #HARD no rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session`; applies to `new-session -templ` and to restore (roll back sessions created in this run when a later step fails)
+1. [BUG] #HARD no rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session`; applies to `new-session -templ` and to restore (roll back sessions created in this run when a later step fails; `tmux.RestoreSession` is the one place both go through, so the rollback belongs there)
 2. [BUG] #MEDIUM `ListSessions` fails with `cannot list sessions` when no tmux server runs, so `restore` after a reboot fails; treat "no server running" as an empty list
 3. [BUG] #EASY `Config.ReadSessionsFile` calls `ensureTmxuConfigDir`; a read must not create the directory (a missing dir should surface as a missing-file error)
 4. [BUG] #EASY `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (the `restore -force` prompt has shipped)
-5. [FEATURE] #HARD one shared `restoreSession` for restore and new-from-template (`restore-sessions` itself works: `-force`, `-yes`, prompt, success message)
-6. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
-7. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
-8. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
-9. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
-10. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
+5. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
+6. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
+7. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
+8. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
+9. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 
 ## Should Fix
 

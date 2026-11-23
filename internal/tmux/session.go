@@ -108,18 +108,15 @@ func AttachToSession(name string, in io.Reader, out, errw io.Writer) error {
 	return nil
 }
 
-func CreateSessions(sessions []SessionData) error {
-	if len(sessions) == 0 {
-		return nil
-	}
-
-	argv := buildNewSessionsCmd(sessions)
-	_, err := exec.Command("tmux", argv...).Output()
+// RestoreSession creates a detached session called sessionName and builds
+// windows in it. It is shared by restore and new-session -templ.
+func RestoreSession(sessionName, dirPath string, windows []WindowData) error {
+	err := createSession(sessionName, dirPath)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotCreateSession, err)
+		return err
 	}
 
-	return nil
+	return CreateWindows(sessionName, windows)
 }
 
 func KillSessions(sessions []SessionData) error {
@@ -179,16 +176,6 @@ func buildListSessionsFormat() string {
 		}
 
 	return strings.Join(fields, lineSafeSeparator)
-}
-
-func buildNewSessionsCmd(sessions []SessionData) []string {
-	argv := make([]string, 0)
-
-	for _, s := range sessions {
-		argv = appendCmd(argv, buildNewSessionCmd(s.Name, ""))
-	}
-
-	return argv
 }
 
 func buildKillSessionsCmd(sessions []SessionData) []string {

@@ -112,13 +112,8 @@ func (c *RestoreSessions) Run(args []string) error {
 		}
 	}
 
-	err = tmux.CreateSessions(snapshot.Sessions)
-	if err != nil {
-		return err
-	}
-
 	for _, s := range snapshot.Sessions {
-		err := tmux.CreateWindows(s.Name, s.Windows)
+		err = tmux.RestoreSession(s.Name, "", s.Windows)
 		if err != nil {
 			return err
 		}

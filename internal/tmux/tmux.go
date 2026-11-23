@@ -124,12 +124,7 @@ func (d SnapshotData) RestoreFromTempl(sessionName, dirPath string) error {
 		session = session.withPaneDirPath(dirPath)
 	}
 
-	err = createSession(sessionName, dirPath)
-	if err != nil {
-		return err
-	}
-
-	return CreateWindows(sessionName, session.Windows)
+	return RestoreSession(sessionName, dirPath, session.Windows)
 }
 
 // Snapshot reads the live tmux state. An empty sessionName snapshots every
