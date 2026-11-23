@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -42,9 +43,14 @@ type Flag struct {
 }
 
 type IOs struct {
-	In  io.Reader
-	Out io.Writer
-	Err io.Writer
+	// In is the raw stdin. Pass it to child processes (exec needs the real
+	// *os.File to hand over the terminal).
+	In io.Reader
+	// Reader is the single buffered reader over In. Use it for prompts and any
+	// line-based input so buffered bytes are never lost between reads.
+	Reader *bufio.Reader
+	Out    io.Writer
+	Err    io.Writer
 }
 
 type Cmd interface {

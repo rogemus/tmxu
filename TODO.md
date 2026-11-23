@@ -2,7 +2,7 @@
 
 Everything left to do to finish porting `restore` into `internal/` and to ship `tmxu` as a good Unix tool.
 
-Policy: stdlib-first. Only `golang.org/x/term` is allowed as a dependency (currently not in `go.mod`; add it with the menu or `term.GetSize` work). Write things by hand to learn Go. I write every test myself, by hand; Claude only reviews them.
+Policy: stdlib-first. Only `golang.org/x/term` is allowed as a dependency (in `go.mod`; used by `utils.RequireTerminal`, the menu and `term.GetSize` work will reuse it). Write things by hand to learn Go. I write every test myself, by hand; Claude only reviews them.
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
@@ -24,12 +24,11 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 
 1. [BUG] #HARD no rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session`; applies to `new-session -templ` and to restore (roll back sessions created in this run when a later step fails; `tmux.RestoreSession` is the one place both go through, so the rollback belongs there)
 2. [BUG] #MEDIUM `ListSessions` fails with `cannot list sessions` when no tmux server runs, so `restore` after a reboot fails; treat "no server running" as an empty list
-4. [BUG] #EASY `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (the `restore -force` prompt has shipped)
-5. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
-6. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
-7. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
-8. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
-9. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
+3. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
+4. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
+5. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
+6. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
+7. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 
 ## Should Fix
 
@@ -116,7 +115,7 @@ Not needed for 0.8.0. Pick up when the core is solid.
 18. [TEST] #MEDIUM `SnapshotData.String` tree: last-child prefixes (`├─`, `└─`, rails), name column alignment (including multibyte names), empty pane path, several sessions separated by a blank line, windows ordered by index
 19. [TEST] #EASY `printJSON`, `list-templates -json` (empty list prints `[]`, not `null`), `version -json`, `paths` and `paths -json` (three lines in the order config, templates, sessions; creates nothing)
 20. [TEST] #EASY `Info()` of the six commands that format `DescLong` from `cfg` (`%s` is filled with the real path, no stray `%!s(MISSING)`)
-21. [TEST] #MEDIUM `utils.Confirm`, `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
+21. [TEST] #MEDIUM `utils.Confirm` (build the input with `bufio.NewReader(strings.NewReader(...))`; cover `y`, `n`, EOF with data, EOF with no data) and `utils.RequireTerminal` (non-file readers pass), `Line` conversions, pane builders, `buildNewSessionCmd`, `newSessionError`
 22. [TEST] #MEDIUM window layout: decoding real tmux text, `isSplitLayout` (single pane, split, empty, invalid), `Data.String` and `Data.JSON` output, `buildSetLayoutCmd`, `select-layout` after the splits
 23. [TEST] #EASY `config.New` (`t.Setenv` for `XDG_CONFIG_HOME` and `HOME`, version trimming, missing home)
 24. [TEST] #EASY `internal/cli` help output (order, aliases), command lookup, `ErrUnknownCommand`, `-h` handling

@@ -21,6 +21,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Download dependencies
+        run: |
+          go mod download
+
       - name: Vet
         run: |
           go vet ./...

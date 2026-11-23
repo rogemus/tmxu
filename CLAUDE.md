@@ -6,7 +6,7 @@ Learning project. The user writes the code, Claude reviews and teaches.
 
 - Never edit files unless explicitly asked. `README.md` and `TODO.md` may be updated without asking.
 - Do not hand over finished fixes. Give doc links, concepts and partial examples on different code.
-- Stdlib first. Only `golang.org/x/term` is an allowed dependency (not in `go.mod` right now; add it with the menu or `term.GetSize` work).
+- Stdlib first. Only `golang.org/x/term` is an allowed dependency (in `go.mod`; used by `utils.RequireTerminal`).
 - Rules and skill: `.claude/rules/go-review-mode.md`, `.claude/skills/effective-go/`.
 
 ## Project

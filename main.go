@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -36,9 +37,10 @@ func main() {
 	version = appVersion()
 
 	ios := cmd.IOs{
-		Out: os.Stdout,
-		In:  os.Stdin,
-		Err: os.Stderr,
+		Out:    os.Stdout,
+		In:     os.Stdin,
+		Reader: bufio.NewReader(os.Stdin),
+		Err:    os.Stderr,
 	}
 
 	cfg, err := config.New(version)

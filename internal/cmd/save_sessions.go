@@ -63,9 +63,20 @@ func (c *SaveSessions) Run(args []string) error {
 		return fmt.Errorf("%w: %w", ErrCannotParseSaveSessionsCmdFlags, err)
 	}
 
-	if !c.yes && !utils.Confirm("Save all tmux sessions?", c.ios.In, c.ios.Err) {
-		fmt.Fprintln(c.ios.Err, "Aborted")
-		return nil
+	if !c.yes {
+		err := utils.RequireTerminal(c.ios.In)
+		if err != nil {
+			return err
+		}
+
+		ok, err := utils.Confirm("Save all tmux sessions?", c.ios.Reader, c.ios.Err)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			fmt.Fprintln(c.ios.Err, "Aborted")
+			return nil
+		}
 	}
 
 	s, err := tmux.Snapshot("")

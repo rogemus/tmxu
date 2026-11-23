@@ -70,9 +70,20 @@ func (c *RestoreSessions) Run(args []string) error {
 		prompt = "Restore all tmux sessions? Existing sessions with the same names will be killed."
 	}
 
-	if !c.yes && !utils.Confirm(prompt, c.ios.In, c.ios.Err) {
-		fmt.Fprintln(c.ios.Err, "Aborted")
-		return nil
+	if !c.yes {
+		err := utils.RequireTerminal(c.ios.In)
+		if err != nil {
+			return err
+		}
+
+		ok, err := utils.Confirm(prompt, c.ios.Reader, c.ios.Err)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			fmt.Fprintln(c.ios.Err, "Aborted")
+			return nil
+		}
 	}
 
 	data, err := c.cfg.ReadSessionsFile()
