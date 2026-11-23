@@ -65,9 +65,40 @@ func (c *RestoreSessions) Run(args []string) error {
 		return fmt.Errorf("%w: %w", ErrCannotParseRestoreSessionsCmdFlags, err)
 	}
 
+	data, err := c.cfg.ReadSessionsFile()
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := tmux.LoadSnapshot(data)
+	if err != nil {
+		return err
+	}
+
+	ls, err := tmux.ListSessions()
+	if err != nil {
+		return err
+	}
+
+	existing := snapshot.ExistingIn(ls)
+	sesNames := make([]string, 0, len(existing))
+	for _, es := range existing {
+		sesNames = append(sesNames, es.Name)
+	}
+	existingNames := strings.Join(sesNames, ", ")
+	hasExisting := len(existing) > 0
+
+	if hasExisting && !c.force {
+		return fmt.Errorf(
+			"%w: existing sessions [%s] (use -force to override them)",
+			ErrSessionsAlreadyCreated,
+			existingNames,
+		)
+	}
+
 	prompt := "Restore all tmux sessions?"
-	if c.force {
-		prompt = "Restore all tmux sessions? Existing sessions with the same names will be killed."
+	if hasExisting {
+		prompt = fmt.Sprintf("Restore all tmux sessions? Existing sessions [%s] will be killed.", existingNames)
 	}
 
 	if !c.yes {
@@ -86,37 +117,7 @@ func (c *RestoreSessions) Run(args []string) error {
 		}
 	}
 
-	data, err := c.cfg.ReadSessionsFile()
-	if err != nil {
-		return err
-	}
-
-	snapshot, err := tmux.LoadSnapshot(data)
-	if err != nil {
-		return err
-	}
-
-	ls, err := tmux.ListSessions()
-	if err != nil {
-		return err
-	}
-
-	existing := snapshot.ExistingIn(ls)
-	if len(existing) > 0 {
-		if !c.force {
-			sesNames := make([]string, 0, len(existing))
-
-			for _, es := range existing {
-				sesNames = append(sesNames, es.Name)
-			}
-
-			return fmt.Errorf(
-				"%w: sessions already created [%s] (use -force to override them)",
-				ErrSessionsAlreadyCreated,
-				strings.Join(sesNames, ", "),
-			)
-		}
-
+	if hasExisting {
 		err = tmux.KillSessions(existing)
 		if err != nil {
 			return err
