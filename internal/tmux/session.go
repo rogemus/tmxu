@@ -1,6 +1,7 @@
 package tmux
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -81,6 +82,11 @@ func createSession(sessionName, dirPath string) error {
 func ListSessions() ([]SessionData, error) {
 	o, err := exec.Command("tmux", "list-sessions", "-F", buildListSessionsFormat()).Output()
 	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) && ee.ExitCode() == 1 && bytes.Contains(ee.Stderr, []byte("no server")) {
+			return []SessionData{}, nil
+		}
+
 		return nil, fmt.Errorf("%w: %w", ErrCannotListSessions, err)
 	}
 
