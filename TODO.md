@@ -6,7 +6,7 @@ Policy: stdlib-first. Only `golang.org/x/term` is allowed as a dependency (curre
 Scope: single user, so there is no migration from the old `tmux-sessions.json`. The new schema is designed clean.
 Target: tmux 3.8+ only (JSON `window_layout`).
 
-Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (works: refuses sessions that already exist, `-force` kills them first, `-yes` skips the prompt; rollback, a missing server, the `-force` prompt listing names and the current-session guard are still open), `list-templates`, `save-template`, `delete-template`, `show-template`, `paths`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`); this covers file reads, writes and deletes only, directory creation and `ListTemplates` still use plain paths. Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. The menu is not ported. `new-session -templ` works end to end (error paths are still open). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `paths`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, files 0600, dirs 0700). Window layouts are read, stored as raw tmux JSON and applied after the splits. The persisted shape is the nested `SnapshotData` (version 1). `internal/` tests: only `utils` (`Quote`, `Escape`, `Slug`) plus the `internal/expect` helper, all written by hand. Everything that shells out to tmux needs the runner seam.
+Status: `main` is wired to `internal/cli`. `Run` dispatches `ls`, `save`, `version`, `help`, `attach`, `dump`, `new-session`, `restore` (works: refuses sessions that already exist, `-force` kills them first, `-yes` skips the prompt; rollback, a missing server, the `-force` prompt listing names and the current-session guard are still open), `list-templates`, `save-template`, `delete-template`, `show-template`, `paths`. Config file operations go through `os.Root` (helpers take a `*os.Root` and a root-relative name, and return `filepath.Join(root.Name(), name)`); this covers file reads, writes and deletes only, directory creation and `ListTemplates` still use plain paths. Each command owns its `FlagSet` (built in the constructor, bound to its own fields, pointer receivers); `Cmd.Flags()` is the single source of flags for parsing and help. The menu is not ported. `new-session -templ` works end to end (error paths are still open). `dump` and `show-template` print a names-only tree (session, windows, panes with their paths); `-json` works on `ls`, `list-templates`, `version`, `paths`, `dump` and `show-template`; `save` has `-yes`. `save` writes `tmux-sessions2.json` into the config dir (first version: not atomic, files 0600, dirs 0700). Window layouts are read, stored as raw tmux JSON and applied after the splits. The persisted shape is the nested `SnapshotData` (version 1). `internal/` tests: only `utils` (`Escape`, `Slug`) plus the `internal/expect` helper, all written by hand. Everything that shells out to tmux needs the runner seam.
 
 Done items are removed from this file; `git log` has them. Goal: 0.8.0 release. Port `restore` to `internal/` (the old `cli/` package is already deleted). `attach -menu` is not ported yet: it was broken in the previous version. The flag stays registered (and `restore -force`) and will be implemented.
 
@@ -23,17 +23,16 @@ Sections: [Must Fix](#must-fix) · [Should Fix](#should-fix) · [Verify](#verify
 Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, decisions the code is waiting on, and release mechanics. The checks that need a real run, including the ones that block the release, are in [Verify](#verify).
 
 1. [BUG] #HARD no rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session`; applies to `new-session -templ` and to restore (roll back sessions created in this run when a later step fails)
-2. [BUG] #MEDIUM `buildNewSessionsCmd` and `buildKillSessionsCmd` (`session.go`) pass one joined string to `exec.Command`; rewrite both on argv. `new-session -s` is format-expanded, so the name needs `utils.Escape` (today `utils.Quote`: a saved name like `a#S` restores under the wrong name); `kill-session -t` is not expanded
-3. [BUG] #MEDIUM `ListSessions` fails with `cannot list sessions` when no tmux server runs, so `restore` after a reboot fails; treat "no server running" as an empty list
-4. [BUG] #EASY `Config.ReadSessionsFile` calls `ensureTmxuConfigDir`; a read must not create the directory (a missing dir should surface as a missing-file error)
-5. [BUG] #EASY `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (the `restore -force` prompt has shipped)
-6. [FEATURE] #HARD one shared `restoreSession` for restore and new-from-template (`restore-sessions` itself works: `-force`, `-yes`, prompt, success message)
-7. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
-8. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
-9. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
-10. [FEATURE] #HARD decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
-11. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
-12. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
+2. [BUG] #MEDIUM `ListSessions` fails with `cannot list sessions` when no tmux server runs, so `restore` after a reboot fails; treat "no server running" as an empty list
+3. [BUG] #EASY `Config.ReadSessionsFile` calls `ensureTmxuConfigDir`; a read must not create the directory (a missing dir should surface as a missing-file error)
+4. [BUG] #EASY `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (the `restore -force` prompt has shipped)
+5. [FEATURE] #HARD one shared `restoreSession` for restore and new-from-template (`restore-sessions` itself works: `-force`, `-yes`, prompt, success message)
+6. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
+7. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
+8. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
+9. [FEATURE] #HARD decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
+10. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
+11. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 
 ## Should Fix
 
@@ -146,11 +145,10 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 
 1. [COSMETIC] #EASY `helpCmd`: align the FLAGS descriptions in a column (`-path` and `-templ` differ in length, the template pads with fixed spaces); use `text/tabwriter` like `listAllCommands`, with a tab between name and description, flushed after `Execute`; check that the other sections are not affected
 2. [COSMETIC] #MEDIUM doc comments on exported identifiers (package docs exist everywhere; `Info`, `Flag`, `IOs`, `Cmd`, `Config`, `New`, `SnapshotData`, `SessionData`, `WindowData`, `PaneData`, constructors and `utils.Slug` have none); unexport what is not API
-3. [COSMETIC] #EASY `utils.Quote` has no callers on the argv path; only `buildNewSessionsCmd` and `buildKillSessionsCmd` use it; delete it (and its tests) once both builders are on argv (Must Fix 2)
-4. [COSMETIC] #EASY `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
-5. [COSMETIC] #EASY config: fold the repeated `os.OpenRoot` + `defer root.Close()` (5 places: four in `templates.go`, one in `sessions.go`) into one helper
-6. [COSMETIC] #MEDIUM generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
-7. [COSMETIC] #EASY `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
+3. [COSMETIC] #EASY `HasTemplate` duplicates what `ShowTemplate` reports; keep it, or return a not-found sentinel from `ShowTemplate`
+4. [COSMETIC] #EASY config: fold the repeated `os.OpenRoot` + `defer root.Close()` (5 places: four in `templates.go`, one in `sessions.go`) into one helper
+5. [COSMETIC] #MEDIUM generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
+6. [COSMETIC] #EASY `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
 
 ## Settled decisions
 

@@ -113,8 +113,8 @@ func CreateSessions(sessions []SessionData) error {
 		return nil
 	}
 
-	cmd := buildNewSessionsCmd(sessions)
-	_, err := exec.Command("tmux", cmd).Output()
+	argv := buildNewSessionsCmd(sessions)
+	_, err := exec.Command("tmux", argv...).Output()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCreateSession, err)
 	}
@@ -123,8 +123,8 @@ func CreateSessions(sessions []SessionData) error {
 }
 
 func KillSessions(sessions []SessionData) error {
-	cmd := buildKillSessionsCmd(sessions)
-	_, err := exec.Command("tmux", cmd).Output()
+	argv := buildKillSessionsCmd(sessions)
+	_, err := exec.Command("tmux", argv...).Output()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotKillSessions, err)
 	}
@@ -181,32 +181,32 @@ func buildListSessionsFormat() string {
 	return strings.Join(fields, lineSafeSeparator)
 }
 
-func buildNewSessionsCmd(sessions []SessionData) string {
-	cmds := make([]string, 0)
+func buildNewSessionsCmd(sessions []SessionData) []string {
+	argv := make([]string, 0)
 
 	for _, s := range sessions {
-		name := utils.Quote(s.Name)
-		cmd := strings.Join([]string{"new-session -d -s", name}, " ")
-		cmds = append(cmds, cmd)
+		argv = appendCmd(argv, buildNewSessionCmd(s.Name, ""))
 	}
 
-	return strings.Join(cmds, " ; ")
+	return argv
 }
 
-func buildKillSessionsCmd(sessions []SessionData) string {
-	cmds := make([]string, 0)
+func buildKillSessionsCmd(sessions []SessionData) []string {
+	argv := make([]string, 0)
 
 	for _, s := range sessions {
-		name := utils.Quote(s.Name)
-		cmd := strings.Join([]string{"kill-session -t", "=" + name}, " ")
-		cmds = append(cmds, cmd)
+		argv = appendCmd(argv, buildKillSessionCmd(s.Name))
 	}
 
-	return strings.Join(cmds, " ; ")
+	return argv
+}
+
+func buildKillSessionCmd(sessionName string) []string {
+	return []string{"kill-session", "-t", "=" + sessionName}
 }
 
 func buildNewSessionCmd(sessionName, dirPath string) []string {
-	argv := []string{"new-session", "-d", "-s", sessionName}
+	argv := []string{"new-session", "-d", "-s", utils.Escape(sessionName)}
 
 	if dirPath != "" {
 		argv = append(argv, "-c", dirPath)
