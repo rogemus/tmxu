@@ -13,7 +13,6 @@ var (
 	ErrCannotEncodeJSON = errors.New("cannot encode json")
 )
 
-// printJSON writes v to w as a single line of JSON.
 func printJSON(w io.Writer, v any) error {
 	out, err := json.Marshal(v)
 	if err != nil {
@@ -24,8 +23,6 @@ func printJSON(w io.Writer, v any) error {
 	return err
 }
 
-// dumpSnapshot prints data to w as a tree of sessions, windows and panes,
-// or as the persisted JSON shape when asJSON is set.
 func dumpSnapshot(asJSON bool, data tmux.SnapshotData, w io.Writer) error {
 	if asJSON {
 		return printJSON(w, data)

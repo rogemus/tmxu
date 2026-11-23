@@ -46,9 +46,6 @@ func (d SessionData) AsTemplate() SessionData {
 	return d
 }
 
-// withPaneDirPath returns a copy of the session in which every pane starts in
-// dirPath. The windows and panes are cloned first, so the receiver's data is
-// left unchanged.
 func (d SessionData) withPaneDirPath(dirPath string) SessionData {
 	windows := slices.Clone(d.Windows)
 
@@ -108,8 +105,6 @@ func AttachToSession(name string, in io.Reader, out, errw io.Writer) error {
 	return nil
 }
 
-// RestoreSession creates a detached session called sessionName and builds
-// windows in it. It is shared by restore and new-session -templ.
 func RestoreSession(sessionName, dirPath string, windows []WindowData) error {
 	err := createSession(sessionName, dirPath)
 	if err != nil {
@@ -165,10 +160,6 @@ func parseSessionLines(output []byte) ([]SessionData, error) {
 	return sessions, nil
 }
 
-// buildListSessionsFormat returns the `list-sessions -F` format: one row per
-// session, fields joined by lineSafeSeparator. Field order must match
-// parseSessionLines. session_name stays last so SplitN keeps any stray
-// separator in it.
 func buildListSessionsFormat() string {
 	fields :=
 		[]string{

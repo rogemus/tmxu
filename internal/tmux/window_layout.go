@@ -21,8 +21,6 @@ type WindowLayoutNode struct {
 	Children []WindowLayoutNode `json:"c"` // splits only
 }
 
-// isSplitLayout reports whether the raw layout has more than one pane. An empty
-// or invalid layout is not a split.
 func isSplitLayout(raw json.RawMessage) bool {
 	var wl WindowLayout
 	if err := json.Unmarshal(raw, &wl); err != nil {

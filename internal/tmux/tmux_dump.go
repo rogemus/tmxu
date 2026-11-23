@@ -13,9 +13,6 @@ func (d SnapshotData) JSON() ([]byte, error) {
 	return json.Marshal(d)
 }
 
-// String renders the snapshot as a tree of sessions, windows and panes.
-// Panes show their name and start directory; ids, indexes and layouts are
-// only part of the JSON output.
 func (d SnapshotData) String() string {
 	var b strings.Builder
 

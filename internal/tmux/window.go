@@ -44,7 +44,6 @@ func windowTarget(sessionName string, winIndex int) string {
 	return fmt.Sprintf("=%s:%d", sessionName, winIndex)
 }
 
-// appendCmd adds cmd to argv, joined by the ";" argument tmux treats as a command separator.
 func appendCmd(argv []string, cmd []string) []string {
 	if len(argv) > 0 {
 		argv = append(argv, ";")
@@ -82,9 +81,6 @@ func buildNewWindowsCmd(sessionName string, windows []WindowData) ([]string, err
 	return argv, nil
 }
 
-// buildNewFirstWindowCmd builds the command that recreates the first window of
-// a restored session. -k replaces the window new-session already created at
-// that index, so it is needed only here.
 func buildNewFirstWindowCmd(winTarget, winName string, pane PaneData) []string {
 	name := utils.Escape(winName)
 	cmd := []string{"new-window", "-k", "-d", "-t", winTarget, "-n", name}

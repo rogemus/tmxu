@@ -85,8 +85,6 @@ func (d SnapshotData) AsTemplate() SnapshotData {
 	return d
 }
 
-// ExistingIn returns the sessions of the snapshot whose names are already
-// present in sessions.
 func (d SnapshotData) ExistingIn(sessions []SessionData) []SessionData {
 	existing := make([]SessionData, 0)
 
@@ -101,8 +99,6 @@ func (d SnapshotData) ExistingIn(sessions []SessionData) []SessionData {
 	return existing
 }
 
-// Template returns the only session of a template snapshot, or
-// ErrInvalidTemplate if the snapshot does not hold exactly one session.
 func (d SnapshotData) Template() (SessionData, error) {
 	if len(d.Sessions) != 1 {
 		return SessionData{}, fmt.Errorf("%w: expected 1 session, got %d", ErrInvalidTemplate, len(d.Sessions))
@@ -111,9 +107,6 @@ func (d SnapshotData) Template() (SessionData, error) {
 	return d.Sessions[0], nil
 }
 
-// RestoreFromTempl creates a session called sessionName from a template
-// snapshot. The template is validated before tmux is touched. When dirPath is
-// not empty, the session and every pane of the template start there.
 func (d SnapshotData) RestoreFromTempl(sessionName, dirPath string) error {
 	session, err := d.Template()
 	if err != nil {
@@ -127,9 +120,6 @@ func (d SnapshotData) RestoreFromTempl(sessionName, dirPath string) error {
 	return RestoreSession(sessionName, dirPath, session.Windows)
 }
 
-// Snapshot reads the live tmux state. An empty sessionName snapshots every
-// session on the server, otherwise only that session, or ErrNoSession if it
-// does not exist.
 func Snapshot(sessionName string) (SnapshotData, error) {
 	argv := []string{
 		"list-panes", "-F", buildListPanesFormat(),
@@ -225,9 +215,6 @@ func parseTmuxLines(lines []Line) SnapshotData {
 	}
 }
 
-// buildListPanesFormat returns the `list-panes -F` format: one row per pane,
-// fields joined by lineSafeSeparator. Field order must match parseLines.
-// pane_current_path stays last so SplitN keeps any stray separator in it.
 func buildListPanesFormat() string {
 	fields :=
 		[]string{

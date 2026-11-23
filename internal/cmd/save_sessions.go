@@ -24,7 +24,6 @@ type SaveSessions struct {
 	yes bool
 }
 
-// NewSaveSessions builds a SaveSessionsCmd from the app config.
 func NewSaveSessions(ios IOs, cfg config.Config) *SaveSessions {
 	cmd := &SaveSessions{
 		ios: ios,

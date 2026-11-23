@@ -11,8 +11,6 @@ type PaneData struct {
 	Path  string `json:"pane_path"`
 }
 
-// AsTemplate clears the start directory, so a template pane starts in tmux's
-// default directory.
 func (d *PaneData) AsTemplate() *PaneData {
 	d.Path = ""
 	return d
