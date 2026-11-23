@@ -30,9 +30,8 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 6. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
 7. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
 8. [FEATURE] #MEDIUM read the real `base-index` and `pane-base-index` (restore targets `=S:W.<saved pane index>`, so it only works when the restoring server uses the same bases as the saving one; `BaseIndex` was deleted as unused; `tmux show-options -gv base-index` reads the global option, the session's own may differ); handle saved index != current base so no blank leftover window stays
-9. [FEATURE] #HARD decide split direction and the 80x24 detached-size problem (`new-session -x -y`, or apply layout per split)
-10. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
-11. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
+9. [FEATURE] #MEDIUM config store `writeFileAtomic` (temp file, `Sync`, `Rename`, same `0600` mode), keep a `.bak`
+10. [RELEASE] #EASY switch `save` back from `tmux-sessions2.json` to `tmux-sessions.json` (temporary name while the port is in progress); change only `sessionsFileName` (`paths` and the `DescLong` text follow it) and update the status text
 
 ## Should Fix
 
@@ -149,6 +148,7 @@ Naming, text, structure, duplication, doc comments. No behavior change for users
 4. [COSMETIC] #EASY config: fold the repeated `os.OpenRoot` + `defer root.Close()` (5 places: four in `templates.go`, one in `sessions.go`) into one helper
 5. [COSMETIC] #MEDIUM generic `readJSON[T]` / `writeJSON`; `os.MkdirAll` (file reads, writes and deletes already go through `os.Root`: `readFile`, `saveToFile`, `deleteFile` in `tmxu_config.go`)
 6. [COSMETIC] #EASY `Root`-based listing for `ListTemplates` (`fs.ReadDir(root.FS(), ".")`; `os.Root` has no `ReadDir`; `readTemplatesName` then takes `[]fs.DirEntry`)
+7. [COSMETIC] #EASY a window with more than about 7 panes fails restore with `no space for a new pane` (each `split-window -h` halves the active pane, whatever the window size; accepted as user error). If it ever matters: `select-layout even-horizontal` after each split, then the saved layout (checked on tmux 3.8: an 80x24 detached window reaches 21 panes and the saved layout applies as is)
 
 ## Settled decisions
 
