@@ -24,7 +24,6 @@ Needed before 0.8.0: data loss, a broken `save`, the `restore` port itself, deci
 
 1. [BUG] #HARD no rollback: a failed window step leaves a half-built session that blocks the retry with `duplicate session`; applies to `new-session -templ` and to restore (roll back sessions created in this run when a later step fails; `tmux.RestoreSession` is the one place both go through, so the rollback belongs there)
 2. [BUG] #MEDIUM `ListSessions` fails with `cannot list sessions` when no tmux server runs, so `restore` after a reboot fails; treat "no server running" as an empty list
-3. [BUG] #EASY `Config.ReadSessionsFile` calls `ensureTmxuConfigDir`; a read must not create the directory (a missing dir should surface as a missing-file error)
 4. [BUG] #EASY `utils.Confirm`: one reader, handle the read error, fail loudly when stdin is not a TTY (the `restore -force` prompt has shipped)
 5. [FEATURE] #MEDIUM never use `-k` on a session that was not created in this run
 6. [FEATURE] #MEDIUM `-force` prompt lists the sessions that will be killed (read the file, build the snapshot and list sessions first, then confirm); refuse to kill the current session (`$TMUX`, `display-message -p '#S'`), or tmxu gets SIGHUP mid-restore
