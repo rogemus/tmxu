@@ -65,27 +65,23 @@ Not blocking, but restore is risky or unpleasant without them. Roughly in the or
 
 ## Verify
 
-Checks that need a real tmux server or a real GitHub run, not more code. Items 1 to 3 are needed before 0.8.0.
+Checks that need a real tmux server or a real GitHub run, not more code. Item 1 is needed before 0.8.0.
 
-1. [VERIFY] #EASY `new-session -templ -path` (decided: `-path` is the start directory of every pane, applied by `withPaneDirPath` in `RestoreFromTempl`; without `-path` panes start in the directory `tmxu` runs from, because a `new-window` without `-c` uses the client's directory, not the session's; written, not run yet)
-   - `tmxu new -templ <t> -path /tmp x`, then `tmux list-panes -s -t =x -F '#{pane_current_path}'`: every pane under `/tmp` (macOS prints `/private/tmp`)
-   - `tmxu new -templ <t> y` without `-path`: panes start in the current directory
-2. [VERIFY] #EASY `select-layout` in the argv chain on a multi-pane template (`ran_liftup`, `dt_demo_now` window 2): the layout is raw tmux JSON that still carries the old pane ids (`"I":"%5"`) and `"a":true`; check that tmux accepts it for the new panes, and if not strip `I` in `buildSetLayoutCmd`; tmux needs the pane count to match
-3. [VERIFY] #EASY first run of `release.yaml` (written, never run on GitHub: `check` then a 4-target `build` matrix then `release`; archives `tmxu_<version without v>_<os>_<arch>.tar.gz`, `checksums.txt`, `gh release create --generate-notes`; every `v*` tag makes a normal release, there is no prerelease flag)
+1. [VERIFY] #EASY first run of `release.yaml` (written, never run on GitHub: `check` then a 4-target `build` matrix then `release`; archives `tmxu_<version without v>_<os>_<arch>.tar.gz`, `checksums.txt`, `gh release create --generate-notes`; every `v*` tag makes a normal release, there is no prerelease flag)
    - push a throwaway tag (`v0.0.1-rc1`): four green builds and a release with four archives plus `checksums.txt`
    - download one archive: `sha256sum -c checksums.txt` passes, `tar -tzvf` shows `-rwxr-xr-x` on `tmxu`, `tmxu version` prints the tag
    - `go install github.com/rogemus/tmxu@<tag>` and `tmxu version` print the tag (the `debug.ReadBuildInfo` path)
    - clean up: `gh release delete <tag> --cleanup-tag`
    - run `actionlint` on both workflows once (not installed here)
-4. [VERIFY] #EASY whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
-5. [VERIFY] #EASY a window name or pane title ending in `;`: tmux treats a trailing `;` on an argv word as a command separator, so it may need `\;` even in argv form
-6. [VERIFY] #EASY the `\x1f` field separator (`lineSafeSeparator`): check on a throwaway server that tmux prints it raw (`list-sessions -F $'#{session_name}\x1f#{session_id}' | od -c`) and what it does to a `\n` or control character in a session or window name; `parseLines` assumes neither reaches the output
-7. [VERIFY] #MEDIUM on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
+2. [VERIFY] #EASY whether `-c` (start directory) is format-expanded; escape `#` in paths if it is
+3. [VERIFY] #EASY a window name or pane title ending in `;`: tmux treats a trailing `;` on an argv word as a command separator, so it may need `\;` even in argv form
+4. [VERIFY] #EASY the `\x1f` field separator (`lineSafeSeparator`): check on a throwaway server that tmux prints it raw (`list-sessions -F $'#{session_name}\x1f#{session_id}' | od -c`) and what it does to a `\n` or control character in a session or window name; `parseLines` assumes neither reaches the output
+5. [VERIFY] #MEDIUM on a throwaway server (private socket, `-L`): single-string chain parsing, `'it'\''s'` quoting, `new-window -k` on a session's only window, `-T` format expansion, order of `list-panes -a`, session names with `.` or `:`
    - Verified (default server, not a private socket): `new-session -s` is format-expanded (`-s 'a##b'` creates `a#b`); `-t` is not (`has-session -t '=a#b'` finds it, `'=a##b'` does not)
    - Verified: duplicate `new-session` exits 1 with `duplicate session: NAME` and stops a chain; `new-session -A -d` on an existing session fails without a terminal; `-c` with a missing directory exits 0 and falls back to `$HOME`
    - Verified: tmux 3.8 prints `#{window_layout}` as JSON; it can contain keys the structs do not model (`"l":0`), so the raw text is what gets sent back to `select-layout`
 
-8. [VERIFY] #EASY stderr and exit code of `tmux list-sessions` when no server ever started (socket file missing): it may print `error connecting to ... (No such file or directory)` instead of `no server running`, and `ListSessions` only matches `no server`; check (`tmux kill-server; tmux ls`), then widen the match if needed
+6. [VERIFY] #EASY stderr and exit code of `tmux list-sessions` when no server ever started (socket file missing): it may print `error connecting to ... (No such file or directory)` instead of `no server running`, and `ListSessions` only matches `no server`; check (`tmux kill-server; tmux ls`), then widen the match if needed
 
 ## Nice to have
 

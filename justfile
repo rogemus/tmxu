@@ -30,6 +30,11 @@ check: lint test
 test:
   go test -race ./...
 
+# Run e2e checks on an isolated tmux server (needs tmux); optional prefix, e.g. just e2e 03
+[group: 'test']
+e2e PREFIX='':
+  bash e2e/run.sh {{PREFIX}}
+
 # Format Go code with gofmt
 [group: 'quality']
 fmt:
