@@ -44,7 +44,7 @@ var restoreSessionsInfo = Info{
 	Command:   "restore-sessions",
 	Aliases:   []string{"restore", "r"},
 	DescShort: "Restore tmux sessions",
-	DescLong:  "Recreates tmux sessions from %s. Skips sessions that already exist; -force replaces them instead. Not implemented yet.",
+	DescLong:  "Recreates tmux sessions from %s. Refuses to run if any saved session already exists; -force kills those sessions first and recreates them (asks for confirmation unless -yes is given).",
 	Examples: []string{
 		"tmxu restore-sessions",
 		"tmxu restore",
