@@ -52,12 +52,63 @@ func hasFile(root *os.Root, name string) (bool, error) {
 }
 
 func saveToFile(root *os.Root, name string, data []byte) (string, error) {
-	err := root.WriteFile(name, data, 0600)
+	tmp := name + ".tmp"
+
+	f, err := root.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, name, err)
+	}
+
+	_, err = f.Write(data)
+	if err != nil {
+		return saveError(err, name, root, tmp, f)
+	}
+
+	err = f.Sync()
+	if err != nil {
+		return saveError(err, name, root, tmp, f)
+	}
+
+	err = f.Close()
+	if err != nil {
+		return saveError(err, name, root, tmp, nil)
+	}
+
+	bak := name + ".bak"
+
+	err = root.Remove(bak)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return saveError(err, name, root, tmp, nil)
+	}
+
+	err = root.Link(name, bak)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return saveError(err, name, root, tmp, nil)
+	}
+
+	err = root.Rename(tmp, name)
+	if err != nil {
+		return saveError(err, name, root, tmp, nil)
+	}
+
+	err = syncDir(root)
 	if err != nil {
 		return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, name, err)
 	}
 
 	return filepath.Join(root.Name(), name), nil
+}
+
+func syncDir(root *os.Root) error {
+	d, err := root.Open(".")
+	if err != nil {
+		return err
+	}
+
+	syncErr := d.Sync()
+	closeErr := d.Close()
+
+	return errors.Join(syncErr, closeErr)
 }
 
 func deleteFile(root *os.Root, name string) (string, error) {
@@ -67,4 +118,28 @@ func deleteFile(root *os.Root, name string) (string, error) {
 	}
 
 	return filepath.Join(root.Name(), name), nil
+}
+
+func saveError(originalErr error, name string, root *os.Root, tmp string, f *os.File) (string, error) {
+	cleanUpErr := cleanupTmp(root, tmp, f)
+
+	return "", fmt.Errorf("%w %s: %w", ErrCannotSaveFile, name, errors.Join(originalErr, cleanUpErr))
+}
+
+func cleanupTmp(root *os.Root, tmp string, f *os.File) error {
+	var errs []error
+
+	if f != nil {
+		err := f.Close()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	_, err := deleteFile(root, tmp)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
