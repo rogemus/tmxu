@@ -14,26 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Setup Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with:
-          go-version-file: go.mod
+      - uses: ./.github/actions/setup
 
-      - name: Download dependencies
-        run: |
-          go mod download
-
-      - name: Vet
-        run: |
-          go vet ./...
-
-      - name: Format check
-        run: |
-          test -z "$(gofmt -l .)" || { echo "unformatted files:"; gofmt -l .; exit 1; }
-
-      - name: Tests
-        run: |
-          go test -race ./...
+      - uses: ./.github/actions/verify
 
   build:
     needs: check
@@ -46,14 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Setup Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with:
-          go-version-file: go.mod
-
-      - name: Download dependencies
-        run: |
-          go mod download
+      - uses: ./.github/actions/setup
 
       - name: Set archive name
         run: |
