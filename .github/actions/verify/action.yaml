@@ -1,0 +1,25 @@
+name: Verify
+description: Run vet, format check and tests
+
+runs:
+  using: composite
+  steps:
+    - name: Vet
+      shell: bash
+      run: |
+        go vet ./...
+
+    - name: Format check
+      shell: bash
+      run: |
+        test -z "$(gofmt -l .)" || { echo "unformatted files:"; gofmt -l .; exit 1; }
+
+    - name: Build
+      shell: bash
+      run: |
+        go build ./...
+
+    - name: Tests
+      shell: bash
+      run: |
+        go test -race ./...
